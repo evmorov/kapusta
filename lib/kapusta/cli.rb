@@ -5,7 +5,7 @@ require 'optparse'
 
 module Kapusta
   class CLI
-    Options = Struct.new(:compile, :help, keyword_init: true)
+    Options = Struct.new(:compile, :help, :version, keyword_init: true)
 
     def self.start(argv = ARGV)
       args = argv.dup
@@ -13,6 +13,11 @@ module Kapusta
 
       if options.help
         $stdout.puts usage
+        return
+      end
+
+      if options.version
+        $stdout.puts "kapusta #{Kapusta::VERSION}"
         return
       end
 
@@ -24,13 +29,13 @@ module Kapusta
     end
 
     def self.parse_options(args)
-      options = Options.new(compile: false, help: false)
+      options = Options.new(compile: false, help: false, version: false)
 
       OptionParser.new do |parser|
-        parser.version = Kapusta::VERSION
         parser.banner = usage
         parser.on('-c', '--compile', 'Compile .kap to Ruby') { options.compile = true }
         parser.on('-h', '--help', 'Show this help') { options.help = true }
+        parser.on('-v', '--version', 'Show version') { options.version = true }
       end.order!(args)
 
       options
