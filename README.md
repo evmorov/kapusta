@@ -11,6 +11,14 @@ For more information about Kapusta, see the official Fennel documentation and tu
 ## Usage
 
 ```
+gem install kapusta
+kapfmt --fix examples/fizzbuzz.kap
+kapusta examples/fizzbuzz.kap
+```
+
+or
+
+```
 exe/kapusta examples/fizzbuzz.kap
 ```
 
