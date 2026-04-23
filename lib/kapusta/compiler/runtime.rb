@@ -63,12 +63,29 @@ module Kapusta
             end
           end
         RUBY
-        stringify: <<~RUBY.chomp,
+        stringify: <<~'RUBY'.chomp,
           def __kap_stringify(value)
+            render = nil
+            render = lambda do |item|
+              case item
+              when nil then 'nil'
+              when true then 'true'
+              when false then 'false'
+              when String, Symbol then item.inspect
+              when Array
+                "[#{item.map { |child| render.call(child) }.join(', ')}]"
+              when Hash
+                "{#{item.map { |key, child| "#{render.call(key)}=>#{render.call(child)}" }.join(', ')}}"
+              else
+                item.inspect
+              end
+            end
+
             case value
             when nil then 'nil'
             when true then 'true'
             when false then 'false'
+            when Array, Hash then render.call(value)
             else value.to_s
             end
           end
@@ -327,257 +344,19 @@ module Kapusta
         seen[name] = true
       end
 
-      def call(callee, positional, kwargs = nil, block = nil)
-        raise "not callable: #{callee.inspect}" unless callee.respond_to?(:call)
-
-        if block
-          kwargs ? callee.call(*positional, **kwargs, &block) : callee.call(*positional, &block)
-        else
-          kwargs ? callee.call(*positional, **kwargs) : callee.call(*positional)
-        end
+      HELPER_SOURCES.each_value do |source|
+        module_eval(source, __FILE__, __LINE__)
       end
 
-      def send_call(receiver, method_name, positional, kwargs = nil, block = nil)
-        if block
-          if kwargs
-            receiver.public_send(method_name, *positional, **kwargs,
-                                 &block)
-          else
-            receiver.public_send(method_name, *positional, &block)
-          end
-        elsif kwargs
-          receiver.public_send(method_name, *positional,
-                               **kwargs)
-        else
-          receiver.public_send(method_name, *positional)
-        end
+      helper_methods = []
+
+      HELPER_SOURCES.each_key do |name|
+        helper_method = :"__kap_#{name}"
+        define_singleton_method(name, instance_method(helper_method))
+        helper_methods << helper_method
       end
 
-      def invoke_self(receiver, method_name, positional, kwargs = nil, block = nil)
-        if block
-          if kwargs
-            receiver.send(method_name, *positional, **kwargs,
-                          &block)
-          else
-            receiver.send(method_name, *positional, &block)
-          end
-        else
-          kwargs ? receiver.send(method_name, *positional, **kwargs) : receiver.send(method_name, *positional)
-        end
-      end
-
-      def stringify(value)
-        case value
-        when nil then 'nil'
-        when true then 'true'
-        when false then 'false'
-        else value.to_s
-        end
-      end
-
-      def print_values(*values)
-        $stdout.puts(values.map { |value| stringify(value) }.join("\t"))
-        nil
-      end
-
-      def concat(values)
-        values.map { |value| stringify(value) }.join
-      end
-
-      def get_path(obj, keys)
-        keys.reduce(obj) { |acc, key| acc[key] }
-      end
-
-      def qget_path(obj, keys)
-        keys.each do |key|
-          return nil if obj.nil?
-
-          obj = obj[key]
-        end
-        obj
-      end
-
-      def set_path(obj, keys, value)
-        target = obj
-        keys[0...-1].each { |key| target = target[key] }
-        target[keys.last] = value
-      end
-
-      def method_path_value(base, segments)
-        segments.reduce(base) { |obj, segment| obj.public_send(Kapusta.kebab_to_snake(segment).to_sym) }
-      end
-
-      def set_method_path(base, segments, value)
-        target = base
-        segments[0...-1].each do |segment|
-          target = target.public_send(Kapusta.kebab_to_snake(segment).to_sym)
-        end
-        setter = "#{Kapusta.kebab_to_snake(segments.last)}="
-        target.public_send(setter.to_sym, value)
-      end
-
-      def current_class_scope(receiver)
-        receiver.is_a?(Module) ? receiver : receiver.class
-      end
-
-      def get_ivar(receiver, name)
-        receiver.instance_variable_get("@#{Kapusta.kebab_to_snake(name)}")
-      end
-
-      def set_ivar(receiver, name, value)
-        receiver.instance_variable_set("@#{Kapusta.kebab_to_snake(name)}", value)
-      end
-
-      def get_cvar(receiver, name)
-        current_class_scope(receiver).class_variable_get("@@#{Kapusta.kebab_to_snake(name)}")
-      end
-
-      def set_cvar(receiver, name, value)
-        current_class_scope(receiver).class_variable_set("@@#{Kapusta.kebab_to_snake(name)}", value)
-      end
-
-      def get_gvar(name)
-        Kernel.eval("$#{Kapusta.kebab_to_snake(name)}", binding, __FILE__, __LINE__) # $stderr
-      end
-
-      def set_gvar(name, value)
-        Kernel.eval("$#{Kapusta.kebab_to_snake(name)} = value", binding, __FILE__, __LINE__) # $stderr = value
-      end
-
-      def ensure_module(holder, path)
-        segments = path.split('.')
-        last = segments.pop
-        scope = holder.is_a?(Module) ? holder : Object
-        segments.each do |segment|
-          scope =
-            if scope.const_defined?(segment, false)
-              scope.const_get(segment, false)
-            else
-              mod = Module.new
-              scope.const_set(segment, mod)
-              mod
-            end
-        end
-        if scope.const_defined?(last, false)
-          scope.const_get(last, false)
-        else
-          mod = Module.new
-          scope.const_set(last, mod)
-          mod
-        end
-      end
-
-      def ensure_class(holder, path, super_class)
-        segments = path.split('.')
-        last = segments.pop
-        scope = holder.is_a?(Module) ? holder : Object
-        segments.each do |segment|
-          scope =
-            if scope.const_defined?(segment, false)
-              scope.const_get(segment, false)
-            else
-              mod = Module.new
-              scope.const_set(segment, mod)
-              mod
-            end
-        end
-        if scope.const_defined?(last, false)
-          scope.const_get(last, false)
-        else
-          klass = Class.new(super_class)
-          scope.const_set(last, klass)
-          klass
-        end
-      end
-
-      def destructure(pattern, value)
-        bindings = {}
-        destructure_into(pattern, value, bindings)
-        bindings
-      end
-
-      def destructure_into(pattern, value, bindings)
-        case pattern[0]
-        when :sym
-          name = pattern[1]
-          bindings[name] = value unless name == '_'
-        when :vec
-          items = pattern[1]
-          rest_idx = items.index { |item| item.is_a?(Array) && item[0] == :rest }
-          if rest_idx
-            before = items[0...rest_idx]
-            rest_pattern = items[rest_idx][1]
-            before.each_with_index do |item, i|
-              destructure_into(item, value ? value[i] : nil, bindings)
-            end
-            rest_value = value ? (value[rest_idx..] || []) : []
-            destructure_into(rest_pattern, rest_value, bindings)
-          else
-            items.each_with_index do |item, i|
-              destructure_into(item, value ? value[i] : nil, bindings)
-            end
-          end
-        when :hash
-          pattern[1].each do |key, subpattern|
-            destructure_into(subpattern, value ? value[key] : nil, bindings)
-          end
-        when :ignore
-          nil
-        else
-          raise "unknown destructure pattern: #{pattern.inspect}"
-        end
-      end
-
-      def match_pattern(pattern, value)
-        bindings = {}
-        [match_pattern_into(pattern, value, bindings), bindings]
-      end
-
-      def match_pattern_into(pattern, value, bindings)
-        case pattern[0]
-        when :sym
-          name = pattern[1]
-          bindings[name] = value unless name == '_'
-          true
-        when :vec
-          return false unless value.is_a?(Array) || value.respond_to?(:to_ary)
-
-          array = value.is_a?(Array) ? value : value.to_ary
-          items = pattern[1]
-          rest_idx = items.index { |item| item.is_a?(Array) && item[0] == :rest }
-          if rest_idx
-            before = items[0...rest_idx]
-            rest_pattern = items[rest_idx][1]
-            return false if array.length < before.length
-
-            before.each_with_index do |item, i|
-              return false unless match_pattern_into(item, array[i], bindings)
-            end
-            match_pattern_into(rest_pattern, array[rest_idx..], bindings)
-          else
-            return false unless array.length == items.length
-
-            items.each_with_index do |item, i|
-              return false unless match_pattern_into(item, array[i], bindings)
-            end
-            true
-          end
-        when :hash
-          return false unless value.is_a?(Hash)
-
-          pattern[1].each do |key, subpattern|
-            return false unless value.key?(key)
-            return false unless match_pattern_into(subpattern, value[key], bindings)
-          end
-          true
-        when :lit
-          value == pattern[1]
-        when :nil
-          value.nil?
-        else
-          raise "bad pattern: #{pattern.inspect}"
-        end
-      end
+      send(:private, *helper_methods)
     end
   end
 end
