@@ -2,9 +2,6 @@
 
 Kapusta is a Lisp for the Ruby runtime.
 
-[![CI](https://github.com/evmorov/kapusta/actions/workflows/ci.yml/badge.svg)](https://github.com/evmorov/kapusta/actions/workflows/ci.yml)
-[![Gem Version](https://img.shields.io/gem/v/kapusta)](https://rubygems.org/gems/kapusta)
-
 It is inspired by [Fennel](https://fennel-lang.org). It is not intended to be production-ready like Clojure: that would be a lot of work, and Ruby is already a rich, elegant language.
 
 Instead, Kapusta aims to bring some of the simplicity and joy of Lisp to Ruby. Where Lua is intentionally minimal, and Fennel follows that design for good reason, Kapusta exists mostly for fun. You can use it for small apps, LeetCode, DragonRuby, or maybe even Rails.
