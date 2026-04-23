@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 require 'kapusta/formatter'
+require 'open3'
+require 'rbconfig'
 require 'stringio'
 require 'tmpdir'
 
@@ -126,6 +128,21 @@ RSpec.describe Kapusta::Formatter do
     end
 
     expect(error_output).to include('Cannot use --fix with stdin (-).')
+  end
+
+  it 'prints the version with -v' do
+    output = capture_stdout do
+      expect(described_class.new(['-v']).run).to eq(0)
+    end
+
+    expect(output).to eq("kapfmt #{Kapusta::VERSION}\n")
+  end
+
+  it 'prints the version with --version from the executable' do
+    stdout, stderr, status = Open3.capture3(RbConfig.ruby, File.expand_path('../exe/kapfmt', __dir__), '--version')
+
+    expect(status.success?).to eq(true), stderr
+    expect(stdout).to eq("kapfmt #{Kapusta::VERSION}\n")
   end
 
   it 'preserves top-level comments and comments inside forms' do

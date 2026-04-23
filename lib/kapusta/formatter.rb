@@ -13,10 +13,16 @@ module Kapusta
     def initialize(argv)
       @mode = :stdout
       @files = []
+      @version = false
       parse_args(argv)
     end
 
     def run
+      if @version
+        puts "kapfmt #{Kapusta::VERSION}"
+        return 0
+      end
+
       validate_args!
 
       formatted = @files.map do |path|
@@ -56,6 +62,8 @@ module Kapusta
           ensure_mode!(:fix)
         when '--check'
           ensure_mode!(:check)
+        when '--version', '-v'
+          @version = true
         when '--help', '-h'
           print_help
           exit 0
