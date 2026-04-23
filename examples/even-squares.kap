@@ -4,4 +4,4 @@
       (: :select (fn [n] (n.even?)))
       (: :map (fn [n] (* n n))))
 ]
-  (puts (even-squares.join ", ")))
+  (print (even-squares.join ", ")))

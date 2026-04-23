@@ -12,6 +12,6 @@
 (let [first-pair (two-sum [2 7 11 15] 9)
       second-pair (two-sum [3 2 4] 6)
       missing-pair (two-sum [1 2 3] 10)]
-  (puts (first-pair.inspect))
-  (puts (second-pair.inspect))
-  (puts (missing-pair.inspect)))
+  (print first-pair)
+  (print second-pair)
+  (print missing-pair))

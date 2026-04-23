@@ -3,6 +3,6 @@
         normalized (lower.gsub (ruby "/[^a-z]/") "")]
     (= normalized (normalized.reverse))))
 
-(puts (palindrome? "racecar"))
-(puts (palindrome? "A man, a plan, a canal: Panama"))
-(puts (palindrome? "kapusta"))
+(print (palindrome? "racecar"))
+(print (palindrome? "A man, a plan, a canal: Panama"))
+(print (palindrome? "kapusta"))

@@ -16,4 +16,4 @@
 (let [c (Counter.new 10)]
   (c.tick)
   (c.tick)
-  (puts (c.value)))
+  (print (c.value)))

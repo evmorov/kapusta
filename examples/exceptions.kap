@@ -8,7 +8,7 @@
     (catch ArgumentError e
       (.. "bad: " s))
     (finally
-      (puts (.. "seen: " s)))))
+      (print (.. "seen: " s)))))
 
 (each [_ s (ipairs ["12" "oops"])]
-  (puts (parse-score s)))
+  (print (parse-score s)))

@@ -3,4 +3,4 @@
 (fn self.greet [name]
   (.. "Hello, " name "!"))
 
-(puts (self.greet "Ada"))
+(print (self.greet "Ada"))

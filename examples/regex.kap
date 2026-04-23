@@ -6,4 +6,4 @@
 
 (each [_ s (ipairs ["2026-04-23" "hello" "1999-12-31"])]
   (let [parsed (parse-date s)]
-    (puts (.. s " -> " (parsed.inspect)))))
+    (print (.. s " -> " parsed))))

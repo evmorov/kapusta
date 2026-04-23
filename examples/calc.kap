@@ -7,4 +7,4 @@
     [:div a b] (/ (eval-expr a) (eval-expr b))
     _ (raise (ArgumentError.new (.. "unknown op: " (expr.inspect))))))
 
-(puts (eval-expr [:add [:num 2] [:mul [:num 3] [:num 4]]]))
+(print (eval-expr [:add [:num 2] [:mul [:num 3] [:num 4]]]))

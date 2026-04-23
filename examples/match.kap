@@ -4,6 +4,6 @@
     {: name} (.. name ": no score")
     _ "unknown"))
 
-(puts (describe-user {:name "Ada" :stats {:score 9}}))
-(puts (describe-user {:name "Lin"}))
-(puts (describe-user {}))
+(print (describe-user {:name "Ada" :stats {:score 9}}))
+(print (describe-user {:name "Lin"}))
+(print (describe-user {}))

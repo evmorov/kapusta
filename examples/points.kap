@@ -6,4 +6,4 @@
     [_ _] "point"))
 
 (each [_ point (ipairs [[0 0] [0 2] [3 0] [3 4]])]
-  (puts (point-kind point)))
+  (print (point-kind point)))

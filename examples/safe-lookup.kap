@@ -2,5 +2,5 @@
       missing {}
       name (?. user :profile :name)
       missing-name (?. missing :profile :name)]
-  (puts name)
-  (puts (missing-name.inspect)))
+  (print name)
+  (print missing-name))

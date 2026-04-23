@@ -3,4 +3,4 @@
       (: :select (fn [w] (< (length w) 5)))
       (: :map (fn [w] (w.upcase)))
       (: :sort)
-      (: :each (fn [w] (puts w)))))
+      (: :each (fn [w] (print w)))))

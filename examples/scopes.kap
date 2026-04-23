@@ -12,7 +12,7 @@
 
 (let [a (ScopeCounter.new)
       b (ScopeCounter.new)]
-  (puts (a.add! 5))
-  (puts (b.add! 4))
-  (puts (ScopeCounter.total))
-  (puts (gvar last-total)))
+  (print (a.add! 5))
+  (print (b.add! 4))
+  (print (ScopeCounter.total))
+  (print (gvar last-total)))

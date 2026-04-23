@@ -14,7 +14,7 @@
         {:encoding "UTF-8"}
         (fn [io]
           (let [content (: io :read)]
-            (puts (content.strip))
-            (puts (length (content.lines)))))))
+            (print (content.strip))
+            (print (length (content.lines)))))))
     (finally
       (FileUtils.rm_f path))))

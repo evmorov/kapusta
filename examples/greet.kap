@@ -1,2 +1,2 @@
 (let [name (or (. ARGV 0) "world")]
-  (puts (.. "Hello, " name "!")))
+  (print (.. "Hello, " name "!")))

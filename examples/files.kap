@@ -7,7 +7,7 @@
     (do
       (FileUtils.mkdir_p tmp-dir)
       (File.write path body)
-      (puts (File.read path))
-      (puts (length (File.readlines path))))
+      (print (File.read path))
+      (print (length (File.readlines path))))
     (finally
       (FileUtils.rm_f path))))

@@ -13,4 +13,4 @@
 (let [acc (Accumulator.new 10)]
   (acc.add! 5)
   (acc.add! 7)
-  (puts (acc.value)))
+  (print (acc.value)))

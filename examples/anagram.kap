@@ -8,6 +8,6 @@
   (= (normalize-word a)
     (normalize-word b)))
 
-(puts (anagram? "listen" "silent"))
-(puts (anagram? "apple" "papel"))
-(puts (anagram? "hello" "world"))
+(print (anagram? "listen" "silent"))
+(print (anagram? "apple" "papel"))
+(print (anagram? "hello" "world"))

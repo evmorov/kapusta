@@ -5,5 +5,5 @@
         uniq (chars.uniq)]
     (= (uniq.length) 26)))
 
-(puts (pangram? "The quick brown fox jumps over the lazy dog"))
-(puts (pangram? "Hello, world"))
+(print (pangram? "The quick brown fox jumps over the lazy dog"))
+(print (pangram? "Hello, world"))
