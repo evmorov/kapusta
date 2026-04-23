@@ -1,0 +1,6 @@
+(fn format-record [record]
+  (let [{: name : role : tags} record]
+    (.. name " / " role " / " (tags.join ", "))))
+
+(let [record {:name "Ada" :role "engineer" :tags ["ruby" "lisp"]}]
+  (puts (format-record record)))

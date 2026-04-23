@@ -1,0 +1,7 @@
+/.bundle
+/.rspec_status
+/.rubocop_cache
+/Gemfile.lock
+/coverage
+/pkg
+/tmp

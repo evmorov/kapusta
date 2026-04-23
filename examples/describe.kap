@@ -1,0 +1,9 @@
+(fn describe [x]
+  (case x
+    0 "zero"
+    1 "one"
+    (where n (< n 0)) "negative"
+    _ "many"))
+
+(each [_ n (ipairs [-3 0 1 2 99])]
+  (print n (describe n)))

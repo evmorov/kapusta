@@ -1,0 +1,8 @@
+(fn prime? [n]
+  (var ok true)
+  (for [d 2 (- n 1) &until (not ok)]
+    (when (= 0 (% n d)) (set ok false)))
+  (and (> n 1) ok))
+
+(let [ps (fcollect [n 2 30] (when (prime? n) n))]
+  (each [_ p (ipairs ps)] (print p)))

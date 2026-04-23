@@ -1,0 +1,18 @@
+(class ScopeCounter)
+
+(set (cvar total) 0)
+
+(fn add! [n]
+  (set (cvar total) (+ (cvar total) n))
+  (set (gvar last-total) (cvar total))
+  (cvar total))
+
+(fn self.total []
+  (cvar total))
+
+(let [a (ScopeCounter.new)
+      b (ScopeCounter.new)]
+  (puts (a.add! 5))
+  (puts (b.add! 4))
+  (puts (ScopeCounter.total))
+  (puts (gvar last-total)))

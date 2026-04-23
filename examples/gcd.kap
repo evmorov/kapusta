@@ -1,0 +1,5 @@
+(fn gcd [a b]
+  (if (= b 0) a (gcd b (% a b))))
+
+(print (gcd 48 36))
+(print (gcd 270 192))

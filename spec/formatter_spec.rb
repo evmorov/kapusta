@@ -1,0 +1,176 @@
+# frozen_string_literal: true
+
+require 'spec_helper'
+require 'kapusta/formatter'
+require 'stringio'
+require 'tmpdir'
+
+def capture_stdout
+  previous_stdout = $stdout
+  $stdout = StringIO.new
+  yield
+  $stdout.string
+ensure
+  $stdout = previous_stdout
+end
+
+def capture_stderr
+  previous_stderr = $stderr
+  $stderr = StringIO.new
+  yield
+  $stderr.string
+ensure
+  $stderr = previous_stderr
+end
+
+def with_stdin(input)
+  previous_stdin = $stdin
+  $stdin = StringIO.new(input)
+  yield
+ensure
+  $stdin = previous_stdin
+end
+
+RSpec.describe Kapusta::Formatter do
+  repo_root = File.expand_path('..', __dir__)
+  example_idempotence_paths = Dir.glob(File.join(repo_root, 'examples/**/*.kap')).map do |path|
+    path.delete_prefix("#{repo_root}/")
+  end.freeze
+
+  it 'formats source with the built-in printer even without fnlfmt in PATH' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [uri (URI.join (ivar base-uri) (.. "/posts/" id)) body (Net.HTTP.get uri) post (JSON.parse body {:symbolize-names true}) {: title : author} post] (values title author))
+      KAP
+
+      previous_path = ENV.fetch('PATH', nil)
+      ENV['PATH'] = ''
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (let [uri (URI.join (ivar base-uri) (.. "/posts/" id))
+              body (Net.HTTP.get uri)
+              post (JSON.parse body {:symbolize-names true})
+              {: title : author} post]
+          (values title author))
+      KAP
+    ensure
+      ENV['PATH'] = previous_path
+    end
+  end
+
+  it 'rewrites files in place with --fix' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [words ["red" "green" "blue" "black" "olive"]](-> words (: :select (fn [w] (< (length w) 5))) (: :map (fn [w] (w.upcase))) (: :sort) (: :each (fn [w] (puts w)))))
+      KAP
+
+      expect(described_class.new(['--fix', path]).run).to eq(0)
+      expect(File.read(path)).to eq(<<~KAP)
+        (let [words ["red" "green" "blue" "black" "olive"]]
+          (-> words
+              (: :select (fn [w] (< (length w) 5)))
+              (: :map (fn [w] (w.upcase)))
+              (: :sort)
+              (: :each (fn [w] (puts w)))))
+      KAP
+    end
+  end
+
+  it 'reports dirty files with --check' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, '(fn tick [](set (ivar n) (+ (ivar n) 1))(ivar n))')
+
+      error_output = capture_stderr do
+        expect(described_class.new(['--check', path]).run).to eq(1)
+      end
+
+      expect(error_output).to include("Not formatted: #{path}")
+    end
+  end
+
+  it 'reads stdin when the input path is -' do
+    output = with_stdin("(let [name (or (. ARGV 0) \"world\")](puts (.. \"Hello, \" name \"!\")))\n") do
+      capture_stdout do
+        expect(described_class.new(['-']).run).to eq(0)
+      end
+    end
+
+    expect(output).to eq(<<~KAP)
+      (let [name (or (. ARGV 0) "world")]
+        (puts (.. "Hello, " name "!")))
+    KAP
+  end
+
+  it 'checks stdin when the input path is -' do
+    error_output = with_stdin("(fn tick [](set (ivar n) (+ (ivar n) 1))(ivar n))\n") do
+      capture_stderr do
+        expect(described_class.new(['--check', '-']).run).to eq(1)
+      end
+    end
+
+    expect(error_output).to include('Not formatted: -')
+  end
+
+  it 'rejects --fix with stdin' do
+    error_output = with_stdin("(+ 1 2)\n") do
+      capture_stderr do
+        expect(described_class.new(['--fix', '-']).run).to eq(1)
+      end
+    end
+
+    expect(error_output).to include('Cannot use --fix with stdin (-).')
+  end
+
+  it 'rejects comments instead of dropping them' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, "(fn main [] ; comment\n  (print 1))\n")
+
+      error_output = capture_stderr do
+        expect(described_class.new([path]).run).to eq(1)
+      end
+
+      expect(error_output).to include('kapfmt does not support comments yet.')
+    end
+  end
+
+  it 'formats let bindings with hanging pair alignment' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [[a b c] [1 2 3] {: name : age} {:name "Ada" :age 36}]
+          (print (+ a b c))
+          (print name age))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (let [[a b c] [1 2 3]
+              {: name : age} {:name "Ada" :age 36}]
+          (print (+ a b c))
+          (print name age))
+      KAP
+    end
+  end
+
+  example_idempotence_paths.each do |relative_path|
+    it "keeps #{relative_path} unchanged" do
+      path = File.expand_path("../#{relative_path}", __dir__)
+      source = File.read(path)
+
+      formatted = described_class.new([]).send(:format_source, source)
+
+      expect(formatted).to eq(source)
+    end
+  end
+end

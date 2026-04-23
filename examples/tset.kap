@@ -1,0 +1,4 @@
+(let [person {:name "Ada"}]
+  (tset person :city "Amsterdam")
+  (puts (person.inspect))
+  (puts (. person :city)))

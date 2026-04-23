@@ -1,0 +1,9 @@
+(fn describe-user [user]
+  (match user
+    {: name :stats {: score}} (.. name ": " score)
+    {: name} (.. name ": no score")
+    _ "unknown"))
+
+(puts (describe-user {:name "Ada" :stats {:score 9}}))
+(puts (describe-user {:name "Lin"}))
+(puts (describe-user {}))

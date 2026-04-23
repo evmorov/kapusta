@@ -1,0 +1,19 @@
+(class Counter)
+
+(fn initialize [start]
+  (set (ivar n) start))
+
+(fn tick []
+  (set (ivar n) (+ (ivar n) 1))
+  (ivar n))
+
+(fn value []
+  (ivar n))
+
+(fn self.zero []
+  (Counter.new 0))
+
+(let [c (Counter.new 10)]
+  (c.tick)
+  (c.tick)
+  (puts (c.value)))

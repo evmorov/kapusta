@@ -1,0 +1,7 @@
+(let [
+  even-squares
+  (-> [1 2 3 4 5 6]
+      (: :select (fn [n] (n.even?)))
+      (: :map (fn [n] (* n n))))
+]
+  (puts (even-squares.join ", ")))

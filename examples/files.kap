@@ -1,0 +1,13 @@
+(require "fileutils")
+
+(let [tmp-dir (File.expand_path "tmp" Dir.pwd)
+      path (File.join tmp-dir "file-io-example.txt")
+      body "Ada\nLin"]
+  (try
+    (do
+      (FileUtils.mkdir_p tmp-dir)
+      (File.write path body)
+      (puts (File.read path))
+      (puts (length (File.readlines path))))
+    (finally
+      (FileUtils.rm_f path))))

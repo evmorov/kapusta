@@ -1,0 +1,16 @@
+(fn binary-search [xs target]
+  (var lo 0)
+  (var hi (- (length xs) 1))
+  (var answer nil)
+  (while (and (<= lo hi) (= answer nil))
+    (let [mid (: (/ (+ lo hi) 2) :floor)
+          guess (. xs mid)]
+      (if (= guess target) (set answer mid)
+          (< guess target) (set lo (+ mid 1))
+          (set hi (- mid 1)))))
+  answer)
+
+(let [found (binary-search [1 3 5 7 9 11] 7)
+      missing (binary-search [1 3 5 7 9 11] 2)]
+  (puts found)
+  (puts (missing.inspect)))

@@ -1,0 +1,13 @@
+(fn normalize-word [word]
+  (let [lower (word.downcase)
+        chars (lower.chars)
+        sorted (chars.sort)]
+    (sorted.join)))
+
+(fn anagram? [a b]
+  (= (normalize-word a)
+    (normalize-word b)))
+
+(puts (anagram? "listen" "silent"))
+(puts (anagram? "apple" "papel"))
+(puts (anagram? "hello" "world"))

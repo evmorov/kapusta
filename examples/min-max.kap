@@ -1,0 +1,11 @@
+(fn min-max [xs]
+  (let [[first & rest] xs]
+    (var lo first)
+    (var hi first)
+    (each [_ x (ipairs rest)]
+      (when (< x lo) (set lo x))
+      (when (> x hi) (set hi x)))
+    [lo hi]))
+
+(let [[lo hi] (min-max [3 1 4 1 5 9 2 6])]
+  (print lo hi))

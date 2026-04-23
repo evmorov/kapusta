@@ -1,0 +1,4 @@
+(let [add #(+ $1 $2)
+      triple #(* 3 $)]
+  (print (add 2 3))
+  (print (triple 7)))

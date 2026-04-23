@@ -1,0 +1,28 @@
+(fn append [suffix value]
+  (.. value suffix))
+
+(fn wrap [left right value]
+  (.. left value right))
+
+(fn fetch-name [user]
+  (?. user :profile :name))
+
+(let [thread-last (->> "Ada"
+                       (append " Lovelace")
+                       (wrap "[" "]")
+                       (append "!"))
+      maybe-name (-?>> {:profile {:name "Ada"}}
+                       (fetch-name)
+                       (append "!")
+                       (wrap "<" ">"))
+      missing-name (-?>> {:profile nil}
+                         (fetch-name)
+                         (append "!")
+                         (wrap "<" ">"))
+      thread-first (-?> "kapusta"
+                        (: :upcase)
+                        (: :reverse))
+      missing-first (-?> nil
+                         (: :upcase)
+                         (: :reverse))]
+  (print thread-last maybe-name missing-name thread-first missing-first))

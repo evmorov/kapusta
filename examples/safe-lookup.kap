@@ -1,0 +1,6 @@
+(let [user {:profile {:name "Ada"}}
+      missing {}
+      name (?. user :profile :name)
+      missing-name (?. missing :profile :name)]
+  (puts name)
+  (puts (missing-name.inspect)))

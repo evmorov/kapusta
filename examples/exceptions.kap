@@ -1,0 +1,14 @@
+(fn require-score [s]
+  (if (= s "oops")
+      (raise (ArgumentError.new "not a number"))
+      (Integer s)))
+
+(fn parse-score [s]
+  (try (require-score s)
+    (catch ArgumentError e
+      (.. "bad: " s))
+    (finally
+      (puts (.. "seen: " s)))))
+
+(each [_ s (ipairs ["12" "oops"])]
+  (puts (parse-score s)))

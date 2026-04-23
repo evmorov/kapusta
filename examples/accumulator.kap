@@ -1,0 +1,16 @@
+(class Accumulator)
+
+(fn initialize [start]
+  (set (ivar total) start))
+
+(fn add! [n]
+  (set (ivar total) (+ (ivar total) n))
+  self)
+
+(fn value []
+  (ivar total))
+
+(let [acc (Accumulator.new 10)]
+  (acc.add! 5)
+  (acc.add! 7)
+  (puts (acc.value)))

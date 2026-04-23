@@ -1,0 +1,6 @@
+(module HeaderDemo)
+
+(fn self.greet [name]
+  (.. "Hello, " name "!"))
+
+(puts (self.greet "Ada"))

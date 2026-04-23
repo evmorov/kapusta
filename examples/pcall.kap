@@ -1,0 +1,9 @@
+(let [[ok value] (pcall Integer "12")
+      [bad-ok error] (pcall Integer "oops")
+      [handled-ok handled] (xpcall Integer (fn [e] (e.message)) "oops")]
+  (puts ok)
+  (puts value)
+  (puts bad-ok)
+  (puts (error.class))
+  (puts handled-ok)
+  (puts handled))

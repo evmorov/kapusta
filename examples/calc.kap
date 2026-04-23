@@ -1,0 +1,10 @@
+(fn eval-expr [expr]
+  (case expr
+    [:num n] n
+    [:add a b] (+ (eval-expr a) (eval-expr b))
+    [:sub a b] (- (eval-expr a) (eval-expr b))
+    [:mul a b] (* (eval-expr a) (eval-expr b))
+    [:div a b] (/ (eval-expr a) (eval-expr b))
+    _ (raise (ArgumentError.new (.. "unknown op: " (expr.inspect))))))
+
+(puts (eval-expr [:add [:num 2] [:mul [:num 3] [:num 4]]]))

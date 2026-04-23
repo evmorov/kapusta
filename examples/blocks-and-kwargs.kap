@@ -1,0 +1,20 @@
+(require "fileutils")
+
+(let [tmp-dir (File.expand_path "tmp" Dir.pwd)
+      path (File.join tmp-dir "blocks-and-kwargs.txt")]
+  (try
+    (do
+      (FileUtils.mkdir_p tmp-dir)
+      (File.open path
+        "w"
+        {:encoding "UTF-8"}
+        (fn [io] (: io :write "Ada\nLin\n")))
+      (File.open path
+        "r"
+        {:encoding "UTF-8"}
+        (fn [io]
+          (let [content (: io :read)]
+            (puts (content.strip))
+            (puts (length (content.lines)))))))
+    (finally
+      (FileUtils.rm_f path))))

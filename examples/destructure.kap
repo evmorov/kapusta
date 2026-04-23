@@ -1,0 +1,4 @@
+(let [[a b c] [1 2 3]
+      {: name : age} {:name "Ada" :age 36}]
+  (print (+ a b c))
+  (print name age))

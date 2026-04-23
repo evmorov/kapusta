@@ -1,0 +1,19 @@
+(class Stack)
+
+(fn initialize []
+  (set (ivar xs) []))
+
+(fn push! [x]
+  (let [xs (ivar xs)]
+    (xs.push x))
+  self)
+
+(fn pop! []
+  (let [xs (ivar xs)]
+    (xs.pop)))
+
+(fn empty? []
+  (= 0 (length (ivar xs))))
+
+(fn size []
+  (length (ivar xs)))

@@ -1,0 +1,7 @@
+(for [n 1 20]
+  (let [d3? (= 0 (% n 3))
+        d5? (= 0 (% n 5))]
+    (if (and d3? d5?) (print "FizzBuzz")
+        d3? (print "Fizz")
+        d5? (print "Buzz")
+        (print n))))

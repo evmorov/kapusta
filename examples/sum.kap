@@ -1,0 +1,3 @@
+(let [xs [10 20 30 40]
+      total (accumulate [s 0 _ x (ipairs xs)] (+ s x))]
+  (print total))
