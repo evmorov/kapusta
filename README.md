@@ -1,9 +1,9 @@
 # Kapusta
 
+Kapusta is a Lisp for the Ruby runtime.
+
 [![CI](https://github.com/evmorov/kapusta/actions/workflows/ci.yml/badge.svg)](https://github.com/evmorov/kapusta/actions/workflows/ci.yml)
 [![Gem Version](https://img.shields.io/gem/v/kapusta)](https://rubygems.org/gems/kapusta)
-
-Kapusta is a Lisp for the Ruby runtime.
 
 It is inspired by [Fennel](https://fennel-lang.org). It is not intended to be production-ready like Clojure: that would be a lot of work, and Ruby is already a rich, elegant language.
 
