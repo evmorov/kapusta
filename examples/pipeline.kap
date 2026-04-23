@@ -1,5 +1,8 @@
+; Pipelines stay readable as stages stack up.
 (let [words ["red" "green" "blue" "black" "olive"]]
+  ; Filter first so later stages stay focused.
   (-> words
+      ; Keep the shorter words before transforming them.
       (: :select (fn [w] (< (length w) 5)))
       (: :map (fn [w] (w.upcase)))
       (: :sort)

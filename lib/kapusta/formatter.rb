@@ -92,16 +92,14 @@ module Kapusta
     end
 
     def format_source(source)
-      reject_comments!(source)
-
-      forms = Reader.read_all(source)
-      rendered = forms.map { |form| render(form, 0, top_level: true) }
-      return '' if rendered.empty?
+      forms = Reader.read_all(source, preserve_comments: true)
+      entries = top_level_entries(forms)
+      return '' if entries.empty?
 
       output = +''
-      rendered.each_with_index do |form, index|
-        output << separator_for(forms[index - 1], forms[index]) unless index.zero?
-        output << form
+      entries.each_with_index do |entry, index|
+        output << separator_for_entries(entries[index - 1], entry) unless index.zero?
+        output << render_top_level_entry(entry)
       end
       output << "\n"
     rescue StandardError => e
@@ -117,37 +115,37 @@ module Kapusta
       end
     end
 
-    def reject_comments!(source)
-      index = 0
+    def top_level_entries(forms)
+      entries = []
+      leading_comments = []
 
-      while index < source.length
-        char = source[index]
-
-        if char == '"'
-          index = consume_string(source, index)
-        elsif char == ';'
-          raise Error, 'kapfmt does not support comments yet.'
+      forms.each do |form|
+        if comment?(form)
+          leading_comments << form
         else
-          index += 1
+          entries << { comments: leading_comments, form: }
+          leading_comments = []
         end
       end
+
+      entries << { comments: leading_comments, form: nil } unless leading_comments.empty?
+      entries
     end
 
-    def consume_string(source, start)
-      index = start + 1
+    def separator_for_entries(previous, current)
+      return "\n" unless previous[:form] && current[:form]
 
-      while index < source.length
-        char = source[index]
-        index += 1
+      separator_for(previous[:form], current[:form])
+    end
 
-        if char == '\\'
-          index += 1
-        elsif char == '"'
-          break
-        end
-      end
+    def render_top_level_entry(entry)
+      parts = entry[:comments].map { |comment| render(comment, 0) }
+      parts << render(entry[:form], 0, top_level: true) if entry[:form]
+      parts.join("\n")
+    end
 
-      index
+    def comment?(form)
+      form.is_a?(Comment)
     end
 
     def render(form, indent, layout: nil, top_level: false, force_expand: false)
@@ -155,6 +153,7 @@ module Kapusta
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(form, top_level:, layout:)
 
       case form
+      when Comment then form.text
       when List then render_list(form, indent, top_level:)
       when Vec then render_vec(form, indent, layout:, top_level:, force_expand:)
       when HashLit then render_hash(form, indent)
@@ -165,14 +164,21 @@ module Kapusta
 
     def flat_render(form)
       case form
+      when Comment
+        nil
       when Sym
         form.name
       when Vec
+        return nil if contains_comments?(form.items)
+
         "[#{form.items.map { |item| flat_render(item) }.join(' ')}]"
       when HashLit
+        return nil if contains_comments?(form.entries)
+
         "{#{form.pairs.map { |key, value| flat_hash_pair(key, value) }.join(' ')}}"
       when List
-        return "##{flat_render(form.items[1])}" if hashfn_literal?(form)
+        return nil if contains_comments?(form.items)
+        return "##{flat_render(semantic_items(form.items)[1])}" if hashfn_literal?(form)
 
         "(#{form.items.map { |item| flat_render(item) }.join(' ')})"
       when String, Numeric, true, false, nil
@@ -183,55 +189,66 @@ module Kapusta
     end
 
     def render_list(list, indent, top_level: false)
-      return '()' if list.empty?
-      return "##{render(list.items[1], indent, top_level:)}" if hashfn_literal?(list)
+      return '()' if list.items.empty?
+      return "##{render(semantic_items(list.items)[1], indent, top_level:)}" if hashfn_literal?(list)
 
-      head = list.head
+      head = list_head(list)
+      return render_generic_list(list, indent) unless head
+
       head_name = head.is_a?(Sym) ? head.name : nil
+      raw_args = list_raw_rest(list)
 
       case head_name
       when 'fn', 'lambda', 'λ' then render_fn(head_name, list, indent, top_level:)
       when 'let' then render_let(list, indent)
-      when 'do', 'finally' then render_prefix_body_form(head_name, [], list.rest, indent)
+      when 'do', 'finally' then render_prefix_body_form(head_name, [], raw_args, indent)
       when 'try' then render_try(list, indent)
       when 'while', 'when', 'unless', 'for', 'each', 'icollect', 'collect', 'fcollect', 'accumulate', 'faccumulate'
-        render_prefix_body_form(head_name, list.rest.take(1), list.rest.drop(1), indent)
-      when 'module' then render_prefix_body_form('module', list.rest.take(1), list.rest.drop(1), indent)
+        raw_prefix, raw_body = split_raw_items(raw_args, 1)
+        render_prefix_body_form(head_name, raw_prefix, raw_body, indent)
+      when 'module'
+        raw_prefix, raw_body = split_raw_items(raw_args, 1)
+        render_prefix_body_form('module', raw_prefix, raw_body, indent)
       when 'class' then render_class(list, indent)
       when 'catch' then render_catch(list, indent)
       when 'if' then render_if(list, indent)
-      when 'case', 'match' then render_case(head_name, list.rest, indent)
-      when *PIPELINE_FORMS then render_pipeline(head_name, list.rest, indent)
+      when 'case', 'match'
+        if contains_comments?(raw_args)
+          render_sequential_head_form(head_name, raw_args, indent)
+        else
+          render_case(head_name, list_rest(list), indent)
+        end
+      when *PIPELINE_FORMS then render_pipeline(head_name, raw_args, indent)
       else
         render_call(list, indent)
       end
     end
 
     def render_fn(head, list, indent, top_level: false)
-      args = list.rest
-      if args[0].is_a?(Sym) && args[1].is_a?(Vec)
-        render_prefix_body_form(head, args.take(2), args.drop(2), indent, force_body_multiline: top_level)
-      else
-        render_prefix_body_form(head, args.take(1), args.drop(1), indent, force_body_multiline: top_level)
-      end
+      args = list_rest(list)
+      raw_args = list_raw_rest(list)
+      prefix_length = args[0].is_a?(Sym) && args[1].is_a?(Vec) ? 2 : 1
+      raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
+      render_prefix_body_form(head, raw_prefix, raw_body, indent, force_body_multiline: top_level)
     end
 
     def render_catch(list, indent)
-      args = list.rest
-      prefix = args.take(2)
-      body = args.drop(2)
-      render_prefix_body_form('catch', prefix, body, indent)
+      raw_prefix, raw_body = split_raw_items(list_raw_rest(list), 2)
+      render_prefix_body_form('catch', raw_prefix, raw_body, indent)
     end
 
     def render_class(list, indent)
-      args = list.rest
+      args = list_rest(list)
+      raw_args = list_raw_rest(list)
       prefix = args[1].is_a?(Vec) ? args.take(2) : args.take(1)
-      body = args.drop(prefix.length)
-      render_prefix_body_form('class', prefix, body, indent)
+      raw_prefix, raw_body = split_raw_items(raw_args, prefix.length)
+      render_prefix_body_form('class', raw_prefix, raw_body, indent)
     end
 
     def render_try(list, indent)
-      args = list.rest
+      args = list_rest(list)
+      return render_sequential_head_form('try', list_raw_rest(list), indent) if contains_comments?(list_raw_rest(list))
+
       lines = ['(try']
 
       if args.any?
@@ -252,10 +269,17 @@ module Kapusta
     end
 
     def render_let(list, indent)
-      bindings = list.rest.first
-      body = list.rest.drop(1)
+      bindings = list_rest(list).first
+      raw_args = list_raw_rest(list)
+      raw_prefix, raw_body = split_raw_items(raw_args, 1)
+      body = list_rest(list).drop(1)
       unless bindings.is_a?(Vec)
-        return render_prefix_body_form('let', list.rest.take(1), body, indent,
+        return render_prefix_body_form('let', raw_prefix, raw_body, indent,
+                                       layouts: [:pairwise])
+      end
+
+      if contains_comments?(raw_args) || contains_comments?(bindings.items)
+        return render_prefix_body_form('let', raw_prefix, raw_body, indent,
                                        layouts: [:pairwise])
       end
 
@@ -272,20 +296,35 @@ module Kapusta
       line = "(#{head}"
       lines = [line]
       current_first_line = line
+      layout_index = 0
+      inline_prefix = true
 
-      prefix_forms.each_with_index do |form, index|
-        rendered = render(form, indent + INDENT, layout: layouts[index])
+      prefix_forms.each do |form|
+        if comment?(form)
+          lines << indent_block(render(form, indent + INDENT), INDENT)
+          inline_prefix = false
+          next
+        end
+
+        rendered = render(form, indent + INDENT, layout: layouts[layout_index])
+        layout_index += 1
         candidate = "#{current_first_line} #{rendered}"
 
-        if single_line?(rendered) && fits?(candidate, indent)
+        if inline_prefix && single_line?(rendered) && fits?(candidate, indent)
           current_first_line = candidate
           lines[0] = current_first_line
         else
           lines << indent_block(rendered, INDENT)
+          inline_prefix = false
         end
       end
 
       body_forms.each do |form|
+        if comment?(form)
+          lines << indent_block(render(form, indent + INDENT), INDENT)
+          next
+        end
+
         body = render(
           form,
           indent + INDENT,
@@ -298,7 +337,9 @@ module Kapusta
     end
 
     def render_if(list, indent)
-      args = list.rest
+      args = list_rest(list)
+      return render_sequential_head_form('if', list_raw_rest(list), indent) if contains_comments?(list_raw_rest(list))
+
       lines = []
       hanging = ' ' * '(if '.length
 
@@ -384,9 +425,15 @@ module Kapusta
       lines = [base]
       hanging = ' ' * (base.length + 1)
 
-      args.each_with_index do |form, index|
+      semantic_index = 0
+      args.each do |form|
+        if comment?(form)
+          lines << "#{hanging}#{render(form, indent + base.length + 1)}"
+          next
+        end
+
         rendered = render(form, indent + base.length + 1)
-        if index.zero?
+        if semantic_index.zero?
           first_line, *rest = rendered.lines(chomp: true)
           candidate = "#{base} #{first_line}"
           if fits?(candidate, indent)
@@ -398,39 +445,49 @@ module Kapusta
         else
           lines << "#{hanging}#{rendered}"
         end
+        semantic_index += 1
       end
 
       append_suffix(lines, ')')
     end
 
     def render_call(list, indent)
-      head = flat_render(list.head)
-      raise Error, "cannot format form head: #{list.head.inspect}" unless head
+      head = flat_render(list_head(list))
+      raise Error, "cannot format form head: #{list_head(list).inspect}" unless head
 
       base = "(#{head}"
       lines = [base]
-      args = list.rest
+      args = list_raw_rest(list)
+      semantic_length = semantic_items(args).length
 
-      unless args.empty?
-        first = render(
-          args.first,
-          indent + base.length + 1,
-          force_expand: args.length == 1 && fn_form?(args.first)
-        )
-        first_line, *rest = first.lines(chomp: true)
-        candidate = "#{base} #{first_line}"
-
-        if fits?(candidate, indent)
-          lines[0] = candidate
-          hanging = ' ' * (base.length + 1)
-          rest.each { |line| lines << "#{hanging}#{line}" }
-        else
-          lines << indent_block(first, INDENT)
+      semantic_index = 0
+      args.each do |arg|
+        if comment?(arg)
+          lines << indent_block(render(arg, indent + INDENT), INDENT)
+          next
         end
 
-        args.drop(1).each do |arg|
+        if semantic_index.zero?
+          first = render(
+            arg,
+            indent + base.length + 1,
+            force_expand: semantic_length == 1 && fn_form?(arg)
+          )
+          first_line, *rest = first.lines(chomp: true)
+          candidate = "#{base} #{first_line}"
+
+          if lines.length == 1 && fits?(candidate, indent)
+            lines[0] = candidate
+            hanging = ' ' * (base.length + 1)
+            rest.each { |line| lines << "#{hanging}#{line}" }
+          else
+            lines << indent_block(first, INDENT)
+          end
+        else
           lines << indent_block(render(arg, indent + INDENT), INDENT)
         end
+
+        semantic_index += 1
       end
 
       append_suffix(lines, ')')
@@ -440,15 +497,14 @@ module Kapusta
       flat = flat_render(vec)
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(vec, top_level:, layout:)
 
-      if layout == :pairwise
+      if layout == :pairwise && !contains_comments?(vec.items)
         render_pairwise_vec(vec, indent)
       else
         lines = ['[']
         vec.items.each do |item|
           lines << indent_block(render(item, indent + INDENT), INDENT)
         end
-        lines << ']'
-        lines.join("\n")
+        append_suffix(lines, ']')
       end
     end
 
@@ -474,6 +530,7 @@ module Kapusta
     end
 
     def render_let_bindings(bindings, indent)
+      return render(bindings, indent + '(let '.length, force_expand: true) if contains_comments?(bindings.items)
       return render(bindings, indent + '(let '.length, layout: :pairwise) if bindings.items.length <= 2
 
       hanging = render_hanging_pairwise_vec(bindings)
@@ -504,18 +561,22 @@ module Kapusta
 
       lines = ['{']
 
-      hash.pairs.each do |key, value|
-        pair = flat_hash_pair(key, value)
-        if fits?(pair, indent + INDENT)
-          lines << indent_block(pair, INDENT)
+      hash.entries.each do |entry|
+        if comment?(entry)
+          lines << indent_block(render(entry, indent + INDENT), INDENT)
         else
-          lines << indent_block(render_hash_key(key), INDENT)
-          lines << indent_block(render(value, indent + INDENT), INDENT)
+          key, value = entry
+          pair = flat_hash_pair(key, value)
+          if pair && fits?(pair, indent + INDENT)
+            lines << indent_block(pair, INDENT)
+          else
+            lines << indent_block(render_hash_key(key), INDENT)
+            lines << indent_block(render(value, indent + INDENT), INDENT)
+          end
         end
       end
 
-      lines << '}'
-      lines.join("\n")
+      append_suffix(lines, '}')
     end
 
     def flat_hash_pair(key, value)
@@ -564,17 +625,19 @@ module Kapusta
     end
 
     def hashfn_literal?(form)
-      form.is_a?(List) &&
-        form.items.length == 2 &&
-        form.items[0].is_a?(Sym) &&
-        form.items[0].name == 'hashfn'
+      return false unless form.is_a?(List)
+
+      items = semantic_items(form.items)
+      items.length == 2 &&
+        items[0].is_a?(Sym) &&
+        items[0].name == 'hashfn'
     end
 
     def allow_flat?(form, top_level:, layout:)
-      return false if layout == :pairwise && form.is_a?(Vec) && form.items.length > 2
+      return false if layout == :pairwise && form.is_a?(Vec) && semantic_items(form.items).length > 2
       return true unless form.is_a?(List)
 
-      head = form.head
+      head = list_head(form)
       return true unless head.is_a?(Sym)
 
       case head.name
@@ -587,9 +650,12 @@ module Kapusta
     end
 
     def force_multiline_body?(form)
-      return false unless form.is_a?(List) && form.head.is_a?(Sym)
+      return false unless form.is_a?(List)
 
-      case form.head.name
+      head = list_head(form)
+      return false unless head.is_a?(Sym)
+
+      case head.name
       when 'if', 'case', 'match', 'let', 'try', 'catch', 'finally', 'do', 'for', '->', '->>', '-?>', '-?>>', 'doto',
            'fn', 'lambda', 'λ'
         true
@@ -600,7 +666,7 @@ module Kapusta
     end
 
     def fn_body(form)
-      args = form.rest
+      args = list_rest(form)
       if args[0].is_a?(Sym) && args[1].is_a?(Vec)
         args.drop(2)
       else
@@ -616,23 +682,27 @@ module Kapusta
       return true if require_form?(form)
       return false unless form.is_a?(List) && flat_render(form)
 
-      head = form.head
+      head = list_head(form)
       return false unless head.is_a?(Sym)
 
       !%w[fn module class let].include?(head.name)
     end
 
     def require_form?(form)
-      form.is_a?(List) &&
-        form.items.length == 2 &&
-        form.head.is_a?(Sym) &&
-        form.head.name == 'require'
+      return false unless form.is_a?(List)
+
+      items = semantic_items(form.items)
+      items.length == 2 &&
+        items[0].is_a?(Sym) &&
+        items[0].name == 'require'
     end
 
     def fn_form?(form)
-      form.is_a?(List) &&
-        form.head.is_a?(Sym) &&
-        %w[fn lambda λ].include?(form.head.name)
+      return false unless form.is_a?(List)
+
+      head = list_head(form)
+      head.is_a?(Sym) &&
+        %w[fn lambda λ].include?(head.name)
     end
 
     def inline_three_arg_if?(args)
@@ -670,8 +740,82 @@ module Kapusta
 
     def append_suffix(lines, suffix)
       updated = lines.dup
-      updated[-1] = "#{updated[-1]}#{suffix}"
+      if updated[-1].lstrip.start_with?(';')
+        updated << suffix
+      else
+        updated[-1] = "#{updated[-1]}#{suffix}"
+      end
       updated.join("\n")
+    end
+
+    def render_generic_list(list, indent)
+      lines = ['(']
+      list.items.each do |item|
+        lines << indent_block(render(item, indent + INDENT), INDENT)
+      end
+      append_suffix(lines, ')')
+    end
+
+    def render_sequential_head_form(head, raw_items, indent)
+      lines = ["(#{head}"]
+      semantic_index = 0
+
+      raw_items.each do |item|
+        if comment?(item)
+          lines << indent_block(render(item, indent + INDENT), INDENT)
+          next
+        end
+
+        rendered = render(item, indent + INDENT)
+        if semantic_index.zero?
+          candidate = "(#{head} #{rendered}"
+          if lines.length == 1 && single_line?(rendered) && fits?(candidate, indent)
+            lines[0] = candidate
+          else
+            lines << indent_block(rendered, INDENT)
+          end
+        else
+          lines << indent_block(rendered, INDENT)
+        end
+        semantic_index += 1
+      end
+
+      append_suffix(lines, ')')
+    end
+
+    def contains_comments?(items)
+      items.any? { |item| comment?(item) }
+    end
+
+    def semantic_items(items)
+      items.reject { |item| comment?(item) }
+    end
+
+    def list_head(list)
+      semantic_items(list.items).first
+    end
+
+    def list_rest(list)
+      semantic_items(list.items).drop(1)
+    end
+
+    def list_raw_rest(list)
+      index = list.items.index { |item| !comment?(item) }
+      return list.items if index.nil?
+
+      list.items[(index + 1)..] || []
+    end
+
+    def split_raw_items(items, semantic_count)
+      split_index = 0
+      seen = 0
+
+      while split_index < items.length && seen < semantic_count
+        seen += 1 unless comment?(items[split_index])
+        split_index += 1
+      end
+
+      [items.take(split_index), items.drop(split_index)]
     end
 
     def print_help

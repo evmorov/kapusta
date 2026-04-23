@@ -128,16 +128,108 @@ RSpec.describe Kapusta::Formatter do
     expect(error_output).to include('Cannot use --fix with stdin (-).')
   end
 
-  it 'rejects comments instead of dropping them' do
+  it 'preserves top-level comments and comments inside forms' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')
-      File.write(path, "(fn main [] ; comment\n  (print 1))\n")
+      File.write(path, <<~KAP)
+        ; entry point
+        (fn main [] ; inline body comment
+          (print 1))
+      KAP
 
-      error_output = capture_stderr do
-        expect(described_class.new([path]).run).to eq(1)
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
       end
 
-      expect(error_output).to include('kapfmt does not support comments yet.')
+      expect(output).to eq(<<~KAP)
+        ; entry point
+        (fn main []
+          ; inline body comment
+          (print 1))
+      KAP
+    end
+  end
+
+  it 'normalizes end-of-line comments into standalone indented comments' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [words ["red" "green" "blue"]] ; source data
+          (-> words ; start pipeline
+              (: :select (fn [w] (< (length w) 5))) ; keep short words
+              (: :map (fn [w] (w.upcase)))))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (let [words ["red" "green" "blue"]]
+          ; source data
+          (-> words
+              ; start pipeline
+              (: :select (fn [w] (< (length w) 5)))
+              ; keep short words
+              (: :map (fn [w] (w.upcase)))))
+      KAP
+    end
+  end
+
+  it 'preserves comments in multiline collections' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [profile {:name "Ada"
+                       ; active user
+                       :active true}
+              ; next binding
+              role "Engineer"]
+          (print profile role))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (let
+          [
+            profile
+            {
+              :name "Ada"
+              ; active user
+              :active true}
+            ; next binding
+            role
+            "Engineer"]
+          (print profile role))
+      KAP
+    end
+  end
+
+  it 'preserves indented comments in nested bodies' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (fn classify [score]
+          (if (> score 90)
+            ; fast path for top scores
+            :great
+            :ok))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (fn classify [score]
+          (if (> score 90)
+            ; fast path for top scores
+            :great
+            :ok))
+      KAP
     end
   end
 

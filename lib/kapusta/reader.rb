@@ -5,13 +5,14 @@ module Kapusta
     WHITESPACE = [' ', "\t", "\n", "\r", "\f", "\v", ','].freeze
     DELIMS = ['(', ')', '[', ']', '{', '}', '"', ';'].freeze
 
-    def self.read_all(source)
-      new(source).read_all
+    def self.read_all(source, preserve_comments: false)
+      new(source, preserve_comments:).read_all
     end
 
-    def initialize(source)
+    def initialize(source, preserve_comments: false)
       @src = source
       @pos = 0
+      @preserve_comments = preserve_comments
     end
 
     def read_all
@@ -20,7 +21,7 @@ module Kapusta
         skip_ws
         break if eof?
 
-        forms << read_form
+        forms << read_next_item
       end
       forms
     end
@@ -46,7 +47,7 @@ module Kapusta
         char = peek
         if WHITESPACE.include?(char)
           advance
-        elsif char == ';'
+        elsif !@preserve_comments && char == ';'
           advance until eof? || peek == "\n"
         else
           break
@@ -58,9 +59,20 @@ module Kapusta
       char.nil? || WHITESPACE.include?(char) || DELIMS.include?(char)
     end
 
+    def read_next_item
+      skip_ws
+      raise 'unexpected eof' if eof?
+
+      return read_comment if @preserve_comments && peek == ';'
+
+      read_form
+    end
+
     def read_form
       skip_ws
       raise 'unexpected eof' if eof?
+
+      return read_comment if @preserve_comments && peek == ';'
 
       form =
         case peek
@@ -84,7 +96,7 @@ module Kapusta
         raise 'unclosed (' if eof?
         break if peek == ')'
 
-        items << read_form
+        items << read_next_item
       end
       advance
       List.new(items)
@@ -98,7 +110,7 @@ module Kapusta
         raise 'unclosed [' if eof?
         break if peek == ']'
 
-        items << read_form
+        items << read_next_item
       end
       advance
       Vec.new(items)
@@ -106,32 +118,30 @@ module Kapusta
 
     def read_hash
       advance
-      items = []
+      entries = []
+      pending = []
       loop do
         skip_ws
         raise 'unclosed {' if eof?
         break if peek == '}'
 
-        items << read_form
+        item = read_next_item
+        if item.is_a?(Comment)
+          entries << item
+          next
+        end
+
+        pending << item
+        next unless pending.length == 2
+
+        entries << normalize_hash_pair(pending[0], pending[1])
+        pending.clear
       end
       advance
 
-      pairs = []
-      i = 0
-      while i < items.length
-        item = items[i]
-        if item.is_a?(Sym) && item.name == ':'
-          sym = items[i + 1]
-          raise 'bad shorthand' unless sym.is_a?(Sym)
+      raise 'odd number of forms in hash' unless pending.empty?
 
-          key = Kapusta.kebab_to_snake(sym.name).to_sym
-          pairs << [key, sym]
-        else
-          pairs << [item, items[i + 1]]
-        end
-        i += 2
-      end
-      HashLit.new(pairs)
+      HashLit.new(entries)
     end
 
     def read_string
@@ -168,6 +178,12 @@ module Kapusta
       advance
       form = read_form
       List.new([Sym.new('hashfn'), form])
+    end
+
+    def read_comment
+      start = @pos
+      advance until eof? || peek == "\n"
+      Comment.new(@src[start...@pos].rstrip)
     end
 
     def read_postfix(form)
@@ -209,6 +225,17 @@ module Kapusta
         Kapusta.kebab_to_snake(token[1..]).to_sym
       else
         Sym.new(token)
+      end
+    end
+
+    def normalize_hash_pair(item, value)
+      if item.is_a?(Sym) && item.name == ':'
+        raise 'bad shorthand' unless value.is_a?(Sym)
+
+        key = Kapusta.kebab_to_snake(value.name).to_sym
+        [key, value]
+      else
+        [item, value]
       end
     end
   end

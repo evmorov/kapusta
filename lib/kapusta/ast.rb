@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 module Kapusta
+  class Comment
+    attr_reader :text
+
+    def initialize(text)
+      @text = text
+    end
+  end
+
   class Sym
     attr_reader :name
 
@@ -43,14 +51,18 @@ module Kapusta
   end
 
   class HashLit
-    attr_reader :pairs
+    attr_reader :entries
 
-    def initialize(pairs)
-      @pairs = pairs
+    def initialize(entries)
+      @entries = entries
+    end
+
+    def pairs
+      @entries.grep(Array)
     end
 
     def all_sym_keys?
-      @pairs.all? { |key, _| key.is_a?(Symbol) }
+      pairs.all? { |key, _| key.is_a?(Symbol) }
     end
   end
 

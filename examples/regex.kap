@@ -1,9 +1,11 @@
 (fn parse-date [s]
   (let [re (ruby "/\\A(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})\\z/")]
+    ; Match YYYY-MM-DD and expose the named captures.
     (case (re.match s)
       nil nil
       m (m.named-captures))))
 
 (each [_ s (ipairs ["2026-04-23" "hello" "1999-12-31"])]
+  ; Show both successful and failed parses.
   (let [parsed (parse-date s)]
     (print (.. s " -> " parsed))))
