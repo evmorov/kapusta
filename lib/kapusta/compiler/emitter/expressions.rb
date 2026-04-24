@@ -71,7 +71,7 @@ module Kapusta
           when '?.' then emit_safe_lookup(args, env, current_scope)
           when ':' then emit_colon(args, env, current_scope)
           when '..' then emit_concat(args, env, current_scope)
-          when 'length' then "(#{emit_expr(args[0], env, current_scope)}).length"
+          when 'length' then "#{parenthesize(emit_expr(args[0], env, current_scope))}.length"
           when 'require' then emit_require(args[0], env, current_scope)
           when 'module' then emit_module_expr(args, env)
           when 'class' then emit_class_expr(args, env)
