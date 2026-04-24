@@ -68,9 +68,7 @@ module Kapusta
           when '.' then emit_lookup(args, env, current_scope)
           when '?.' then emit_safe_lookup(args, env, current_scope)
           when ':' then emit_colon(args, env, current_scope)
-          when '..' then runtime_call(:concat, args.map do |arg|
-            emit_expr(arg, env, current_scope)
-          end)
+          when '..' then emit_concat(args, env, current_scope)
           when 'length' then "(#{emit_expr(args[0], env, current_scope)}).length"
           when 'require' then emit_require(args[0], env, current_scope)
           when 'module' then emit_module_expr(args, env)
@@ -95,12 +93,30 @@ module Kapusta
           when '*' then emit_reduce(args, env, current_scope, '1', :*)
           when '/' then emit_div(args, env, current_scope)
           when '%' then args.map { |arg| parenthesize(emit_expr(arg, env, current_scope)) }.join(' % ')
-          when 'print' then runtime_call(:print_values, *args.map do |arg|
-            emit_expr(arg, env, current_scope)
-          end)
+          when 'print' then emit_print(args, env, current_scope)
           else
             raise Error, "unknown special form: #{name}"
           end
+        end
+
+        def emit_concat(args, env, current_scope)
+          return '""' if args.empty?
+
+          args.map { |arg| emit_string_part(arg, env, current_scope) }.join(' + ')
+        end
+
+        def emit_print(args, env, current_scope)
+          return '$stdout.puts("")' if args.empty?
+
+          values = args.map { |arg| emit_string_part(arg, env, current_scope) }
+          output = values.length == 1 ? values.first : "[#{values.join(', ')}].join(\"\\t\")"
+          "$stdout.puts(#{output})"
+        end
+
+        def emit_string_part(arg, env, current_scope)
+          return arg.inspect if arg.is_a?(String)
+
+          runtime_call(:stringify, emit_expr(arg, env, current_scope))
         end
       end
     end
