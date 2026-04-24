@@ -38,11 +38,11 @@ module Kapusta
         when 'when'
           cond = items[1]
           body = wrap_do(items[2..])
-          List.new([Sym.new('if'), cond, body, nil])
+          List.new([Sym.new('if'), cond, body])
         when 'unless'
           cond = items[1]
           body = wrap_do(items[2..])
-          List.new([Sym.new('if'), cond, nil, body])
+          List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body])
         when 'tset'
           List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]])
         when 'pcall'
