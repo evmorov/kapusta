@@ -62,7 +62,7 @@ module Kapusta
     end
 
     def all_sym_keys?
-      pairs.all? { |key, _| key.is_a?(Symbol) }
+      pairs.any? && pairs.all? { |key, _| key.is_a?(Symbol) }
     end
   end
 

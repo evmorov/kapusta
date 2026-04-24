@@ -1,0 +1,17 @@
+(let [
+  two-sum-hash
+  (fn [nums target seen]
+    (var i 0)
+    (var answer nil)
+    (while (and (< i (length nums)) (= answer nil))
+      (let [n (. nums i)
+            complement (- target n)]
+        (if (seen.key? complement)
+            (set answer [(. seen complement) i])
+            (tset seen n i)))
+      (set i (+ i 1)))
+    answer)
+]
+  (print (two-sum-hash [2 7 11 15] 9 {}))
+  (print (two-sum-hash [3 2 4] 6 {}))
+  (print (two-sum-hash [1 2 3] 10 {})))
