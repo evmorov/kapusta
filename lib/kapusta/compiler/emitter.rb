@@ -34,11 +34,7 @@ module Kapusta
         env = Env.new
         body = emit_forms_with_headers(forms, env, :toplevel)
         helpers = Runtime.helper_source(@runtime_helpers)
-        [
-          '# frozen_string_literal: true',
-          helpers,
-          body
-        ].reject(&:empty?).join("\n\n") << "\n"
+        [helpers, body].reject(&:empty?).join("\n\n") << "\n"
       end
     end
   end
