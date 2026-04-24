@@ -1,0 +1,5 @@
+(let [__doto__ 99
+      xs []]
+  (doto xs
+        (: :push __doto__))
+  (print (xs.inspect)))

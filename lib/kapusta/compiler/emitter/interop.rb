@@ -322,7 +322,7 @@ module Kapusta
           name = sym.name
           return 'self' if name == 'self'
           return 'Float::INFINITY' if name == 'math.huge'
-          return binding_value_code(env.lookup(name)) if env.defined?(name)
+          return binding_value_code(env.lookup(sym)) if env.defined?(sym)
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)

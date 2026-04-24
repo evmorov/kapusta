@@ -10,12 +10,13 @@ module Kapusta
     end
 
     def define(name, value)
-      @vars[name] = value
+      @vars[binding_key(name)] = value
     end
 
     def lookup(name)
-      if @vars.key?(name)
-        @vars[name]
+      key = binding_key(name)
+      if @vars.key?(key)
+        @vars[key]
       elsif @parent
         @parent.lookup(name)
       else
@@ -24,7 +25,7 @@ module Kapusta
     end
 
     def defined?(name)
-      @vars.key?(name) || @parent&.defined?(name)
+      @vars.key?(binding_key(name)) || @parent&.defined?(name)
     end
 
     def ruby_name_defined?(name)
@@ -36,8 +37,9 @@ module Kapusta
     end
 
     def set_existing!(name, value)
-      if @vars.key?(name)
-        @vars[name] = value
+      key = binding_key(name)
+      if @vars.key?(key)
+        @vars[key] = value
       elsif @parent
         @parent.set_existing!(name, value)
       else
@@ -50,6 +52,10 @@ module Kapusta
     end
 
     private
+
+    def binding_key(name)
+      name.respond_to?(:binding_key) ? name.binding_key : name
+    end
 
     def binding_ruby_name(value)
       value.respond_to?(:ruby_name) ? value.ruby_name : value

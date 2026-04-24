@@ -121,13 +121,12 @@ module Kapusta
       end
 
       def thread_temp
-        @thread_temp_index = (@thread_temp_index || 0) + 1
-        Sym.new("__kap_thread_#{@thread_temp_index}__")
+        gensym('kap_thread')
       end
 
       def doto(forms)
         value = forms.first
-        temp = Sym.new('__doto__')
+        temp = gensym('kap_doto')
         body = forms[1..].map do |form|
           if form.is_a?(List)
             List.new([form.items[0], temp, *form.items[1..]])
@@ -136,6 +135,11 @@ module Kapusta
           end
         end
         List.new([Sym.new('let'), Vec.new([temp, value]), *body, temp])
+      end
+
+      def gensym(prefix)
+        @gensym_index = (@gensym_index || 0) + 1
+        GeneratedSym.new("#{prefix}_#{@gensym_index}", @gensym_index)
       end
     end
   end

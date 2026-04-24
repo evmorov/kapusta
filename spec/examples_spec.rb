@@ -71,6 +71,10 @@ RSpec.describe 'examples' do
     expect(run_example('doto.kap')).to eq("1, 2, 3\n")
   end
 
+  it 'doto-hygiene.kap' do
+    expect(run_example('doto-hygiene.kap')).to eq("[99]\n")
+  end
+
   it 'describe.kap' do
     expect(run_example('describe.kap')).to eq("-3\tnegative\n0\tzero\n1\tone\n2\tmany\n99\tmany\n")
   end

@@ -191,7 +191,7 @@ module Kapusta
 
         def local_name(source_name, env, shadow:)
           base = sanitize_local(source_name)
-          base = "user_#{base}" if reserved_generated_name?(base)
+          base = "user_#{base}" if !generated_symbol?(source_name) && reserved_generated_name?(base)
           return base unless ruby_name_defined?(env, base, shadow:)
 
           index = 2
@@ -209,6 +209,10 @@ module Kapusta
 
         def reserved_generated_name?(name)
           name.start_with?('kap_', '__kap_')
+        end
+
+        def generated_symbol?(source_name)
+          source_name.is_a?(GeneratedSym)
         end
 
         def runtime_helper(name)
@@ -272,7 +276,7 @@ module Kapusta
         end
 
         def sanitize_local(name)
-          base = Kapusta.kebab_to_snake(name)
+          base = Kapusta.kebab_to_snake(name.respond_to?(:name) ? name.name : name)
           base = base.gsub('?', '_q').gsub('!', '_bang')
           base = base.gsub(/[^a-zA-Z0-9_]/, '_')
           if base.empty? || base.match?(/\A\d/) || base.match?(/\A[A-Z]/) || self.class::RUBY_KEYWORDS.include?(base)

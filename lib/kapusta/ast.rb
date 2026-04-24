@@ -25,12 +25,16 @@ module Kapusta
     end
 
     def ==(other)
-      other.is_a?(Sym) && other.name == @name
+      other.instance_of?(self.class) && other.name == @name
     end
     alias eql? ==
 
     def hash
-      @name.hash
+      [self.class, @name].hash
+    end
+
+    def binding_key
+      @name
     end
 
     def dotted?
@@ -39,6 +43,32 @@ module Kapusta
 
     def segments
       @name.split('.')
+    end
+  end
+
+  class GeneratedSym < Sym
+    attr_reader :id
+
+    def initialize(name, id)
+      super(name)
+      @id = id
+    end
+
+    def inspect
+      "#<GeneratedSym #{@name} #{@id}>"
+    end
+
+    def ==(other)
+      other.is_a?(GeneratedSym) && other.id == @id
+    end
+    alias eql? ==
+
+    def hash
+      [self.class, @id].hash
+    end
+
+    def binding_key
+      [self.class, @id]
     end
   end
 

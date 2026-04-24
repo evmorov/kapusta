@@ -10,7 +10,7 @@ module Kapusta
           if pattern.is_a?(Sym)
             return ['nil', env] if pattern.name == '_'
 
-            ruby_name = define_local(env, pattern.name)
+            ruby_name = define_local(env, pattern)
             ["#{ruby_name} = #{value_code}", env]
           else
             bindings_var = temp('bindings')
