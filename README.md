@@ -41,30 +41,6 @@ account = BankAccount.new('Ada', 100)
 
 See `examples/bank-account.kap` and `examples/use_bank_account.rb`.
 
-## Comparison with Fennel
-
-Kapusta keeps most core Fennel forms. The main differences come from Ruby's runtime and object model.
-
-| Fennel                                | Kapusta                                               |
-|---------------------------------------|-------------------------------------------------------|
-| Lua stdlib                            | Ruby stdlib                                           |
-| `:foo` is a Lua string                | `:foo` is a Ruby symbol                               |
-| `(. xs 1)` is the first element       | `(. xs 0)` is the first element                       |
-| `string.format`, `table.insert`, etc. | use Ruby methods and stdlib instead                   |
-| `values` uses Lua multiple returns    | `values` lowers to a Ruby array, usually destructured |
-| `(print x)` is Lua's `print` (bare)   | `(print x)` is Ruby's `p` (inspect-style)             |
-| `with-open`, `tail!`                  | not provided                                          |
-| macros                                | not provided for now                                  |
-
-Kapusta-specific additions:
-
-- `module` and `class` for Ruby host structure, including file-header forms
-- `ivar` (`@var`) / `cvar` (`@@var`) / `gvar` (`$var`) escape hatches
-- `try` / `catch` / `finally` plus `raise` for exceptions
-- `(ruby "...")` raw host escape hatch
-- a trailing symbol-keyed hash is emitted as Ruby keyword arguments
-- a final function literal argument is emitted as a Ruby block
-
 ## Examples
 
 See `examples/`.
@@ -94,6 +70,30 @@ end
 p(ack(2, 3))
 p(ack(3, 3))
 ```
+
+## Comparison with Fennel
+
+Kapusta keeps most core Fennel forms. The main differences come from Ruby's runtime and object model.
+
+| Fennel                                | Kapusta                                               |
+|---------------------------------------|-------------------------------------------------------|
+| Lua stdlib                            | Ruby stdlib                                           |
+| `:foo` is a Lua string                | `:foo` is a Ruby symbol                               |
+| `(. xs 1)` is the first element       | `(. xs 0)` is the first element                       |
+| `string.format`, `table.insert`, etc. | use Ruby methods and stdlib instead                   |
+| `values` uses Lua multiple returns    | `values` lowers to a Ruby array, usually destructured |
+| `(print x)` is Lua's `print` (bare)   | `(print x)` is Ruby's `p` (inspect-style)             |
+| `with-open`, `tail!`                  | not provided                                          |
+| macros                                | not provided for now                                  |
+
+Kapusta-specific additions:
+
+- `module` and `class` for Ruby host structure, including file-header forms
+- `ivar` (`@var`) / `cvar` (`@@var`) / `gvar` (`$var`) escape hatches
+- `try` / `catch` / `finally` plus `raise` for exceptions
+- `(ruby "...")` raw host escape hatch
+- a trailing symbol-keyed hash is emitted as Ruby keyword arguments
+- a final function literal argument is emitted as a Ruby block
 
 ## Formatting
 
