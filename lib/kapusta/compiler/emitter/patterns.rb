@@ -61,7 +61,7 @@ module Kapusta
             elsif or_pattern?(pattern)
               emit_or_match_pattern(pattern, env, mode:, allow_pins:, state:)
             elsif where_pattern?(pattern)
-              raise Error, '`where` is only valid as a case/match clause head'
+              emit_error!('`where` is only valid as a case/match clause head')
             else
               emit_sequence_match_pattern(pattern.items, env, mode:, allow_pins:, state:)
             end
@@ -70,7 +70,7 @@ module Kapusta
           when Symbol, String, Numeric, true, false
             "[:lit, #{pattern.inspect}]"
           else
-            raise Error, "bad pattern: #{pattern.inspect}"
+            emit_error!("bad pattern: #{pattern.inspect}")
           end
         end
 
@@ -116,13 +116,13 @@ module Kapusta
         end
 
         def emit_pin_match_pattern(pattern, env, mode:, allow_pins:)
-          raise Error, 'pin patterns are only supported inside `case` guards' unless allow_pins && mode == :case
+          emit_error!('pin patterns are only supported inside `case` guards') unless allow_pins && mode == :case
 
           name_sym = pattern.items[1]
-          raise Error, "bad pin pattern: #{pattern.inspect}" unless name_sym.is_a?(Sym)
+          emit_error!("bad pin pattern: #{pattern.inspect}") unless name_sym.is_a?(Sym)
 
           binding = env.lookup_if_defined(name_sym.name)
-          raise Error, "cannot pin undefined name: #{name_sym.name}" unless binding
+          emit_error!("cannot pin undefined name: #{name_sym.name}") unless binding
 
           "[:pin, #{binding_value_code(binding)}]"
         end
@@ -139,7 +139,7 @@ module Kapusta
             compiled = emit_match_pattern(subpattern, env, mode:, allow_pins:, state: alt_state)
             alt_names = alt_state[:binding_names][initial_names..]
             canonical_names ||= alt_names
-            raise Error, 'all `or` patterns must bind the same names' if canonical_names.sort != alt_names.sort
+            emit_error!('all `or` patterns must bind the same names') if canonical_names.sort != alt_names.sort
 
             compiled
           end
@@ -177,7 +177,7 @@ module Kapusta
           when Symbol, String, Numeric, true, false
             "[:lit, #{pattern.inspect}]"
           else
-            raise Error, "bad pattern: #{pattern.inspect}"
+            emit_error!("bad pattern: #{pattern.inspect}")
           end
         end
 

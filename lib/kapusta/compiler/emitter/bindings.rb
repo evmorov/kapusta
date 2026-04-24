@@ -275,7 +275,7 @@ module Kapusta
             binding = env.lookup_if_defined(target.name)
             ruby_name =
               if binding
-                raise Error, "cannot set method binding: #{target.name}" if method_binding?(binding)
+                emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
 
                 binding
               else
@@ -301,7 +301,7 @@ module Kapusta
               runtime_call(:set_method_path, base_code, segments.inspect, value_code)
             else
               binding = env.lookup(target.name)
-              raise Error, "cannot set method binding: #{target.name}" if method_binding?(binding)
+              emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
 
               "#{binding} = #{value_code}"
             end
@@ -323,10 +323,10 @@ module Kapusta
                 runtime_call(:set_gvar, target.items[1].name.inspect, value_code)
               end
             else
-              raise Error, "bad set target: #{target.inspect}"
+              emit_error!("bad set target: #{target.inspect}")
             end
           else
-            raise Error, "bad set target: #{target.inspect}"
+            emit_error!("bad set target: #{target.inspect}")
           end
         end
       end

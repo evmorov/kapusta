@@ -6,6 +6,10 @@ module Kapusta
       module Support
         private
 
+        def emit_error!(message)
+          raise Error, "#{@path}: #{message}"
+        end
+
         def emit_forms_with_headers(forms, env, current_scope, result: true)
           i = 0
           codes = []

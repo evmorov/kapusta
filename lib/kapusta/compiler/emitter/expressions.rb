@@ -17,7 +17,7 @@ module Kapusta
           when List then emit_list(form, env, current_scope)
           when String, Symbol, Numeric, true, false, nil then form.inspect
           else
-            raise Error, "cannot emit form: #{form.inspect}"
+            emit_error!("cannot emit form: #{form.inspect}")
           end
         end
 
@@ -97,7 +97,7 @@ module Kapusta
           when '%' then args.map { |arg| parenthesize(emit_expr(arg, env, current_scope)) }.join(' % ')
           when 'print' then emit_print(args, env, current_scope)
           else
-            raise Error, "unknown special form: #{name}"
+            emit_error!("unknown special form: #{name}")
           end
         end
 

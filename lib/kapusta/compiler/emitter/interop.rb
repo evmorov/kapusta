@@ -330,7 +330,7 @@ module Kapusta
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
 
-          raise Error, "undefined symbol: #{name}"
+          emit_error!("undefined symbol: #{name}")
         end
 
         def emit_gvar(sym)
@@ -359,7 +359,7 @@ module Kapusta
               const_path << segments[idx]
               idx += 1
             end
-            raise Error, "bad multisym: #{segments.join('.')}" if const_path.empty?
+            emit_error!("bad multisym: #{segments.join('.')}") if const_path.empty?
 
             [const_path.join('::'), segments[idx..]]
           end
