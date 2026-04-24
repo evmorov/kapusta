@@ -9,45 +9,6 @@ module Kapusta
       }.freeze
 
       HELPER_SOURCES = {
-        call: <<~'RUBY'.chomp,
-          def kap_call(callee, positional, kwargs = nil, block = nil)
-            raise "not callable: #{callee.inspect}" unless callee.respond_to?(:call)
-
-            if block
-              kwargs ? callee.call(*positional, **kwargs, &block) : callee.call(*positional, &block)
-            else
-              kwargs ? callee.call(*positional, **kwargs) : callee.call(*positional)
-            end
-          end
-        RUBY
-        send_call: <<~RUBY.chomp,
-          def kap_send_call(receiver, method_name, positional, kwargs = nil, block = nil)
-            if block
-              if kwargs
-                receiver.public_send(method_name, *positional, **kwargs, &block)
-              else
-                receiver.public_send(method_name, *positional, &block)
-              end
-            elsif kwargs
-              receiver.public_send(method_name, *positional, **kwargs)
-            else
-              receiver.public_send(method_name, *positional)
-            end
-          end
-        RUBY
-        invoke_self: <<~RUBY.chomp,
-          def kap_invoke_self(receiver, method_name, positional, kwargs = nil, block = nil)
-            if block
-              if kwargs
-                receiver.send(method_name, *positional, **kwargs, &block)
-              else
-                receiver.send(method_name, *positional, &block)
-              end
-            else
-              kwargs ? receiver.send(method_name, *positional, **kwargs) : receiver.send(method_name, *positional)
-            end
-          end
-        RUBY
         qget_path: <<~RUBY.chomp,
           def kap_qget_path(obj, keys)
             keys.each do |key|

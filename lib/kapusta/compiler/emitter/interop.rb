@@ -25,7 +25,8 @@ module Kapusta
           receiver = emit_expr(args[0], env, current_scope)
           method_name = emit_method_name(args[1], env, current_scope)
           positional, kwargs, block = split_call_args(args[2..], env, current_scope)
-          runtime_call(:send_call, receiver, method_name, positional, kwargs, block)
+          parts = build_call_args([method_name, *positional], kwargs, block)
+          "#{receiver}.public_send(#{parts})"
         end
 
         def emit_require(arg, env, current_scope)
@@ -231,9 +232,16 @@ module Kapusta
 
         def emit_callable_call(callee_code, args, env, current_scope)
           positional, kwargs, block = split_call_args(args, env, current_scope)
-          return emit_direct_callable_call(callee_code, positional) unless kwargs || block
+          rendered = build_call_args(positional, kwargs, block)
+          suffix = rendered.empty? ? '.call' : ".call(#{rendered})"
+          "#{parenthesize(callee_code)}#{suffix}"
+        end
 
-          runtime_call(:call, callee_code, "[#{positional.join(', ')}]", kwargs, block)
+        def build_call_args(positional, kwargs, block)
+          parts = positional.dup
+          parts << "**#{kwargs}" if kwargs
+          parts << "&#{block}" if block
+          parts.join(', ')
         end
 
         def emit_bound_call(binding, args, env, current_scope)
@@ -252,25 +260,20 @@ module Kapusta
           args.empty? ? "#{method_name}()" : "#{method_name}(#{args})"
         end
 
-        def emit_direct_callable_call(callee_code, positional)
-          rendered_args = positional.join(', ')
-          suffix = rendered_args.empty? ? '.call' : ".call(#{rendered_args})"
-          "#{parenthesize(callee_code)}#{suffix}"
-        end
-
         def emit_multisym_call(head, args, env, current_scope)
           base_code, segments = multisym_base(head.segments, env)
           if segments.empty?
             emit_callable_call(base_code, args, env, current_scope)
           else
             receiver = emit_method_path(base_code, segments[0...-1])
-            method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
             positional, kwargs, block = split_call_args(args, env, current_scope)
             if !kwargs && !block && direct_method_name?(segments.last)
               return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last), positional)
             end
 
-            runtime_call(:send_call, receiver, method_name, positional, kwargs, block)
+            method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
+            parts = build_call_args([method_name, *positional], kwargs, block)
+            "#{receiver}.public_send(#{parts})"
           end
         end
 
@@ -295,7 +298,8 @@ module Kapusta
         def emit_self_call(name, args, env, current_scope)
           positional, kwargs, block = split_call_args(args, env, current_scope)
           method_name = Kapusta.kebab_to_snake(name).to_sym.inspect
-          runtime_call(:invoke_self, 'self', method_name, positional, kwargs, block)
+          parts = build_call_args([method_name, *positional], kwargs, block)
+          "send(#{parts})"
         end
 
         def split_call_args(args, env, current_scope)
