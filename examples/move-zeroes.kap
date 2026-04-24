@@ -1,7 +1,7 @@
 (fn move-zeroes [nums]
   (var write 0)
   (for [read 0 (- (length nums) 1)]
-    (when (not (= (. nums read) 0))
+    (when (not= (. nums read) 0)
       (tset nums write (. nums read))
       (set write (+ write 1))))
   (for [i write (- (length nums) 1)]

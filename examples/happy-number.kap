@@ -10,7 +10,7 @@
 (fn happy? [n]
   (let [seen {}]
     (var x n)
-    (while (and (not (= x 1)) (not (seen.key? x)))
+    (while (and (not= x 1) (not (seen.key? x)))
       (tset seen x true)
       (set x (sum-of-squares x)))
     (= x 1)))

@@ -215,6 +215,15 @@ module Kapusta
           end.join(' && ')
         end
 
+        def emit_compare_any(args, env, current_scope, operator)
+          values = args.map { |arg| emit_expr(arg, env, current_scope) }
+          return 'false' if values.length <= 1
+
+          (0...(values.length - 1)).map do |i|
+            "#{parenthesize(values[i])} #{operator} #{parenthesize(values[i + 1])}"
+          end.join(' || ')
+        end
+
         def emit_reduce(args, env, current_scope, empty_value, operator)
           return empty_value if args.empty?
 
