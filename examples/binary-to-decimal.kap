@@ -1,0 +1,7 @@
+(fn binary-to-decimal [bits]
+  (faccumulate [value 0 i 0 (- (length bits) 1)]
+    (+ (* value 2) (if (= (. bits i) "1") 1 0))))
+
+(print (binary-to-decimal "1011"))
+(print (binary-to-decimal "0"))
+(print (binary-to-decimal "101010"))

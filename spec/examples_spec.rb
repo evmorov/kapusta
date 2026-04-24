@@ -43,6 +43,10 @@ RSpec.describe 'examples' do
     expect(run_example('binary-search.kap')).to eq("3\nnil\n")
   end
 
+  it 'binary-to-decimal.kap' do
+    expect(run_example('binary-to-decimal.kap')).to eq("11\n0\n42\n")
+  end
+
   it 'blocks-and-kwargs.kap' do
     path = File.expand_path('../tmp/blocks-and-kwargs.txt', EXAMPLES_DIR)
     FileUtils.rm_f(path)
