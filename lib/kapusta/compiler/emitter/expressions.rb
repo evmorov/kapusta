@@ -83,7 +83,7 @@ module Kapusta
           when 'ruby' then "Kernel.eval(#{emit_expr(args[0], env, current_scope)})"
           when 'and' then emit_and(args, env, current_scope)
           when 'or' then emit_or(args, env, current_scope)
-          when 'not' then "(!#{emit_expr(args[0], env, current_scope)})"
+          when 'not' then "!#{parenthesize(emit_expr(args[0], env, current_scope))}"
           when '=' then emit_compare(args, env, current_scope, '==')
           when 'not=' then "(!#{emit_special('=', args, env, current_scope)})"
           when '<' then emit_compare(args, env, current_scope, '<')

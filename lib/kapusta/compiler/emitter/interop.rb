@@ -396,7 +396,15 @@ module Kapusta
             code.match?(/\A:[a-zA-Z_]\w*[!?=]?\z/) ||
             code.match?(/\A"(?:[^"\\]|\\.)*"\z/) ||
             code.match?(/\A'(?:[^'\\]|\\.)*'\z/) ||
-            %w[nil true false self].include?(code)
+            %w[nil true false self].include?(code) ||
+            negation_simple?(code)
+        end
+
+        def negation_simple?(code)
+          return false unless code.start_with?('!') && code.length > 1
+
+          rest = code[1..]
+          simple_expression?(rest) || (rest.start_with?('(') && rest.end_with?(')'))
         end
       end
     end
