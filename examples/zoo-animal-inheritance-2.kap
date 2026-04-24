@@ -1,0 +1,8 @@
+(require "./zoo-animal-1")
+
+(class Zoo.Dog [Zoo.Animal]
+  (fn label [] (.. (self.name) " the dog"))
+  (fn bark [] "woof"))
+
+(let [dog (Zoo.Dog.new "Poppy")]
+  (print (= Zoo.Dog.superclass Zoo.Animal) (dog.kingdom) (dog.label) (dog.bark)))

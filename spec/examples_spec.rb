@@ -239,8 +239,12 @@ RSpec.describe 'examples' do
     expect(run_example('hashfn.kap')).to eq("5\n21\n")
   end
 
-  it 'inheritance.kap' do
-    expect(run_example('inheritance.kap')).to eq(<<~OUT)
+  it 'zoo-animal-1.kap' do
+    expect(run_example('zoo-animal-1.kap')).to eq('')
+  end
+
+  it 'zoo-animal-inheritance-2.kap' do
+    expect(run_example('zoo-animal-inheritance-2.kap')).to eq(<<~OUT)
       true
       "animalia"
       "Poppy the dog"
