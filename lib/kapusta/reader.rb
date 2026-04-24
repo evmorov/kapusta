@@ -222,8 +222,8 @@ module Kapusta
       return true if token == 'true'
       return false if token == 'false'
       return if token == 'nil'
-      return token.to_i if token.match?(/\A-?\d+\z/)
-      return token.to_f if token.match?(/\A-?\d+\.\d+\z/)
+      return Integer(token, 10) if token.match?(/\A-?\d+\z/)
+      return Float(token) if token.match?(/\A-?\d+\.\d+\z/)
 
       if token.start_with?(':') && token.length > 1
         Kapusta.kebab_to_snake(token[1..]).to_sym

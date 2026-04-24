@@ -21,6 +21,9 @@ Metrics/ModuleLength:
 Metrics/PerceivedComplexity:
   Enabled: false
 
+Lint/NumberConversion:
+  Enabled: true
+
 # Dynamic global-variable access in Ruby still requires eval.
 Security/Eval:
   Enabled: false
