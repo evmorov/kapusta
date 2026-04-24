@@ -1,0 +1,21 @@
+(class BankAccount)
+
+(fn initialize [owner balance]
+  (set (ivar owner) owner)
+  (set (ivar balance) balance))
+
+(fn owner []
+  (ivar owner))
+
+(fn balance []
+  (ivar balance))
+
+(fn deposit [amount]
+  (set (ivar balance)
+    (+ (ivar balance) amount))
+  self)
+
+(fn withdraw [amount]
+  (set (ivar balance)
+    (- (ivar balance) amount))
+  self)

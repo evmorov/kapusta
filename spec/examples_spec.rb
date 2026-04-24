@@ -18,6 +18,15 @@ ensure
   ARGV.replace(previous_argv)
 end
 
+def run_ruby_example(name)
+  previous_stdout = $stdout
+  $stdout = StringIO.new
+  load File.join(EXAMPLES_DIR, name)
+  $stdout.string
+ensure
+  $stdout = previous_stdout
+end
+
 RSpec.describe 'examples' do
   it 'ackermann.kap' do
     expect(run_example('ackermann.kap')).to eq("9\n61\n")
@@ -35,6 +44,17 @@ RSpec.describe 'examples' do
     expect(run_example('anonymous-greeter.kap')).to eq(<<~OUT)
       "Hello, anonymous!"
       "Hello, Ada!"
+    OUT
+  end
+
+  it 'bank-account.kap' do
+    expect(run_example('bank-account.kap')).to eq('')
+  end
+
+  it 'use_bank_account.rb' do
+    expect(run_ruby_example('use_bank_account.rb')).to eq(<<~OUT)
+      Owner:   Ada
+      Balance: 120
     OUT
   end
 
