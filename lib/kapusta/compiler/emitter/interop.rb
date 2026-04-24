@@ -8,8 +8,11 @@ module Kapusta
 
         def emit_lookup(args, env, current_scope)
           object_code = emit_expr(args[0], env, current_scope)
-          keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }.join(', ')
-          runtime_call(:get_path, object_code, "[#{keys}]")
+          keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }
+          return object_code if keys.empty?
+
+          receiver = simple_expression?(object_code) ? object_code : parenthesize(object_code)
+          "#{receiver}#{keys.map { |k| "[#{k}]" }.join}"
         end
 
         def emit_safe_lookup(args, env, current_scope)

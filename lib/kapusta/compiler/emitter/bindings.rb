@@ -316,8 +316,10 @@ module Kapusta
             head = target.head
             if head.is_a?(Sym) && head.name == '.'
               object_code = emit_expr(target.items[1], env, current_scope)
-              keys_code = "[#{target.items[2..].map { |item| emit_expr(item, env, current_scope) }.join(', ')}]"
-              runtime_call(:set_path, object_code, keys_code, value_code)
+              keys = target.items[2..].map { |item| emit_expr(item, env, current_scope) }
+              receiver = simple_expression?(object_code) ? object_code : parenthesize(object_code)
+              prefix = keys[0...-1].map { |k| "[#{k}]" }.join
+              "#{receiver}#{prefix}[#{keys.last}] = #{value_code}"
             elsif head.is_a?(Sym) && head.name == 'ivar'
               "@#{Kapusta.kebab_to_snake(target.items[1].name)} = #{value_code}"
             elsif head.is_a?(Sym) && head.name == 'cvar'

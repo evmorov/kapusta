@@ -48,11 +48,6 @@ module Kapusta
             end
           end
         RUBY
-        get_path: <<~RUBY.chomp,
-          def kap_get_path(obj, keys)
-            keys.reduce(obj) { |acc, key| acc[key] }
-          end
-        RUBY
         qget_path: <<~RUBY.chomp,
           def kap_qget_path(obj, keys)
             keys.each do |key|
@@ -61,13 +56,6 @@ module Kapusta
               obj = obj[key]
             end
             obj
-          end
-        RUBY
-        set_path: <<~RUBY.chomp,
-          def kap_set_path(obj, keys, value)
-            target = obj
-            keys[0...-1].each { |key| target = target[key] }
-            target[keys.last] = value
           end
         RUBY
         ensure_module: <<~RUBY.chomp,
