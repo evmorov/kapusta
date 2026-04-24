@@ -3,5 +3,6 @@
 (let [solution (ValidParenthesesSolution.new)]
   (print (solution.valid? "()"))
   (print (solution.valid? "()[]{}"))
+  (print (solution.valid? "([])"))
   (print (solution.valid? "(]"))
   (print (solution.valid? "([)]")))

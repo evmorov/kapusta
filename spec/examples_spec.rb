@@ -250,7 +250,7 @@ RSpec.describe 'examples' do
   end
 
   it 'valid-parentheses-2.kap' do
-    expect(run_example('valid-parentheses-2.kap')).to eq("true\ntrue\nfalse\nfalse\n")
+    expect(run_example('valid-parentheses-2.kap')).to eq("true\ntrue\ntrue\nfalse\nfalse\n")
   end
 
   it 'threading.kap' do
