@@ -1,0 +1,26 @@
+(fn inbox-line [user event]
+  (match event
+    [:score user points] (.. "score:" points)
+    [:profile user ?city] (if city (.. "city:" city) "city:nil")
+    _ "other"))
+
+(fn score-delta [user event]
+  (case event
+    (where (or [:bonus (= user) points] [:score (= user) points])
+      (> points 0)
+      (< points 10))
+    points
+    _ 0))
+
+(fn packet-kind [packet]
+  (case packet
+    [:ping seq] (.. "ping:" seq)
+    [:pong seq] (.. "pong:" seq)
+    _ "other"))
+
+(print (inbox-line "Ada" [:score "Ada" 9]))
+(print (inbox-line "Ada" [:score "Lin" 7]))
+(print (inbox-line "Ada" [:profile "Ada" nil]))
+(print (score-delta "Ada" [:bonus "Ada" 5]))
+(print (score-delta "Ada" [:score "Lin" 5]))
+(print (packet-kind [:ping 7 :fast]))

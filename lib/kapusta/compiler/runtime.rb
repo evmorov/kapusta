@@ -270,9 +270,16 @@ module Kapusta
         match_pattern_into: <<~'RUBY'.chomp
           def __kap_match_pattern_into(pattern, value, bindings)
             case pattern[0]
-            when :sym
+            when :bind
               name = pattern[1]
-              bindings[name] = value unless name == '_'
+              allow_nil = pattern[2]
+              return false if value.nil? && !allow_nil
+
+              bindings[name] = value
+              true
+            when :ref
+              bindings.key?(pattern[1]) && bindings[pattern[1]] == value
+            when :wild
               true
             when :vec
               return false unless value.is_a?(Array) || value.respond_to?(:to_ary)
@@ -290,7 +297,7 @@ module Kapusta
                 end
                 __kap_match_pattern_into(rest_pattern, array[rest_idx..], bindings)
               else
-                return false unless array.length == items.length
+                return false unless array.length >= items.length
 
                 items.each_with_index do |item, i|
                   return false unless __kap_match_pattern_into(item, array[i], bindings)
@@ -307,8 +314,16 @@ module Kapusta
               true
             when :lit
               value == pattern[1]
-            when :nil
-              value.nil?
+            when :pin
+              value == pattern[1]
+            when :or
+              pattern[1].any? do |option|
+                option_bindings = bindings.dup
+                next false unless __kap_match_pattern_into(option, value, option_bindings)
+
+                bindings.replace(option_bindings)
+                true
+              end
             else
               raise "bad pattern: #{pattern.inspect}"
             end

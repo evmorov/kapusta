@@ -169,6 +169,10 @@ RSpec.describe 'examples' do
     expect(run_example('match.kap')).to eq("Ada: 9\nLin: no score\nunknown\n")
   end
 
+  it 'packet-router.kap' do
+    expect(run_example('packet-router.kap')).to eq("score:9\nother\ncity:nil\n5\n0\nping:7\n")
+  end
+
   it 'scopes.kap' do
     expect(run_example('scopes.kap')).to eq("5\n9\n9\n9\n")
   end
@@ -223,6 +227,10 @@ RSpec.describe 'examples' do
 
   it 'threading.kap' do
     expect(run_example('threading.kap')).to eq("[Ada Lovelace]!\t<Ada!>\tnil\tATSUPAK\tnil\n")
+  end
+
+  it 'tic-tac-toe.kap' do
+    expect(run_example('tic-tac-toe.kap')).to eq("X\nO\nX\ndraw\n")
   end
 end
 

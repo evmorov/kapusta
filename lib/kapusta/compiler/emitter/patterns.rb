@@ -28,15 +28,127 @@ module Kapusta
           end
         end
 
-        def emit_bindings_from_match(pattern, bindings_var, env)
+        def emit_bindings_from_match(binding_names, bindings_var, env)
           current_env = env
           lines = []
-          pattern_names(pattern).each do |name|
+          binding_names.each do |name|
             ruby_name = temp(sanitize_local(name))
             current_env.define(name, ruby_name)
             lines << "#{ruby_name} = #{bindings_var}.fetch(#{name.inspect})"
           end
           [lines.join("\n"), current_env]
+        end
+
+        def pattern_match_plan(pattern, env, mode:, allow_pins:)
+          state = { bound_names: {}, binding_names: [] }
+          {
+            pattern: emit_match_pattern(pattern, env, mode:, allow_pins:, state:),
+            bindings: state[:binding_names]
+          }
+        end
+
+        def emit_match_pattern(pattern, env, mode:, allow_pins:, state:)
+          case pattern
+          when Sym
+            emit_symbol_match_pattern(pattern, env, mode:, state:)
+          when Vec
+            emit_sequence_match_pattern(pattern.items, env, mode:, allow_pins:, state:)
+          when HashLit
+            pairs = pattern.pairs.map do |key, value|
+              "[#{key.inspect}, #{emit_match_pattern(value, env, mode:, allow_pins:, state:)}]"
+            end
+            "[:hash, [#{pairs.join(', ')}]]"
+          when List
+            if pin_pattern?(pattern)
+              emit_pin_match_pattern(pattern, env, mode:, allow_pins:)
+            elsif or_pattern?(pattern)
+              emit_or_match_pattern(pattern, env, mode:, allow_pins:, state:)
+            elsif where_pattern?(pattern)
+              raise Error, '`where` is only valid as a case/match clause head'
+            else
+              emit_sequence_match_pattern(pattern.items, env, mode:, allow_pins:, state:)
+            end
+          when nil
+            '[:lit, nil]'
+          when Symbol, String, Numeric, true, false
+            "[:lit, #{pattern.inspect}]"
+          else
+            raise Error, "bad pattern: #{pattern.inspect}"
+          end
+        end
+
+        def emit_symbol_match_pattern(pattern, env, mode:, state:)
+          name = pattern.name
+
+          if ignored_pattern_name?(name)
+            '[:wild]'
+          elsif optional_pattern_name?(name)
+            bind_name = name.delete_prefix('?')
+            emit_named_match_pattern(bind_name, env, mode:, state:, allow_nil: true, prefer_pin: false)
+          else
+            emit_named_match_pattern(name, env, mode:, state:, allow_nil: false, prefer_pin: true)
+          end
+        end
+
+        def emit_named_match_pattern(name, env, mode:, state:, allow_nil:, prefer_pin:)
+          if state[:bound_names].key?(name)
+            "[:ref, #{name.inspect}]"
+          elsif prefer_pin && mode == :match && env.defined?(name)
+            "[:pin, #{env.lookup(name)}]"
+          else
+            state[:bound_names][name] = true
+            state[:binding_names] << name
+            "[:bind, #{name.inspect}, #{allow_nil}]"
+          end
+        end
+
+        def emit_sequence_match_pattern(items, env, mode:, allow_pins:, state:)
+          parts = []
+          i = 0
+          while i < items.length
+            if rest_pattern_marker?(items, i)
+              parts << "[:rest, #{emit_match_pattern(items[i + 1], env, mode:, allow_pins:, state:)}]"
+              i += 2
+            else
+              parts << emit_match_pattern(items[i], env, mode:, allow_pins:, state:)
+              i += 1
+            end
+          end
+          "[:vec, [#{parts.join(', ')}]]"
+        end
+
+        def emit_pin_match_pattern(pattern, env, mode:, allow_pins:)
+          raise Error, 'pin patterns are only supported inside `case` guards' unless allow_pins && mode == :case
+
+          name_sym = pattern.items[1]
+          raise Error, "bad pin pattern: #{pattern.inspect}" unless name_sym.is_a?(Sym)
+          raise Error, "cannot pin undefined name: #{name_sym.name}" unless env.defined?(name_sym.name)
+
+          "[:pin, #{env.lookup(name_sym.name)}]"
+        end
+
+        def emit_or_match_pattern(pattern, env, mode:, allow_pins:, state:)
+          initial_names = state[:binding_names].length
+          initial_bound = state[:bound_names].dup
+          bound_names = nil
+          variants = pattern.items[1..].map do |subpattern|
+            alt_state = {
+              bound_names: initial_bound.dup,
+              binding_names: state[:binding_names].dup
+            }
+            compiled = emit_match_pattern(subpattern, env, mode:, allow_pins:, state: alt_state)
+            alt_names = alt_state[:binding_names][initial_names..]
+            bound_names ||= alt_names
+            raise Error, 'all `or` patterns must bind the same names' if bound_names != alt_names
+
+            compiled
+          end
+
+          bound_names.each do |name|
+            state[:bound_names][name] = true
+            state[:binding_names] << name
+          end
+          "[:or, [#{variants.join(', ')}]]"
         end
 
         def emit_pattern(pattern)
@@ -98,6 +210,29 @@ module Kapusta
 
         def where_pattern?(pattern)
           pattern.is_a?(List) && pattern.head.is_a?(Sym) && pattern.head.name == 'where'
+        end
+
+        def pin_pattern?(pattern)
+          pattern.is_a?(List) &&
+            pattern.items.length == 2 &&
+            pattern.head.is_a?(Sym) &&
+            pattern.head.name == '='
+        end
+
+        def or_pattern?(pattern)
+          pattern.is_a?(List) && pattern.head.is_a?(Sym) && pattern.head.name == 'or'
+        end
+
+        def ignored_pattern_name?(name)
+          name == '_' || name.start_with?('_')
+        end
+
+        def optional_pattern_name?(name)
+          name.start_with?('?') && name.length > 1
+        end
+
+        def rest_pattern_marker?(items, index)
+          items[index].is_a?(Sym) && items[index].name == '&'
         end
       end
     end

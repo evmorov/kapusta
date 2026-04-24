@@ -26,9 +26,9 @@ module Kapusta
           RUBY
         end
 
-        def emit_case(args, env, current_scope)
+        def emit_case(args, env, current_scope, mode)
           value_var = temp('case_value')
-          body = build_case_clauses(value_var, args[1..], env, current_scope)
+          body = build_case_clauses(value_var, args[1..], env, current_scope, mode)
           <<~RUBY.chomp
             (-> do
               #{value_var} = #{emit_expr(args[0], env, current_scope)}
@@ -37,31 +37,32 @@ module Kapusta
           RUBY
         end
 
-        def build_case_clauses(value_var, clauses, env, current_scope)
+        def build_case_clauses(value_var, clauses, env, current_scope, mode)
           return 'nil' if clauses.empty?
 
           pattern = clauses[0]
           body = clauses[1]
-          else_code = build_case_clauses(value_var, clauses[2..], env, current_scope)
-          emit_case_clause(value_var, pattern, body, else_code, env, current_scope)
+          else_code = build_case_clauses(value_var, clauses[2..], env, current_scope, mode)
+          emit_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
         end
 
-        def emit_case_clause(value_var, pattern, body, else_code, env, current_scope)
+        def emit_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
           if where_pattern?(pattern)
-            emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope)
+            emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
           else
-            emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope)
+            emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
           end
         end
 
-        def emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope)
+        def emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
           match_var = temp('match')
           bindings_var = temp('bindings')
+          plan = pattern_match_plan(pattern, env, mode:, allow_pins: false)
           arm_env = env.child
-          assign_code, arm_env = emit_bindings_from_match(pattern, bindings_var, arm_env)
+          assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
           body_code = emit_expr(body, arm_env, current_scope)
           <<~RUBY.chomp
-            #{match_var} = #{runtime_call(:match_pattern, emit_pattern(pattern), value_var)}
+            #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
             if #{match_var}[0]
               #{bindings_var} = #{match_var}[1]
               #{assign_code}
@@ -72,17 +73,18 @@ module Kapusta
           RUBY
         end
 
-        def emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope)
+        def emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
           inner = pattern.items[1]
-          guard = pattern.items[2]
+          guards = pattern.items[2..]
           match_var = temp('match')
           bindings_var = temp('bindings')
+          plan = pattern_match_plan(inner, env, mode:, allow_pins: mode == :case)
           arm_env = env.child
-          assign_code, arm_env = emit_bindings_from_match(inner, bindings_var, arm_env)
-          guard_code = emit_expr(guard, arm_env, current_scope)
+          assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
+          guard_code = emit_case_guards(guards, arm_env, current_scope)
           body_code = emit_expr(body, arm_env, current_scope)
           <<~RUBY.chomp
-            #{match_var} = #{runtime_call(:match_pattern, emit_pattern(inner), value_var)}
+            #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
             if #{match_var}[0]
               #{bindings_var} = #{match_var}[1]
               #{assign_code}
@@ -95,6 +97,12 @@ module Kapusta
               #{indent(else_code)}
             end
           RUBY
+        end
+
+        def emit_case_guards(guards, env, current_scope)
+          return 'true' if guards.empty?
+
+          guards.map { |guard| parenthesize(emit_expr(guard, env, current_scope)) }.join(' && ')
         end
 
         def emit_while(args, env, current_scope)
