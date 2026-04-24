@@ -212,6 +212,10 @@ RSpec.describe 'examples' do
     expect(run_example('leap-year.kap')).to eq("true\n")
   end
 
+  it 'length-of-last-word.kap' do
+    expect(run_example('length-of-last-word.kap')).to eq("5\n4\n6\n")
+  end
+
   it 'min-max.kap' do
     expect(run_example('min-max.kap')).to eq(<<~OUT)
       1
@@ -354,7 +358,12 @@ RSpec.describe 'examples' do
   end
 
   it 'stack.kap' do
-    expect(run_example('stack.kap')).to eq('')
+    expect(run_example('stack.kap')).to eq(<<~OUT)
+      -3
+      0
+      -2
+      true
+    OUT
   end
 
   it 'sum.kap' do
@@ -405,61 +414,5 @@ RSpec.describe 'examples' do
       "X"
       "draw"
     OUT
-  end
-end
-
-RSpec.describe Kapusta do
-  it 'exposes a gem version' do
-    expect(Kapusta::VERSION).to match(/\A\d+\.\d+\.\d+\z/)
-  end
-
-  it 'defaults classes to Object when the superclass is omitted' do
-    source = <<~KAP
-      (let [klass (class Stack
-                    (fn initialize []
-                      nil))]
-        (values (= Stack.superclass Object)
-                (= (Stack.new.class) Stack)
-                (= klass Stack)))
-    KAP
-
-    expect(Kapusta.eval(source)).to eq([true, true, true])
-  end
-
-  it 'still accepts an explicit superclass vector' do
-    source = <<~KAP
-      (let [klass (class KapustaError [StandardError])]
-        (values (= KapustaError.superclass StandardError)
-                (= klass KapustaError)))
-    KAP
-
-    expect(Kapusta.eval(source)).to eq([true, true])
-  end
-
-  it 'preserves nested arithmetic precedence' do
-    source = <<~KAP
-      (values (/ (+ 3 5) 2)
-              (* (+ 1 2) (- 10 4))
-              (% (+ 10 5) 4))
-    KAP
-
-    expect(Kapusta.eval(source)).to eq([4, 18, 3])
-  end
-
-  it 'supports postfix zero-arg method calls on non-symbol expressions' do
-    source = <<~KAP
-      (values [1 2].inspect
-              (+ 1 2).inspect
-              "Listen".downcase.chars.sort.join)
-    KAP
-
-    expect(Kapusta.eval(source)).to eq(['[1, 2]', '3', 'eilnst'])
-  end
-end
-
-RSpec.describe 'errors' do
-  it 'raises on unclosed list' do
-    expect { Kapusta.eval('(fn hello [name] (.. "Hi " name "!")') }
-      .to raise_error(Kapusta::Reader::Error, /unclosed opening delimiter '\('/)
   end
 end

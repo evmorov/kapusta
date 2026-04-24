@@ -1,0 +1,7 @@
+(fn length-of-last-word [s]
+  (let [words (s.strip.split)]
+    (: (. words -1) :length)))
+
+(print (length-of-last-word "Hello World"))
+(print (length-of-last-word "   fly me   to   the moon  "))
+(print (length-of-last-word "luffy is still joyboy"))
