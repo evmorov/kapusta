@@ -108,17 +108,15 @@ module Kapusta
         end
 
         def emit_print(args, env, current_scope)
-          return '$stdout.puts("")' if args.empty?
+          return 'p' if args.empty?
 
-          values = args.map { |arg| emit_string_part(arg, env, current_scope) }
-          output = values.length == 1 ? values.first : "[#{values.join(', ')}].join(\"\\t\")"
-          "$stdout.puts(#{output})"
+          "p(#{args.map { |arg| emit_expr(arg, env, current_scope) }.join(', ')})"
         end
 
         def emit_string_part(arg, env, current_scope)
           return arg.inspect if arg.is_a?(String)
 
-          runtime_call(:stringify, emit_expr(arg, env, current_scope))
+          "(#{emit_expr(arg, env, current_scope)}).to_s"
         end
       end
     end

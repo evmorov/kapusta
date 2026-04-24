@@ -39,7 +39,28 @@ RSpec.describe Kapusta::CLI do
 
       stdout, stderr, status = Open3.capture3(RbConfig.ruby, output_path)
 
-      expected = "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz\n"
+      expected = <<~OUT
+        1
+        2
+        "Fizz"
+        4
+        "Buzz"
+        "Fizz"
+        7
+        8
+        "Fizz"
+        "Buzz"
+        11
+        "Fizz"
+        13
+        14
+        "FizzBuzz"
+        16
+        17
+        "Fizz"
+        19
+        "Buzz"
+      OUT
       expect(status.success?).to eq(true), stderr
       expect(stdout).to eq(expected)
     end
@@ -63,7 +84,9 @@ RSpec.describe Kapusta::CLI do
       described_class.start([path, 'Ada'])
     end
 
-    expect(output).to eq("Hello, Ada!\n")
+    expect(output).to eq(<<~OUT)
+      "Hello, Ada!"
+    OUT
   end
 
   it 'prints the version with -v' do

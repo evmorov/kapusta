@@ -4,9 +4,6 @@ module Kapusta
   module Compiler
     module Runtime
       HELPER_DEPENDENCIES = {
-        stringify: %i[repr],
-        print_values: %i[stringify],
-        concat: %i[stringify],
         method_path_value: %i[kebab_to_snake],
         set_method_path: %i[kebab_to_snake],
         get_ivar: %i[kebab_to_snake],
@@ -62,41 +59,6 @@ module Kapusta
             else
               kwargs ? receiver.send(method_name, *positional, **kwargs) : receiver.send(method_name, *positional)
             end
-          end
-        RUBY
-        stringify: <<~RUBY.chomp,
-          def kap_stringify(value)
-            case value
-            when nil then 'nil'
-            when Array, Hash then kap_repr(value)
-            else value.to_s
-            end
-          end
-        RUBY
-        repr: <<~'RUBY'.chomp,
-          def kap_repr(value)
-            case value
-            when nil then 'nil'
-            when true, false then value.to_s
-            when String, Symbol then value.inspect
-            when Array
-              "[#{value.map { |item| kap_repr(item) }.join(', ')}]"
-            when Hash
-              "{#{value.map { |key, item| "#{kap_repr(key)}=>#{kap_repr(item)}" }.join(', ')}}"
-            else
-              value.inspect
-            end
-          end
-        RUBY
-        print_values: <<~'RUBY'.chomp,
-          def kap_print_values(*values)
-            $stdout.puts(values.map { |value| kap_stringify(value) }.join("\t"))
-            nil
-          end
-        RUBY
-        concat: <<~RUBY.chomp,
-          def kap_concat(values)
-            values.map { |value| kap_stringify(value) }.join
           end
         RUBY
         get_path: <<~RUBY.chomp,
