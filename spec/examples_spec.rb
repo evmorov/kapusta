@@ -459,4 +459,29 @@ RSpec.describe 'examples' do
       "draw"
     OUT
   end
+
+  it 'reverse-integer.kap' do
+    expect(run_example('reverse-integer.kap')).to eq("321\n-321\n21\n0\n")
+  end
+
+  it 'roman-to-integer.kap' do
+    expect(run_example('roman-to-integer.kap')).to eq("3\n58\n1994\n")
+  end
+
+  it 'best-time-to-buy-sell-stock.kap' do
+    expect(run_example('best-time-to-buy-sell-stock.kap')).to eq("5\n0\n2\n")
+  end
+
+  it 'majority-element.kap' do
+    expect(run_example('majority-element.kap')).to eq("3\n2\n1\n")
+  end
+
+  it 'plus-one.kap' do
+    expect(run_example('plus-one.kap')).to eq(<<~OUT)
+      [1, 2, 4]
+      [4, 3, 2, 2]
+      [1, 0]
+      [1, 0, 0]
+    OUT
+  end
 end

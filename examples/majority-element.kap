@@ -1,0 +1,11 @@
+(fn majority [nums]
+  (var candidate nil)
+  (var count 0)
+  (each [n nums]
+    (when (= count 0) (set candidate n))
+    (if (= n candidate) (set count (+ count 1)) (set count (- count 1))))
+  candidate)
+
+(print (majority [3 2 3]))
+(print (majority [2 2 1 1 1 2 2]))
+(print (majority [1]))

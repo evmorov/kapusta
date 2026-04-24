@@ -1,0 +1,12 @@
+(fn max-profit [prices]
+  (var min-price (. prices 0))
+  (var best 0)
+  (for [i 1 (- (length prices) 1)]
+    (let [p (. prices i)]
+      (when (< p min-price) (set min-price p))
+      (when (> (- p min-price) best) (set best (- p min-price)))))
+  best)
+
+(print (max-profit [7 1 5 3 6 4]))
+(print (max-profit [7 6 4 3 1]))
+(print (max-profit [2 4 1]))

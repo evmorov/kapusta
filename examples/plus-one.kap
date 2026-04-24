@@ -1,0 +1,14 @@
+(fn plus-one [digits]
+  (var i (- (length digits) 1))
+  (var carry 1)
+  (while (and (>= i 0) (> carry 0))
+    (let [total (+ (. digits i) carry)]
+      (tset digits i (% total 10))
+      (set carry (: (/ total 10) :floor)))
+    (set i (- i 1)))
+  (if (> carry 0) (: digits :unshift carry) digits))
+
+(print (plus-one [1 2 3]))
+(print (plus-one [4 3 2 1]))
+(print (plus-one [9]))
+(print (plus-one [9 9]))

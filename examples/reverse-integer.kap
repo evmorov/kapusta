@@ -1,0 +1,13 @@
+(fn reverse-integer [x]
+  (let [sign (if (< x 0) -1 1)]
+    (var remaining (* x sign))
+    (var result 0)
+    (while (> remaining 0)
+      (set result (+ (* result 10) (% remaining 10)))
+      (set remaining (: (/ remaining 10) :floor)))
+    (* result sign)))
+
+(print (reverse-integer 123))
+(print (reverse-integer -123))
+(print (reverse-integer 120))
+(print (reverse-integer 0))
