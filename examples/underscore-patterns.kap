@@ -1,0 +1,14 @@
+(fn loose [v]
+  (case v
+    _x _x
+    _ "fallback"))
+
+(fn strict [v]
+  (case v
+    x x
+    _ "fallback"))
+
+(print (loose 5))
+(print (loose nil))
+(print (strict 5))
+(print (strict nil))

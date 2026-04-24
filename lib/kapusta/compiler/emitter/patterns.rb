@@ -80,10 +80,10 @@ module Kapusta
         def emit_symbol_match_pattern(pattern, env, mode:, state:)
           name = pattern.name
 
-          if ignored_pattern_name?(name)
+          if name == '_'
             '[:wild]'
-          elsif optional_pattern_name?(name)
-            bind_name = name.delete_prefix('?')
+          elsif nil_allowing_pattern_name?(name)
+            bind_name = name.start_with?('?') ? name.delete_prefix('?') : name
             emit_named_match_pattern(bind_name, env, mode:, state:, allow_nil: true, prefer_pin: false)
           else
             emit_named_match_pattern(name, env, mode:, state:, allow_nil: false, prefer_pin: true)
@@ -223,12 +223,8 @@ module Kapusta
           pattern.is_a?(List) && pattern.head.is_a?(Sym) && pattern.head.name == 'or'
         end
 
-        def ignored_pattern_name?(name)
-          name == '_' || name.start_with?('_')
-        end
-
-        def optional_pattern_name?(name)
-          name.start_with?('?') && name.length > 1
+        def nil_allowing_pattern_name?(name)
+          name.length > 1 && (name.start_with?('?') || name.start_with?('_'))
         end
 
         def rest_pattern_marker?(items, index)

@@ -181,6 +181,10 @@ RSpec.describe 'examples' do
     expect(run_example('or-patterns.kap')).to eq("1:2\n2:1\nother\n")
   end
 
+  it 'underscore-patterns.kap' do
+    expect(run_example('underscore-patterns.kap')).to eq("5\nnil\n5\nfallback\n")
+  end
+
   it 'scopes.kap' do
     expect(run_example('scopes.kap')).to eq("5\n9\n9\n9\n")
   end
