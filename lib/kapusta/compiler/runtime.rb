@@ -4,6 +4,7 @@ module Kapusta
   module Compiler
     module Runtime
       HELPER_DEPENDENCIES = {
+        stringify: %i[repr],
         print_values: %i[stringify],
         concat: %i[stringify],
         method_path_value: %i[kebab_to_snake],
@@ -63,30 +64,27 @@ module Kapusta
             end
           end
         RUBY
-        stringify: <<~'RUBY'.chomp,
+        stringify: <<~RUBY.chomp,
           def kap_stringify(value)
-            render = nil
-            render = lambda do |item|
-              case item
-              when nil then 'nil'
-              when true then 'true'
-              when false then 'false'
-              when String, Symbol then item.inspect
-              when Array
-                "[#{item.map { |child| render.call(child) }.join(', ')}]"
-              when Hash
-                "{#{item.map { |key, child| "#{render.call(key)}=>#{render.call(child)}" }.join(', ')}}"
-              else
-                item.inspect
-              end
-            end
-
             case value
             when nil then 'nil'
-            when true then 'true'
-            when false then 'false'
-            when Array, Hash then render.call(value)
+            when Array, Hash then kap_repr(value)
             else value.to_s
+            end
+          end
+        RUBY
+        repr: <<~'RUBY'.chomp,
+          def kap_repr(value)
+            case value
+            when nil then 'nil'
+            when true, false then value.to_s
+            when String, Symbol then value.inspect
+            when Array
+              "[#{value.map { |item| kap_repr(item) }.join(', ')}]"
+            when Hash
+              "{#{value.map { |key, item| "#{kap_repr(key)}=>#{kap_repr(item)}" }.join(', ')}}"
+            else
+              value.inspect
             end
           end
         RUBY
@@ -367,10 +365,13 @@ module Kapusta
 
       HELPER_SOURCES.each_key do |name|
         helper_method = :"kap_#{name}"
-        define_singleton_method(name, instance_method(helper_method))
+        body = instance_method(helper_method)
+        define_singleton_method(helper_method, body)
+        define_singleton_method(name, body)
         helper_methods << helper_method
       end
 
+      private_class_method(*helper_methods)
       send(:private, *helper_methods)
     end
   end

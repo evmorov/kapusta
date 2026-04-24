@@ -57,6 +57,31 @@ module Kapusta
           pattern.is_a?(Vec) && pattern.items.all? { |item| item.is_a?(Sym) && !item.dotted? && item.name != '&' }
         end
 
+        def emit_definition_form(form, env, current_scope)
+          return [emit_method_definition(form, env), env] unless current_scope == :toplevel
+
+          emit_toplevel_method_definition(form, env)
+        end
+
+        def emit_toplevel_method_definition(form, env)
+          name_sym = form.items[1]
+          pattern = form.items[2]
+          body = form.items[3..]
+          return [nil, env] if name_sym.dotted?
+          return [nil, env] unless simple_parameter_pattern?(pattern)
+
+          ruby_name = direct_method_definition_name(name_sym)
+          return [nil, env] unless ruby_name
+          return [nil, env] if captures_outer_binding?(body, env, pattern_names(pattern))
+
+          env.define(name_sym.name, Env::MethodBinding.new(ruby_name))
+          definition = emit_direct_method_definition(name_sym, pattern, body, env)
+          if needs_toplevel_method_bridge?(ruby_name)
+            definition = join_code(definition, emit_toplevel_method_bridge(ruby_name))
+          end
+          [definition, env]
+        end
+
         def emit_named_fn_assignment(form, env, current_scope)
           name_sym = form.items[1]
           ruby_name = define_local(env, name_sym.name)
@@ -125,6 +150,15 @@ module Kapusta
           end
         end
 
+        def needs_toplevel_method_bridge?(ruby_name)
+          %w[context describe example it specify].include?(ruby_name)
+        end
+
+        def emit_toplevel_method_bridge(ruby_name)
+          method_name = ruby_name.to_sym.inspect
+          "define_singleton_method(#{method_name}, Object.instance_method(#{method_name}).bind(self))"
+        end
+
         def emit_method_body(pattern, body, env)
           return emit_simple_method_body(pattern, body, env) if simple_parameter_pattern?(pattern)
 
@@ -166,7 +200,9 @@ module Kapusta
 
         def sym_captures_outer_binding?(sym, env, local_names)
           name = sym.dotted? ? sym.segments.first : sym.name
-          env.defined?(name) && !local_names.include?(name)
+          return false if local_names.include?(name) || !env.defined?(name)
+
+          !method_binding?(env.lookup(name))
         end
 
         def emit_let(args, env, current_scope)
@@ -232,7 +268,10 @@ module Kapusta
           if target.is_a?(Sym) && !target.dotted?
             ruby_name =
               if env.defined?(target.name)
-                env.lookup(target.name)
+                binding = env.lookup(target.name)
+                raise Error, "cannot set method binding: #{target.name}" if method_binding?(binding)
+
+                binding
               else
                 define_local(env, target.name)
               end
@@ -255,7 +294,10 @@ module Kapusta
               base_code, segments = multisym_base(target.segments, env)
               runtime_call(:set_method_path, base_code, segments.inspect, value_code)
             else
-              "#{env.lookup(target.name)} = #{value_code}"
+              binding = env.lookup(target.name)
+              raise Error, "cannot set method binding: #{target.name}" if method_binding?(binding)
+
+              "#{binding} = #{value_code}"
             end
           when List
             head = target.head

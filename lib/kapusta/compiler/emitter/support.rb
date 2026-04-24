@@ -63,9 +63,14 @@ module Kapusta
         end
 
         def emit_form_in_sequence(form, env, current_scope, allow_method_definitions:, result_needed: true)
-          if allow_method_definitions && method_definition_form?(form) && %i[module class].include?(current_scope)
-            [emit_method_definition(form, env), env]
-          elsif named_function_form?(form)
+          if allow_method_definitions &&
+             method_definition_form?(form) &&
+             %i[toplevel module class].include?(current_scope)
+            code, env = emit_definition_form(form, env, current_scope)
+            return [code, env] if code
+          end
+
+          if named_function_form?(form)
             emit_named_fn_assignment(form, env, current_scope)
           elsif local_form?(form)
             code, env = emit_local_form(form, env, current_scope)
@@ -217,6 +222,14 @@ module Kapusta
             arg.is_a?(Array) ? "[#{arg.join(', ')}]" : arg || 'nil'
           end
           "#{runtime_helper(name)}(#{rendered_args.join(', ')})"
+        end
+
+        def method_binding?(binding)
+          binding.is_a?(Env::MethodBinding)
+        end
+
+        def binding_value_code(binding)
+          method_binding?(binding) ? "method(#{binding.ruby_name.to_sym.inspect})" : binding
         end
 
         def parse_counted_for_bindings(bindings, env, current_scope)

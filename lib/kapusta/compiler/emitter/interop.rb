@@ -212,6 +212,22 @@ module Kapusta
           runtime_call(:call, callee_code, "[#{positional.join(', ')}]", kwargs, block)
         end
 
+        def emit_bound_call(binding, args, env, current_scope)
+          return emit_self_method_binding_call(binding, args, env, current_scope) if method_binding?(binding)
+
+          emit_callable_call(binding, args, env, current_scope)
+        end
+
+        def emit_self_method_binding_call(binding, args, env, current_scope)
+          positional = args.map { |arg| emit_expr(arg, env, current_scope) }
+          emit_direct_self_method_call(binding.ruby_name, positional)
+        end
+
+        def emit_direct_self_method_call(method_name, positional)
+          args = positional.join(', ')
+          args.empty? ? "#{method_name}()" : "#{method_name}(#{args})"
+        end
+
         def emit_direct_callable_call(callee_code, positional)
           rendered_args = positional.join(', ')
           suffix = rendered_args.empty? ? '.call' : ".call(#{rendered_args})"
@@ -285,7 +301,7 @@ module Kapusta
           name = sym.name
           return 'self' if name == 'self'
           return 'Float::INFINITY' if name == 'math.huge'
-          return env.lookup(name) if env.defined?(name)
+          return binding_value_code(env.lookup(name)) if env.defined?(name)
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
@@ -311,7 +327,7 @@ module Kapusta
           if segments[0] == 'self'
             ['self', segments[1..]]
           elsif env.defined?(segments[0])
-            [env.lookup(segments[0]), segments[1..]]
+            [binding_value_code(env.lookup(segments[0])), segments[1..]]
           else
             idx = 0
             const_path = []
