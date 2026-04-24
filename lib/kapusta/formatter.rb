@@ -519,11 +519,12 @@ module Kapusta
     def render_pairwise_vec(vec, indent)
       lines = ['[']
 
-      vec.items.each_slice(2) do |left, right|
-        if right
-          pair = render_pair(left, right, indent + INDENT)
-          if pair
-            lines << indent_block(pair, INDENT)
+      vec.items.each_slice(2) do |pair|
+        left, right = pair
+        if pair.length == 2
+          rendered_pair = render_pair(left, right, indent + INDENT)
+          if rendered_pair
+            lines << indent_block(rendered_pair, INDENT)
           else
             lines << indent_block(render(left, indent + INDENT), INDENT)
             lines << indent_block(render(right, indent + INDENT), INDENT)
@@ -547,8 +548,9 @@ module Kapusta
 
     def render_hanging_pairwise_vec(vec)
       pairs = vec.items.each_slice(2).to_a
-      rendered_pairs = pairs.map do |left, right|
-        return nil unless right
+      rendered_pairs = pairs.map do |pair|
+        left, right = pair
+        return nil unless pair.length == 2
 
         render_binding_pair(left, right)
       end

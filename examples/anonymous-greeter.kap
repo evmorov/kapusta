@@ -1,0 +1,4 @@
+(let [name nil
+      greet (fn [value] (if value (.. "Hello, " value "!") "Hello, anonymous!"))]
+  (print (greet name))
+  (print (greet "Ada")))

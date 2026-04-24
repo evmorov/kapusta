@@ -31,6 +31,10 @@ RSpec.describe 'examples' do
     expect(run_example('anagram.kap')).to eq("true\ntrue\nfalse\n")
   end
 
+  it 'anonymous-greeter.kap' do
+    expect(run_example('anonymous-greeter.kap')).to eq("Hello, anonymous!\nHello, Ada!\n")
+  end
+
   it 'calc.kap' do
     expect(run_example('calc.kap')).to eq("14\n")
   end

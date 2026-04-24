@@ -272,6 +272,26 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'preserves nil-valued let bindings before function bindings' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (let [name nil get-input (fn [] "Dave")]
+          (print (get-input)))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (let [name nil
+              get-input (fn [] "Dave")]
+          (print (get-input)))
+      KAP
+    end
+  end
+
   example_idempotence_paths.each do |relative_path|
     it "keeps #{relative_path} unchanged" do
       path = File.expand_path("../#{relative_path}", __dir__)
