@@ -130,7 +130,7 @@ module Kapusta
         def emit_or_match_pattern(pattern, env, mode:, allow_pins:, state:)
           initial_names = state[:binding_names].length
           initial_bound = state[:bound_names].dup
-          bound_names = nil
+          canonical_names = nil
           variants = pattern.items[1..].map do |subpattern|
             alt_state = {
               bound_names: initial_bound.dup,
@@ -138,13 +138,13 @@ module Kapusta
             }
             compiled = emit_match_pattern(subpattern, env, mode:, allow_pins:, state: alt_state)
             alt_names = alt_state[:binding_names][initial_names..]
-            bound_names ||= alt_names
-            raise Error, 'all `or` patterns must bind the same names' if bound_names != alt_names
+            canonical_names ||= alt_names
+            raise Error, 'all `or` patterns must bind the same names' if canonical_names.sort != alt_names.sort
 
             compiled
           end
 
-          bound_names.each do |name|
+          canonical_names.each do |name|
             state[:bound_names][name] = true
             state[:binding_names] << name
           end

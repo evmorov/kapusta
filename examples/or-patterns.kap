@@ -1,0 +1,8 @@
+(fn swap-kind [v]
+  (case v
+    (where (or [:pair x y] [:flipped y x])) (.. x ":" y)
+    _ "other"))
+
+(print (swap-kind [:pair 1 2]))
+(print (swap-kind [:flipped 1 2]))
+(print (swap-kind [:nope 1 2]))
