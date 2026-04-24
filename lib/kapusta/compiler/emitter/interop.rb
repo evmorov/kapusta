@@ -33,7 +33,28 @@ module Kapusta
             when String then arg.inspect
             else "(#{emit_expr(arg, env, current_scope)}).to_s"
             end
+          if kapusta_require?(arg)
+            return [
+              'unless defined?(Kapusta)',
+              indent('require "kapusta"'),
+              'end',
+              "Kapusta.require(#{path_code}, relative_to: #{@path.inspect})"
+            ].join("\n")
+          end
+
           "require #{path_code}"
+        end
+
+        def kapusta_require?(arg)
+          path =
+            case arg
+            when Sym then arg.name
+            when Symbol then arg.to_s
+            when String then arg
+            end
+          return false unless path
+
+          path.end_with?('.kap') || path.start_with?('./', '../') || File.absolute_path?(path)
         end
 
         def emit_module_expr(args, env)

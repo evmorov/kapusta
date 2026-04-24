@@ -1,0 +1,7 @@
+(require "./valid-parentheses-1")
+
+(let [solution (ValidParenthesesSolution.new)]
+  (print (solution.valid? "()"))
+  (print (solution.valid? "()[]{}"))
+  (print (solution.valid? "(]"))
+  (print (solution.valid? "([)]")))

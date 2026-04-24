@@ -1,0 +1,19 @@
+(class ValidParenthesesSolution)
+
+(fn initialize []
+  (set (ivar pairs)
+    {")" "(" "]" "[" "}" "{"}))
+
+(fn valid? [s]
+  (let [pairs (ivar pairs)
+        stack []
+        chars (s.chars)]
+    (var i 0)
+    (var ok true)
+    (while (and ok (< i (length chars)))
+      (let [ch (. chars i)]
+        (if (pairs.key? ch)
+            (if (-?> (stack.pop) (= (. pairs ch))) nil (set ok false))
+            (stack.push ch)))
+      (set i (+ i 1)))
+    (and ok (stack.empty?))))

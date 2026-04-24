@@ -245,6 +245,14 @@ RSpec.describe 'examples' do
     expect(run_example('two-sum.kap')).to eq("[0, 1]\n[1, 2]\nnil\n")
   end
 
+  it 'valid-parentheses-1.kap' do
+    expect(run_example('valid-parentheses-1.kap')).to eq('')
+  end
+
+  it 'valid-parentheses-2.kap' do
+    expect(run_example('valid-parentheses-2.kap')).to eq("true\ntrue\nfalse\nfalse\n")
+  end
+
   it 'threading.kap' do
     expect(run_example('threading.kap')).to eq("[Ada Lovelace]!\t<Ada!>\tnil\tATSUPAK\tnil\n")
   end
