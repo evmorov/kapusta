@@ -24,6 +24,15 @@ module Kapusta
       end
     end
 
+    def lookup_if_defined(name)
+      key = binding_key(name)
+      if @vars.key?(key)
+        @vars[key]
+      else
+        @parent&.lookup_if_defined(name)
+      end
+    end
+
     def defined?(name)
       @vars.key?(binding_key(name)) || @parent&.defined?(name)
     end

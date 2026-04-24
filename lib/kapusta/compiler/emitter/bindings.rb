@@ -200,9 +200,12 @@ module Kapusta
 
         def sym_captures_outer_binding?(sym, env, local_names)
           name = sym.dotted? ? sym.segments.first : sym.name
-          return false if local_names.include?(name) || !env.defined?(name)
+          return false if local_names.include?(name)
 
-          !method_binding?(env.lookup(name))
+          binding = env.lookup_if_defined(name)
+          return false if binding.nil?
+
+          !method_binding?(binding)
         end
 
         def emit_let(args, env, current_scope)
@@ -266,9 +269,9 @@ module Kapusta
           value_code = emit_expr(form.items[2], env, current_scope)
 
           if target.is_a?(Sym) && !target.dotted?
+            binding = env.lookup_if_defined(target.name)
             ruby_name =
-              if env.defined?(target.name)
-                binding = env.lookup(target.name)
+              if binding
                 raise Error, "cannot set method binding: #{target.name}" if method_binding?(binding)
 
                 binding

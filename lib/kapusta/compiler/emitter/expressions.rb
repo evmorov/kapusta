@@ -36,7 +36,9 @@ module Kapusta
           if head.is_a?(Sym)
             return emit_special(head.name, args, env, current_scope) if special_form?(head.name)
             return emit_multisym_call(head, args, env, current_scope) if head.dotted?
-            return emit_bound_call(env.lookup(head.name), args, env, current_scope) if env.defined?(head.name)
+            if (binding = env.lookup_if_defined(head.name))
+              return emit_bound_call(binding, args, env, current_scope)
+            end
 
             return emit_self_call(head.name, args, env, current_scope)
           end

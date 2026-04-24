@@ -322,7 +322,10 @@ module Kapusta
           name = sym.name
           return 'self' if name == 'self'
           return 'Float::INFINITY' if name == 'math.huge'
-          return binding_value_code(env.lookup(sym)) if env.defined?(sym)
+
+          if (binding = env.lookup_if_defined(sym))
+            return binding_value_code(binding)
+          end
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
@@ -347,8 +350,8 @@ module Kapusta
         def multisym_base(segments, env)
           if segments[0] == 'self'
             ['self', segments[1..]]
-          elsif env.defined?(segments[0])
-            [binding_value_code(env.lookup(segments[0])), segments[1..]]
+          elsif (binding = env.lookup_if_defined(segments[0]))
+            [binding_value_code(binding), segments[1..]]
           else
             idx = 0
             const_path = []

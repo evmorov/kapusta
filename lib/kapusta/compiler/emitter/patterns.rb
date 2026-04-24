@@ -88,10 +88,11 @@ module Kapusta
         end
 
         def emit_named_match_pattern(name, env, mode:, state:, allow_nil:, prefer_pin:)
+          binding = prefer_pin && mode == :match ? env.lookup_if_defined(name) : nil
           if state[:bound_names].key?(name)
             "[:ref, #{name.inspect}]"
-          elsif prefer_pin && mode == :match && env.defined?(name)
-            "[:pin, #{binding_value_code(env.lookup(name))}]"
+          elsif binding
+            "[:pin, #{binding_value_code(binding)}]"
           else
             state[:bound_names][name] = true
             state[:binding_names] << name
@@ -119,9 +120,11 @@ module Kapusta
 
           name_sym = pattern.items[1]
           raise Error, "bad pin pattern: #{pattern.inspect}" unless name_sym.is_a?(Sym)
-          raise Error, "cannot pin undefined name: #{name_sym.name}" unless env.defined?(name_sym.name)
 
-          "[:pin, #{binding_value_code(env.lookup(name_sym.name))}]"
+          binding = env.lookup_if_defined(name_sym.name)
+          raise Error, "cannot pin undefined name: #{name_sym.name}" unless binding
+
+          "[:pin, #{binding_value_code(binding)}]"
         end
 
         def emit_or_match_pattern(pattern, env, mode:, allow_pins:, state:)
