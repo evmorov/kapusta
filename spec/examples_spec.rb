@@ -283,9 +283,9 @@ RSpec.describe 'examples' do
 
   it 'regex.kap' do
     expected = <<~'OUT'
-      "2026-04-23 -> {\"year\"=>\"2026\", \"month\"=>\"04\", \"day\"=>\"23\"}"
+      "2026-04-23 -> {\"year\" => \"2026\", \"month\" => \"04\", \"day\" => \"23\"}"
       "hello -> "
-      "1999-12-31 -> {\"year\"=>\"1999\", \"month\"=>\"12\", \"day\"=>\"31\"}"
+      "1999-12-31 -> {\"year\" => \"1999\", \"month\" => \"12\", \"day\" => \"31\"}"
     OUT
     expect(run_example('regex.kap')).to eq(expected)
   end
@@ -392,7 +392,7 @@ RSpec.describe 'examples' do
 
   it 'tset.kap' do
     expect(run_example('tset.kap')).to eq(<<~OUT)
-      {:name=>"Ada", :city=>"Amsterdam"}
+      {name: "Ada", city: "Amsterdam"}
       "Amsterdam"
     OUT
   end
