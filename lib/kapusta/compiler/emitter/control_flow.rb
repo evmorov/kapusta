@@ -82,12 +82,12 @@ module Kapusta
           arm_env = env.child
           assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
           body_code = emit_expr(body, arm_env, current_scope)
+          arm_body = [assign_code, body_code].reject(&:empty?).join("\n")
           <<~RUBY.chomp
             #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
             if #{match_var}[0]
               #{bindings_var} = #{match_var}[1]
-              #{assign_code}
-              #{body_code}
+              #{arm_body}
             else
               #{indent(else_code)}
             end
@@ -104,11 +104,11 @@ module Kapusta
           assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
           guard_code = emit_case_guards(guards, arm_env, current_scope)
           body_code = emit_expr(body, arm_env, current_scope)
+          bindings_line = assign_code.empty? ? '' : "\n  #{assign_code}"
           <<~RUBY.chomp
             #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
             if #{match_var}[0]
-              #{bindings_var} = #{match_var}[1]
-              #{assign_code}
+              #{bindings_var} = #{match_var}[1]#{bindings_line}
               if #{guard_code}
                 #{body_code}
               else
