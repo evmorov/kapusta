@@ -8,6 +8,7 @@ module Kapusta
 
     WHITESPACE = [' ', "\t", "\n", "\r", "\f", "\v", ','].freeze
     DELIMS = ['(', ')', '[', ']', '{', '}', '"', ';'].freeze
+    CLOSING_DELIMS = [')', ']', '}'].freeze
 
     def self.read_all(source, preserve_comments: false)
       new(source, preserve_comments:).read_all
@@ -85,6 +86,7 @@ module Kapusta
         when '{' then read_hash
         when '"' then read_string
         when '#' then read_hashfn
+        when *CLOSING_DELIMS then raise unexpected_closing_delim(peek)
         else
           read_atom
         end
@@ -93,11 +95,12 @@ module Kapusta
     end
 
     def read_list
+      opening_position = source_position
       advance
       items = []
       loop do
         skip_ws
-        raise Error, 'unclosed (' if eof?
+        raise unclosed_opening_delim('(', opening_position) if eof?
         break if peek == ')'
 
         items << read_next_item
@@ -107,11 +110,12 @@ module Kapusta
     end
 
     def read_vec
+      opening_position = source_position
       advance
       items = []
       loop do
         skip_ws
-        raise Error, 'unclosed [' if eof?
+        raise unclosed_opening_delim('[', opening_position) if eof?
         break if peek == ']'
 
         items << read_next_item
@@ -121,12 +125,13 @@ module Kapusta
     end
 
     def read_hash
+      opening_position = source_position
       advance
       entries = []
       pending = []
       loop do
         skip_ws
-        raise Error, 'unclosed {' if eof?
+        raise unclosed_opening_delim('{', opening_position) if eof?
         break if peek == '}'
 
         item = read_next_item
@@ -216,6 +221,25 @@ module Kapusta
       raise Error, 'empty token' if token.empty?
 
       parse_atom(token)
+    end
+
+    def unexpected_closing_delim(char)
+      line, column = source_position
+      Error.new("unexpected closing delimiter '#{char}' at line #{line}, column #{column}")
+    end
+
+    def unclosed_opening_delim(char, position)
+      line, column = position
+      Error.new("unclosed opening delimiter '#{char}' at line #{line}, column #{column}")
+    end
+
+    def source_position
+      prefix = @src[0...@pos]
+      line = prefix.count("\n") + 1
+      last_newline = prefix.rindex("\n")
+      column = last_newline ? prefix.length - last_newline : prefix.length + 1
+
+      [line, column]
     end
 
     def parse_atom(token)

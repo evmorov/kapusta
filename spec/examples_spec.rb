@@ -322,6 +322,6 @@ end
 RSpec.describe 'errors' do
   it 'raises on unclosed list' do
     expect { Kapusta.eval('(fn hello [name] (.. "Hi " name "!")') }
-      .to raise_error(Kapusta::Reader::Error, /unclosed \(/)
+      .to raise_error(Kapusta::Reader::Error, /unclosed opening delimiter '\('/)
   end
 end

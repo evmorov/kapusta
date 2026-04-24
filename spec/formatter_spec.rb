@@ -120,6 +120,34 @@ RSpec.describe Kapusta::Formatter do
     expect(error_output).to include('Not formatted: -')
   end
 
+  it 'reports unexpected closing delimiters with their source position' do
+    error_output = with_stdin("(print 1))\n") do
+      capture_stderr do
+        expect(described_class.new(['-']).run).to eq(1)
+      end
+    end
+
+    expect(error_output).to include("unexpected closing delimiter ')' at line 1, column 10")
+  end
+
+  it 'reports unclosed opening delimiters with their source position' do
+    cases = {
+      "(print 1\n" => "unclosed opening delimiter '(' at line 1, column 1",
+      "[1 2\n" => "unclosed opening delimiter '[' at line 1, column 1",
+      "{:name \"Ada\"\n" => "unclosed opening delimiter '{' at line 1, column 1"
+    }
+
+    cases.each do |source, message|
+      error_output = with_stdin(source) do
+        capture_stderr do
+          expect(described_class.new(['-']).run).to eq(1)
+        end
+      end
+
+      expect(error_output).to include(message)
+    end
+  end
+
   it 'rejects --fix with stdin' do
     error_output = with_stdin("(+ 1 2)\n") do
       capture_stderr do
