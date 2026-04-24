@@ -29,6 +29,18 @@ exe/kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
 ruby examples/fizzbuzz.rb
 ```
 
+## Using from Ruby
+
+Ruby can require a `.kap` file and use it directly.
+
+```
+require 'kapusta'
+Kapusta.require('./bank-account', relative_to: __FILE__)
+account = BankAccount.new('Ada', 100)
+```
+
+See `examples/bank-account.kap` and `examples/use_bank_account.rb`.
+
 ## Comparison with Fennel
 
 Kapusta keeps most core Fennel forms. The main differences come from Ruby's runtime and object model.
