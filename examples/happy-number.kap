@@ -1,0 +1,20 @@
+(fn sum-of-squares [n]
+  (var x n)
+  (var total 0)
+  (while (> x 0)
+    (let [d (% x 10)]
+      (set total (+ total (* d d)))
+      (set x (: (/ x 10) :floor))))
+  total)
+
+(fn happy? [n]
+  (let [seen {}]
+    (var x n)
+    (while (and (not (= x 1)) (not (seen.key? x)))
+      (tset seen x true)
+      (set x (sum-of-squares x)))
+    (= x 1)))
+
+(print (happy? 19))
+(print (happy? 2))
+(print (happy? 1))

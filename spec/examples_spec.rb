@@ -95,6 +95,26 @@ RSpec.describe 'examples' do
     expect(run_example('contains-duplicate.kap')).to eq("true\nfalse\ntrue\n")
   end
 
+  it 'climbing-stairs.kap' do
+    expect(run_example('climbing-stairs.kap')).to eq("2\n3\n8\n89\n")
+  end
+
+  it 'maximum-subarray.kap' do
+    expect(run_example('maximum-subarray.kap')).to eq("6\n1\n23\n")
+  end
+
+  it 'happy-number.kap' do
+    expect(run_example('happy-number.kap')).to eq("true\nfalse\ntrue\n")
+  end
+
+  it 'move-zeroes.kap' do
+    expect(run_example('move-zeroes.kap')).to eq(<<~OUT)
+      [1, 3, 12, 0, 0]
+      [0]
+      [1, 2, 3]
+    OUT
+  end
+
   it 'doto.kap' do
     expect(run_example('doto.kap')).to eq(<<~OUT)
       "1, 2, 3"

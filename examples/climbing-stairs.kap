@@ -1,0 +1,13 @@
+(fn climb-stairs [n]
+  (var prev 1)
+  (var curr 1)
+  (for [_ 2 n]
+    (let [next (+ prev curr)]
+      (set prev curr)
+      (set curr next)))
+  curr)
+
+(print (climb-stairs 2))
+(print (climb-stairs 3))
+(print (climb-stairs 5))
+(print (climb-stairs 10))
