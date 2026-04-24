@@ -1,0 +1,11 @@
+(fn cal-points [ops]
+  (let [scores []]
+    (each [op ops]
+      (if (= op "C") (do (-?> (scores.pop) (: :abs)) nil)
+          (= op "D") (scores.push (* 2 (. scores -1)))
+          (= op "+") (scores.push (+ (. scores -1) (. scores -2)))
+          (scores.push (Integer op))))
+    scores.sum))
+
+(print (cal-points ["5" "2" "C" "D" "+"]))
+(print (cal-points ["5" "-2" "4" "C" "D" "9" "+" "+"]))

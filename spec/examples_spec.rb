@@ -245,6 +245,10 @@ RSpec.describe 'examples' do
     expect(run_example('two-sum.kap')).to eq("[0, 1]\n[1, 2]\nnil\n")
   end
 
+  it 'baseball-game.kap' do
+    expect(run_example('baseball-game.kap')).to eq("30\n27\n")
+  end
+
   it 'valid-parentheses-1.kap' do
     expect(run_example('valid-parentheses-1.kap')).to eq('')
   end
