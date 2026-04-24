@@ -70,6 +70,9 @@ module Kapusta
           name_sym = form.items[1]
           pattern = form.items[2]
           body = form.items[3..]
+          direct_definition = emit_direct_method_definition(name_sym, pattern, body, env)
+          return direct_definition if direct_definition
+
           block_header, body_code = emit_method_body(pattern, body, env)
 
           if name_sym.name.start_with?('self.')
@@ -86,6 +89,39 @@ module Kapusta
               indent(body_code),
               'end'
             ].join("\n")
+          end
+        end
+
+        def emit_direct_method_definition(name_sym, pattern, body, env)
+          return nil unless simple_parameter_pattern?(pattern)
+
+          ruby_name = direct_method_definition_name(name_sym)
+          return nil unless ruby_name
+          return nil if captures_outer_binding?(body, env, pattern_names(pattern))
+
+          body_env = env.child
+          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
+          body_code, = emit_sequence(body, body_env, :toplevel, allow_method_definitions: false)
+          header = params.empty? ? "def #{ruby_name}" : "def #{ruby_name}(#{params.join(', ')})"
+          [
+            header,
+            indent(body_code),
+            'end'
+          ].join("\n")
+        end
+
+        def direct_method_definition_name(name_sym)
+          source_name = name_sym.name
+          if source_name.start_with?('self.')
+            method_name = Kapusta.kebab_to_snake(source_name.delete_prefix('self.'))
+            return nil unless direct_method_name?(method_name)
+
+            "self.#{method_name}"
+          else
+            method_name = Kapusta.kebab_to_snake(source_name)
+            return nil unless direct_method_name?(method_name)
+
+            method_name
           end
         end
 
@@ -106,6 +142,31 @@ module Kapusta
           params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
           body_code, = emit_sequence(body, body_env, :toplevel, allow_method_definitions: false)
           [params.empty? ? 'do' : "do |#{params.join(', ')}|", body_code]
+        end
+
+        def captures_outer_binding?(forms, env, local_names)
+          forms.any? { |form| form_captures_outer_binding?(form, env, local_names) }
+        end
+
+        def form_captures_outer_binding?(form, env, local_names)
+          case form
+          when Sym
+            sym_captures_outer_binding?(form, env, local_names)
+          when Vec, List
+            form.items.any? { |item| form_captures_outer_binding?(item, env, local_names) }
+          when HashLit
+            form.pairs.any? do |key, value|
+              form_captures_outer_binding?(key, env, local_names) ||
+                form_captures_outer_binding?(value, env, local_names)
+            end
+          else
+            false
+          end
+        end
+
+        def sym_captures_outer_binding?(sym, env, local_names)
+          name = sym.dotted? ? sym.segments.first : sym.name
+          env.defined?(name) && !local_names.include?(name)
         end
 
         def emit_let(args, env, current_scope)
