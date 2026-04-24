@@ -825,6 +825,6 @@ module Kapusta
       puts 'Formats Kapusta source using the built-in Kapusta reader and pretty-printer.'
     end
 
-    class Error < StandardError; end
+    class Error < Kapusta::Error; end
   end
 end

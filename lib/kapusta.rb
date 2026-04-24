@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'kapusta/version'
+require_relative 'kapusta/error'
 require_relative 'kapusta/support'
 require_relative 'kapusta/ast'
 require_relative 'kapusta/reader'

@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
+require_relative 'error'
 require_relative 'compiler/runtime'
 require_relative 'compiler/normalizer'
 require_relative 'compiler/emitter'
 
 module Kapusta
   module Compiler
-    class Error < StandardError; end
+    class Error < Kapusta::Error; end
     SPECIAL_FORMS = %w[
       fn lambda λ let local var set if when unless case match
       while for each do values

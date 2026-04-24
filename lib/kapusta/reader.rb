@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'error'
+
 module Kapusta
   class Reader
+    class Error < Kapusta::Error; end
+
     WHITESPACE = [' ', "\t", "\n", "\r", "\f", "\v", ','].freeze
     DELIMS = ['(', ')', '[', ']', '{', '}', '"', ';'].freeze
 
@@ -61,7 +65,7 @@ module Kapusta
 
     def read_next_item
       skip_ws
-      raise 'unexpected eof' if eof?
+      raise Error, 'unexpected eof' if eof?
 
       return read_comment if @preserve_comments && peek == ';'
 
@@ -70,7 +74,7 @@ module Kapusta
 
     def read_form
       skip_ws
-      raise 'unexpected eof' if eof?
+      raise Error, 'unexpected eof' if eof?
 
       return read_comment if @preserve_comments && peek == ';'
 
@@ -93,7 +97,7 @@ module Kapusta
       items = []
       loop do
         skip_ws
-        raise 'unclosed (' if eof?
+        raise Error, 'unclosed (' if eof?
         break if peek == ')'
 
         items << read_next_item
@@ -107,7 +111,7 @@ module Kapusta
       items = []
       loop do
         skip_ws
-        raise 'unclosed [' if eof?
+        raise Error, 'unclosed [' if eof?
         break if peek == ']'
 
         items << read_next_item
@@ -122,7 +126,7 @@ module Kapusta
       pending = []
       loop do
         skip_ws
-        raise 'unclosed {' if eof?
+        raise Error, 'unclosed {' if eof?
         break if peek == '}'
 
         item = read_next_item
@@ -139,7 +143,7 @@ module Kapusta
       end
       advance
 
-      raise 'odd number of forms in hash' unless pending.empty?
+      raise Error, 'odd number of forms in hash' unless pending.empty?
 
       HashLit.new(entries)
     end
@@ -168,7 +172,7 @@ module Kapusta
           buffer << advance
         end
       end
-      raise 'unterminated string' if eof?
+      raise Error, 'unterminated string' if eof?
 
       advance
       buffer
@@ -209,7 +213,7 @@ module Kapusta
       start = @pos
       advance until delim?(peek)
       token = @src[start...@pos]
-      raise 'empty token' if token.empty?
+      raise Error, 'empty token' if token.empty?
 
       parse_atom(token)
     end
@@ -230,7 +234,7 @@ module Kapusta
 
     def normalize_hash_pair(item, value)
       if item.is_a?(Sym) && item.name == ':'
-        raise 'bad shorthand' unless value.is_a?(Sym)
+        raise Error, 'bad shorthand' unless value.is_a?(Sym)
 
         key = Kapusta.kebab_to_snake(value.name).to_sym
         [key, value]
