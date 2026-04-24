@@ -177,15 +177,15 @@ module Kapusta
       when Sym
         form.name
       when Vec
-        return nil if contains_comments?(form.items)
+        return if contains_comments?(form.items)
 
         "[#{form.items.map { |item| flat_render(item) }.join(' ')}]"
       when HashLit
-        return nil if contains_comments?(form.entries)
+        return if contains_comments?(form.entries)
 
         "{#{form.pairs.map { |key, value| flat_hash_pair(key, value) }.join(' ')}}"
       when List
-        return nil if contains_comments?(form.items)
+        return if contains_comments?(form.items)
         return "##{flat_render(semantic_items(form.items)[1])}" if hashfn_literal?(form)
 
         "(#{form.items.map { |item| flat_render(item) }.join(' ')})"
@@ -548,13 +548,12 @@ module Kapusta
 
     def render_hanging_pairwise_vec(vec)
       pairs = vec.items.each_slice(2).to_a
-      rendered_pairs = pairs.map do |pair|
-        left, right = pair
-        return nil unless pair.length == 2
+      return unless pairs.all? { |pair| pair.length == 2 }
 
+      rendered_pairs = pairs.map do |left, right|
         render_binding_pair(left, right)
       end
-      return nil if rendered_pairs.any?(&:nil?)
+      return if rendered_pairs.any?(&:nil?)
 
       lines = ["[#{rendered_pairs.first}"]
       continuation = ' ' * '(let ['.length
@@ -609,7 +608,7 @@ module Kapusta
     def render_pair(left, right, indent)
       left_rendered = flat_render(left) || render(left, indent)
       right_rendered = flat_render(right) || render(right, indent)
-      return nil unless single_line?(left_rendered) && single_line?(right_rendered)
+      return unless single_line?(left_rendered) && single_line?(right_rendered)
 
       pair = "#{left_rendered} #{right_rendered}"
       fits?(pair, indent) ? pair : nil
@@ -617,12 +616,12 @@ module Kapusta
 
     def render_binding_pair(left, right)
       left_rendered = flat_render(left)
-      return nil unless left_rendered
+      return unless left_rendered
 
       right_rendered = render(right, '(let ['.length + left_rendered.length + 1)
       first_line, *rest = right_rendered.lines(chomp: true)
       pair = "#{left_rendered} #{first_line}"
-      return nil unless pair.length <= MAX_WIDTH
+      return unless pair.length <= MAX_WIDTH
 
       return pair if rest.empty?
 

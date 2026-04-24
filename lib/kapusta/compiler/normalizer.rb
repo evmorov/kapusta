@@ -74,7 +74,7 @@ module Kapusta
       end
 
       def wrap_do(forms)
-        return nil if forms.empty?
+        return if forms.empty?
         return forms.first if forms.length == 1
 
         List.new([Sym.new('do'), *forms])

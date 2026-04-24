@@ -109,7 +109,7 @@ module Kapusta
         qget_path: <<~RUBY.chomp,
           def kap_qget_path(obj, keys)
             keys.each do |key|
-              return nil if obj.nil?
+              return if obj.nil?
 
               obj = obj[key]
             end

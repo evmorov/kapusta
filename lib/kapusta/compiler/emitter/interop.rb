@@ -63,7 +63,7 @@ module Kapusta
 
         def emit_direct_module_header(name_sym, body)
           const_name = simple_constant_name(name_sym)
-          return nil unless const_name
+          return unless const_name
 
           [
             "module #{const_name}",
@@ -94,7 +94,7 @@ module Kapusta
 
         def emit_direct_class_header(name_sym, supers, body)
           const_name = simple_constant_name(name_sym)
-          return nil unless const_name && supers.nil?
+          return unless const_name && supers.nil?
 
           [
             "class #{const_name}",
@@ -105,7 +105,7 @@ module Kapusta
         end
 
         def simple_constant_name(name_sym)
-          return nil unless name_sym.is_a?(Sym) && name_sym.name.match?(/\A[A-Z]\w*\z/)
+          return unless name_sym.is_a?(Sym) && name_sym.name.match?(/\A[A-Z]\w*\z/)
 
           name_sym.name
         end

@@ -93,11 +93,11 @@ module Kapusta
         end
 
         def emit_direct_method_definition(name_sym, pattern, body, env)
-          return nil unless simple_parameter_pattern?(pattern)
+          return unless simple_parameter_pattern?(pattern)
 
           ruby_name = direct_method_definition_name(name_sym)
-          return nil unless ruby_name
-          return nil if captures_outer_binding?(body, env, pattern_names(pattern))
+          return unless ruby_name
+          return if captures_outer_binding?(body, env, pattern_names(pattern))
 
           body_env = env.child
           params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
@@ -114,12 +114,12 @@ module Kapusta
           source_name = name_sym.name
           if source_name.start_with?('self.')
             method_name = Kapusta.kebab_to_snake(source_name.delete_prefix('self.'))
-            return nil unless direct_method_name?(method_name)
+            return unless direct_method_name?(method_name)
 
             "self.#{method_name}"
           else
             method_name = Kapusta.kebab_to_snake(source_name)
-            return nil unless direct_method_name?(method_name)
+            return unless direct_method_name?(method_name)
 
             method_name
           end

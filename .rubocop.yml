@@ -32,6 +32,10 @@ Style/ClassVars:
 Style/Documentation:
   Enabled: false
 
+Style/ReturnNil:
+  Enabled: true
+  EnforcedStyle: return
+
 Metrics/ParameterLists:
   Enabled: false
 

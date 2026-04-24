@@ -221,7 +221,7 @@ module Kapusta
     def parse_atom(token)
       return true if token == 'true'
       return false if token == 'false'
-      return nil if token == 'nil'
+      return if token == 'nil'
       return token.to_i if token.match?(/\A-?\d+\z/)
       return token.to_f if token.match?(/\A-?\d+\.\d+\z/)
 
