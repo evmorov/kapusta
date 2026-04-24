@@ -15,7 +15,7 @@ module Kapusta
           return emit_expr(args[0], env, current_scope) if args.length == 1
 
           cond = emit_expr(args[0], env, current_scope)
-          truthy = emit_expr(args[1], env, current_scope)
+          truthy = emit_if_branch(args[1], env, current_scope)
           lines = ["if #{cond}", indent(truthy)]
           append_else_lines(lines, args[2..], env, current_scope)
           lines << 'end'
@@ -31,7 +31,7 @@ module Kapusta
             append_elsif_lines(lines, args, env, current_scope)
           else
             lines << 'else'
-            lines << indent(emit_expr(args[0], env, current_scope))
+            lines << indent(emit_if_branch(args[0], env, current_scope))
           end
         end
 
@@ -39,8 +39,16 @@ module Kapusta
           return append_else_lines(lines, args, env, current_scope) if args.length < 2
 
           lines << "elsif #{emit_expr(args[0], env, current_scope)}"
-          lines << indent(emit_expr(args[1], env, current_scope))
+          lines << indent(emit_if_branch(args[1], env, current_scope))
           append_else_lines(lines, args[2..], env, current_scope)
+        end
+
+        def emit_if_branch(form, env, current_scope)
+          return emit_expr(form, env, current_scope) unless do_form?(form)
+
+          emit_sequence(form.rest, env, current_scope,
+                        allow_method_definitions: false,
+                        result: true).first
         end
 
         def if_form?(form)
