@@ -85,24 +85,44 @@ module Kapusta
         short = %w[-?> -?>>].include?(kind)
         position = %w[-> -?>].include?(kind) ? :first : :last
 
-        forms[1..].reduce(value) do |memo, form|
-          threaded =
-            if form.is_a?(List)
-              if position == :first
-                List.new([form.items[0], memo, *form.items[1..]])
-              else
-                List.new([*form.items, memo])
-              end
-            else
-              List.new([form, memo])
-            end
+        return thread_short(forms, position) if short
 
-          if short
-            List.new([Sym.new('if'), List.new([Sym.new('='), memo, nil]), nil, threaded])
-          else
-            threaded
-          end
+        forms[1..].reduce(value) do |memo, form|
+          thread_step(memo, form, position)
         end
+      end
+
+      def thread_short(forms, position)
+        forms[1..].reduce(forms.first) do |memo, form|
+          temp = thread_temp
+          List.new([
+                     Sym.new('let'),
+                     Vec.new([temp, memo]),
+                     List.new([
+                                Sym.new('if'),
+                                List.new([Sym.new('='), temp, nil]),
+                                nil,
+                                thread_step(temp, form, position)
+                              ])
+                   ])
+        end
+      end
+
+      def thread_step(memo, form, position)
+        if form.is_a?(List)
+          if position == :first
+            List.new([form.items[0], memo, *form.items[1..]])
+          else
+            List.new([*form.items, memo])
+          end
+        else
+          List.new([form, memo])
+        end
+      end
+
+      def thread_temp
+        @thread_temp_index = (@thread_temp_index || 0) + 1
+        Sym.new("__kap_thread_#{@thread_temp_index}__")
       end
 
       def doto(forms)
