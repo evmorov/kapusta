@@ -23,10 +23,16 @@ module Kapusta
 
         def emit_colon(args, env, current_scope)
           receiver = emit_expr(args[0], env, current_scope)
-          method_name = emit_method_name(args[1], env, current_scope)
+          method_form = args[1]
           positional, kwargs, block = split_call_args(args[2..], env, current_scope)
+          literal_name = method_form if method_form.is_a?(Symbol) || method_form.is_a?(String)
+          if literal_name && !kwargs && !block && direct_method_name?(literal_name.to_s)
+            return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s), positional)
+          end
+
+          method_name = emit_method_name(method_form, env, current_scope)
           parts = build_call_args([method_name, *positional], kwargs, block)
-          "#{receiver}.public_send(#{parts})"
+          "#{parenthesize(receiver)}.public_send(#{parts})"
         end
 
         def emit_require(arg, env, current_scope)
