@@ -263,17 +263,11 @@ module Kapusta
 
         def emit_counted_loop(ruby_name:, start_code:, finish_code:, step_code:,
                               until_form:, loop_env:, current_scope:, body_code:)
-          finish_var = temp('finish')
-          step_var = temp('step')
-          cmp_var = temp('cmp')
           until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
-          body = [until_code, body_code, "#{ruby_name} += #{step_var}"].compact.reject(&:empty?).join("\n")
+          body = [until_code, body_code].compact.reject(&:empty?).join("\n")
+          step_part = step_code == '1' ? '' : ", #{step_code}"
           [
-            "#{ruby_name} = #{start_code}",
-            "#{finish_var} = #{finish_code}",
-            "#{step_var} = #{step_code}",
-            "#{cmp_var} = #{step_var} >= 0 ? :<= : :>=",
-            "while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})",
+            "#{parenthesize(start_code)}.step(#{finish_code}#{step_part}) do |#{ruby_name}|",
             indent(body),
             'end'
           ].join("\n")
