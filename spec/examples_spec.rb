@@ -282,11 +282,13 @@ RSpec.describe 'examples' do
   end
 
   it 'regex.kap' do
-    expected = <<~'OUT'
-      "2026-04-23 -> {\"year\" => \"2026\", \"month\" => \"04\", \"day\" => \"23\"}"
-      "hello -> "
-      "1999-12-31 -> {\"year\" => \"1999\", \"month\" => \"12\", \"day\" => \"31\"}"
-    OUT
+    first = { 'year' => '2026', 'month' => '04', 'day' => '23' }
+    last = { 'year' => '1999', 'month' => '12', 'day' => '31' }
+    expected = [
+      "2026-04-23 -> #{first}".inspect,
+      'hello -> '.inspect,
+      "1999-12-31 -> #{last}".inspect
+    ].map { |line| "#{line}\n" }.join
     expect(run_example('regex.kap')).to eq(expected)
   end
 
@@ -391,10 +393,8 @@ RSpec.describe 'examples' do
   end
 
   it 'tset.kap' do
-    expect(run_example('tset.kap')).to eq(<<~OUT)
-      {name: "Ada", city: "Amsterdam"}
-      "Amsterdam"
-    OUT
+    person = { name: 'Ada', city: 'Amsterdam' }
+    expect(run_example('tset.kap')).to eq("#{person.inspect}\n#{'Amsterdam'.inspect}\n")
   end
 
   it 'two-sum.kap' do
