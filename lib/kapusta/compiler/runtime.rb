@@ -4,24 +4,11 @@ module Kapusta
   module Compiler
     module Runtime
       HELPER_DEPENDENCIES = {
-        method_path_value: %i[kebab_to_snake],
-        set_method_path: %i[kebab_to_snake],
-        get_ivar: %i[kebab_to_snake],
-        set_ivar: %i[kebab_to_snake],
-        get_cvar: %i[current_class_scope kebab_to_snake],
-        set_cvar: %i[current_class_scope kebab_to_snake],
-        get_gvar: %i[kebab_to_snake],
-        set_gvar: %i[kebab_to_snake],
         destructure: %i[destructure_into],
         match_pattern: %i[match_pattern_into]
       }.freeze
 
       HELPER_SOURCES = {
-        kebab_to_snake: <<~RUBY.chomp,
-          def kap_kebab_to_snake(name)
-            name.tr('-', '_')
-          end
-        RUBY
         call: <<~'RUBY'.chomp,
           def kap_call(callee, positional, kwargs = nil, block = nil)
             raise "not callable: #{callee.inspect}" unless callee.respond_to?(:call)
@@ -81,56 +68,6 @@ module Kapusta
             target = obj
             keys[0...-1].each { |key| target = target[key] }
             target[keys.last] = value
-          end
-        RUBY
-        method_path_value: <<~RUBY.chomp,
-          def kap_method_path_value(base, segments)
-            segments.reduce(base) { |obj, segment| obj.public_send(kap_kebab_to_snake(segment).to_sym) }
-          end
-        RUBY
-        set_method_path: <<~'RUBY'.chomp,
-          def kap_set_method_path(base, segments, value)
-            target = base
-            segments[0...-1].each do |segment|
-              target = target.public_send(kap_kebab_to_snake(segment).to_sym)
-            end
-            setter = "#{kap_kebab_to_snake(segments.last)}="
-            target.public_send(setter.to_sym, value)
-          end
-        RUBY
-        current_class_scope: <<~RUBY.chomp,
-          def kap_current_class_scope(receiver)
-            receiver.is_a?(Module) ? receiver : receiver.class
-          end
-        RUBY
-        get_ivar: <<~'RUBY'.chomp,
-          def kap_get_ivar(receiver, name)
-            receiver.instance_variable_get("@#{kap_kebab_to_snake(name)}")
-          end
-        RUBY
-        set_ivar: <<~'RUBY'.chomp,
-          def kap_set_ivar(receiver, name, value)
-            receiver.instance_variable_set("@#{kap_kebab_to_snake(name)}", value)
-          end
-        RUBY
-        get_cvar: <<~'RUBY'.chomp,
-          def kap_get_cvar(receiver, name)
-            kap_current_class_scope(receiver).class_variable_get("@@#{kap_kebab_to_snake(name)}")
-          end
-        RUBY
-        set_cvar: <<~'RUBY'.chomp,
-          def kap_set_cvar(receiver, name, value)
-            kap_current_class_scope(receiver).class_variable_set("@@#{kap_kebab_to_snake(name)}", value)
-          end
-        RUBY
-        get_gvar: <<~'RUBY'.chomp,
-          def kap_get_gvar(name)
-            Kernel.eval("$#{kap_kebab_to_snake(name)}", binding, __FILE__, __LINE__)
-          end
-        RUBY
-        set_gvar: <<~'RUBY'.chomp,
-          def kap_set_gvar(name, value)
-            Kernel.eval("$#{kap_kebab_to_snake(name)} = value", binding, __FILE__, __LINE__)
           end
         RUBY
         ensure_module: <<~RUBY.chomp,

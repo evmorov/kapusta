@@ -77,8 +77,8 @@ module Kapusta
           when 'class' then emit_class_expr(args, env)
           when 'try' then emit_try(args, env, current_scope)
           when 'raise' then emit_raise(args, env, current_scope)
-          when 'ivar' then runtime_call(:get_ivar, 'self', args[0].name.inspect)
-          when 'cvar' then runtime_call(:get_cvar, 'self', args[0].name.inspect)
+          when 'ivar' then "@#{Kapusta.kebab_to_snake(args[0].name)}"
+          when 'cvar' then "@@#{Kapusta.kebab_to_snake(args[0].name)}"
           when 'gvar' then emit_gvar(args[0])
           when 'ruby' then "Kernel.eval(#{emit_expr(args[0], env, current_scope)})"
           when 'and' then emit_and(args, env, current_scope)

@@ -260,19 +260,25 @@ module Kapusta
           if segments.empty?
             emit_callable_call(base_code, args, env, current_scope)
           else
-            receiver =
-              if segments.length == 1
-                base_code
-              else
-                runtime_call(:method_path_value, base_code, segments[0...-1].inspect)
-              end
+            receiver = emit_method_path(base_code, segments[0...-1])
             method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
             positional, kwargs, block = split_call_args(args, env, current_scope)
-            if segments.length == 1 && !kwargs && !block && direct_method_name?(segments.last)
+            if !kwargs && !block && direct_method_name?(segments.last)
               return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last), positional)
             end
 
             runtime_call(:send_call, receiver, method_name, positional, kwargs, block)
+          end
+        end
+
+        def emit_method_path(base_code, segments)
+          segments.reduce(base_code) do |acc, segment|
+            snake = Kapusta.kebab_to_snake(segment)
+            if direct_method_name?(segment)
+              "#{acc}.#{snake}"
+            else
+              "#{acc}.public_send(#{snake.to_sym.inspect})"
+            end
           end
         end
 
@@ -334,17 +340,12 @@ module Kapusta
         end
 
         def emit_gvar(sym)
-          ruby_name = global_name(sym.name)
-          return "$#{ruby_name}" if direct_global_name?(ruby_name)
-
-          runtime_call(:get_gvar, sym.name.inspect)
+          "$#{global_name(sym.name)}"
         end
 
         def emit_multisym_value(sym, env)
           base_code, segments = multisym_base(sym.segments, env)
-          return base_code if segments.empty?
-
-          runtime_call(:method_path_value, base_code, segments.inspect)
+          emit_method_path(base_code, segments)
         end
 
         def multisym_base(segments, env)
@@ -373,10 +374,6 @@ module Kapusta
 
         def direct_method_name?(name)
           Kapusta.kebab_to_snake(name).match?(/\A[a-z_]\w*[!?=]?\z/)
-        end
-
-        def direct_global_name?(name)
-          name.match?(/\A[a-z_]\w*\z/)
         end
 
         def global_name(name)

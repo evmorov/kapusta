@@ -298,7 +298,14 @@ module Kapusta
           when Sym
             if target.dotted?
               base_code, segments = multisym_base(target.segments, env)
-              runtime_call(:set_method_path, base_code, segments.inspect, value_code)
+              receiver = emit_method_path(base_code, segments[0...-1])
+              last = segments.last
+              snake = Kapusta.kebab_to_snake(last)
+              if direct_method_name?(last)
+                "#{receiver}.#{snake} = #{value_code}"
+              else
+                "#{receiver}.public_send(:\"#{snake}=\", #{value_code})"
+              end
             else
               binding = env.lookup(target.name)
               emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
@@ -312,16 +319,11 @@ module Kapusta
               keys_code = "[#{target.items[2..].map { |item| emit_expr(item, env, current_scope) }.join(', ')}]"
               runtime_call(:set_path, object_code, keys_code, value_code)
             elsif head.is_a?(Sym) && head.name == 'ivar'
-              runtime_call(:set_ivar, 'self', target.items[1].name.inspect, value_code)
+              "@#{Kapusta.kebab_to_snake(target.items[1].name)} = #{value_code}"
             elsif head.is_a?(Sym) && head.name == 'cvar'
-              runtime_call(:set_cvar, 'self', target.items[1].name.inspect, value_code)
+              "@@#{Kapusta.kebab_to_snake(target.items[1].name)} = #{value_code}"
             elsif head.is_a?(Sym) && head.name == 'gvar'
-              ruby_name = global_name(target.items[1].name)
-              if direct_global_name?(ruby_name)
-                "$#{ruby_name} = #{value_code}"
-              else
-                runtime_call(:set_gvar, target.items[1].name.inspect, value_code)
-              end
+              "$#{global_name(target.items[1].name)} = #{value_code}"
             else
               emit_error!("bad set target: #{target.inspect}")
             end
