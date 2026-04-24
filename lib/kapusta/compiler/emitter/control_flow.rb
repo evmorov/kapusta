@@ -16,14 +16,35 @@ module Kapusta
 
           cond = emit_expr(args[0], env, current_scope)
           truthy = emit_expr(args[1], env, current_scope)
-          falsy = build_if(args[2..], env, current_scope)
-          <<~RUBY.chomp
-            if #{cond}
-              #{truthy}
-            else
-              #{indent(falsy)}
-            end
-          RUBY
+          lines = ["if #{cond}", indent(truthy)]
+          append_else_lines(lines, args[2..], env, current_scope)
+          lines << 'end'
+          lines.join("\n")
+        end
+
+        def append_else_lines(lines, args, env, current_scope)
+          return if args.empty?
+
+          if args.length == 1 && if_form?(args[0])
+            append_elsif_lines(lines, args[0].rest, env, current_scope)
+          elsif args.length >= 2
+            append_elsif_lines(lines, args, env, current_scope)
+          else
+            lines << 'else'
+            lines << indent(emit_expr(args[0], env, current_scope))
+          end
+        end
+
+        def append_elsif_lines(lines, args, env, current_scope)
+          return append_else_lines(lines, args, env, current_scope) if args.length < 2
+
+          lines << "elsif #{emit_expr(args[0], env, current_scope)}"
+          lines << indent(emit_expr(args[1], env, current_scope))
+          append_else_lines(lines, args[2..], env, current_scope)
+        end
+
+        def if_form?(form)
+          form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'if'
         end
 
         def emit_case(args, env, current_scope, mode)
@@ -106,21 +127,16 @@ module Kapusta
         end
 
         def emit_while(args, env, current_scope)
-          body_code, = emit_sequence(args[1..], env, current_scope, allow_method_definitions: false)
           <<~RUBY.chomp
             (-> do
-              while #{emit_expr(args[0], env, current_scope)}
-                #{indent(body_code)}
-              end
+              #{indent(emit_while_statement(args, env, current_scope))}
               nil
             end).call
           RUBY
         end
 
         def emit_for(args, env, current_scope)
-          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
-          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope, allow_method_definitions: false)
-          loop_code = emit_counted_loop(**parsed, current_scope:, body_code:)
+          loop_code = emit_for_statement(args, env, current_scope)
           <<~RUBY.chomp
             (-> do
               #{indent(loop_code)}
@@ -130,15 +146,40 @@ module Kapusta
         end
 
         def emit_each(args, env, current_scope)
-          iter_code = emit_iteration(args[0], env, current_scope) do |iter_env|
-            emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
-          end
+          iter_code = emit_each_statement(args, env, current_scope)
           <<~RUBY.chomp
             (-> do
               #{iter_code}
               nil
             end).call
           RUBY
+        end
+
+        def emit_while_statement(args, env, current_scope)
+          body_code, = emit_sequence(args[1..], env, current_scope,
+                                     allow_method_definitions: false,
+                                     result: false)
+          [
+            "while #{emit_expr(args[0], env, current_scope)}",
+            indent(body_code),
+            'end'
+          ].join("\n")
+        end
+
+        def emit_for_statement(args, env, current_scope)
+          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
+          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope,
+                                     allow_method_definitions: false,
+                                     result: false)
+          emit_counted_loop(**parsed, current_scope:, body_code:)
+        end
+
+        def emit_each_statement(args, env, current_scope)
+          emit_iteration(args[0], env, current_scope) do |iter_env|
+            emit_sequence(args[1..], iter_env, current_scope,
+                          allow_method_definitions: false,
+                          result: false).first
+          end
         end
       end
     end

@@ -6,7 +6,7 @@ module Kapusta
       module Support
         private
 
-        def emit_forms_with_headers(forms, env, current_scope)
+        def emit_forms_with_headers(forms, env, current_scope, result: true)
           i = 0
           codes = []
           while i < forms.length
@@ -15,7 +15,9 @@ module Kapusta
               codes << emit_bodyless_header(form, forms[(i + 1)..], env, current_scope)
               break
             else
-              code, env = emit_form_in_sequence(form, env, current_scope, allow_method_definitions: true)
+              code, env = emit_form_in_sequence(form, env, current_scope,
+                                                allow_method_definitions: true,
+                                                result_needed: result && i == forms.length - 1)
               codes << code
               i += 1
             end
@@ -50,25 +52,29 @@ module Kapusta
               if inner.length == 1 && bodyless_header?(inner[0])
                 emit_bodyless_header(inner[0], remaining_forms, env, :module)
               else
-                emit_forms_with_headers(remaining_forms, env, :module)
+                emit_forms_with_headers(remaining_forms, env, :module, result: false)
               end
-            emit_module_wrapper(name_sym, body)
+            emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body)
           else
             name_sym, supers, = split_class_args(form.items[1..])
-            body = emit_forms_with_headers(remaining_forms, env, :class)
-            emit_class_wrapper(name_sym, supers, env, body)
+            body = emit_forms_with_headers(remaining_forms, env, :class, result: false)
+            emit_direct_class_header(name_sym, supers, body) || emit_class_wrapper(name_sym, supers, env, body)
           end
         end
 
-        def emit_form_in_sequence(form, env, current_scope, allow_method_definitions:)
+        def emit_form_in_sequence(form, env, current_scope, allow_method_definitions:, result_needed: true)
           if allow_method_definitions && method_definition_form?(form) && %i[module class].include?(current_scope)
             [emit_method_definition(form, env), env]
           elsif named_function_form?(form)
             emit_named_fn_assignment(form, env, current_scope)
           elsif local_form?(form)
-            emit_local_form(form, env, current_scope)
+            code, env = emit_local_form(form, env, current_scope)
+            code = code.delete_suffix("\nnil") unless result_needed
+            [code, env]
           elsif do_form?(form)
-            emit_do_form(form.rest, env, current_scope)
+            emit_do_form(form.rest, env, current_scope, result_needed:)
+          elsif sequence_statement_form?(form)
+            emit_sequence_statement_form(form, env, current_scope, result_needed:)
           elsif set_new_local_form?(form, env)
             emit_set_form(form, env, current_scope)
           else
@@ -76,20 +82,49 @@ module Kapusta
           end
         end
 
-        def emit_do_form(forms, env, current_scope)
-          body, new_env = emit_sequence(forms, env, current_scope, allow_method_definitions: false)
+        def emit_do_form(forms, env, current_scope, result_needed: true)
+          body, new_env = emit_sequence(forms, env, current_scope,
+                                        allow_method_definitions: false,
+                                        result: result_needed)
+          return [body, new_env] unless result_needed
+
           ["begin\n#{indent(body)}\nend", new_env]
         end
 
-        def emit_sequence(forms, env, current_scope, allow_method_definitions:)
+        def emit_sequence(forms, env, current_scope, allow_method_definitions:, result: true)
           current_env = env
           codes = []
-          forms.each do |form|
+          forms.each_with_index do |form, index|
             code, current_env = emit_form_in_sequence(form, current_env, current_scope,
-                                                      allow_method_definitions:)
+                                                      allow_method_definitions:,
+                                                      result_needed: result && index == forms.length - 1)
             codes << code
           end
           [codes.join("\n"), current_env]
+        end
+
+        def sequence_statement_form?(form)
+          return false unless form.is_a?(List) && form.head.is_a?(Sym)
+
+          %w[let while for each].include?(form.head.name)
+        end
+
+        def emit_sequence_statement_form(form, env, current_scope, result_needed:)
+          case form.head.name
+          when 'let'
+            return [emit_let_statement(form.rest, env, current_scope), env] unless result_needed
+          when 'while'
+            return [emit_while_statement(form.rest, env, current_scope), env]
+          when 'for'
+            return [emit_for_statement(form.rest, env, current_scope), env]
+          when 'each'
+            code = emit_each_statement(form.rest, env, current_scope)
+            return ["#{code}\nnil", env] if result_needed
+
+            return [code, env]
+          end
+
+          [emit_expr(form, env, current_scope), env]
         end
 
         def special_form?(name)
@@ -140,7 +175,35 @@ module Kapusta
 
         def temp(prefix)
           @temp_index += 1
-          "__kap_#{prefix}_#{@temp_index}"
+          "kap_#{prefix}_#{@temp_index}"
+        end
+
+        def define_local(env, source_name, shadow: false)
+          ruby_name = local_name(source_name, env, shadow:)
+          env.define(source_name, ruby_name)
+          ruby_name
+        end
+
+        def local_name(source_name, env, shadow:)
+          base = sanitize_local(source_name)
+          base = "user_#{base}" if reserved_generated_name?(base)
+          return base unless ruby_name_defined?(env, base, shadow:)
+
+          index = 2
+          loop do
+            candidate = "#{base}_#{index}"
+            return candidate unless ruby_name_defined?(env, candidate, shadow:)
+
+            index += 1
+          end
+        end
+
+        def ruby_name_defined?(env, name, shadow:)
+          shadow ? env.local_ruby_name_defined?(name) : env.ruby_name_defined?(name)
+        end
+
+        def reserved_generated_name?(name)
+          name.start_with?('kap_', '__kap_')
         end
 
         def runtime_helper(name)
@@ -158,9 +221,8 @@ module Kapusta
 
         def parse_counted_for_bindings(bindings, env, current_scope)
           name_sym = bindings[0]
-          ruby_name = temp(sanitize_local(name_sym.name))
           loop_env = env.child
-          loop_env.define(name_sym.name, ruby_name)
+          ruby_name = define_local(loop_env, name_sym.name)
           start_code = emit_expr(bindings[1], env, current_scope)
           finish_code = emit_expr(bindings[2], env, current_scope)
           step_code = '1'
@@ -184,24 +246,25 @@ module Kapusta
           step_var = temp('step')
           cmp_var = temp('cmp')
           until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
-          <<~RUBY.chomp
-            #{ruby_name} = #{start_code}
-            #{finish_var} = #{finish_code}
-            #{step_var} = #{step_code}
-            #{cmp_var} = #{step_var} >= 0 ? :<= : :>=
-            while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})
-              #{until_code}
-              #{indent(body_code)}
-              #{ruby_name} += #{step_var}
-            end
-          RUBY
+          body = [until_code, body_code, "#{ruby_name} += #{step_var}"].compact.reject(&:empty?).join("\n")
+          [
+            "#{ruby_name} = #{start_code}",
+            "#{finish_var} = #{finish_code}",
+            "#{step_var} = #{step_code}",
+            "#{cmp_var} = #{step_var} >= 0 ? :<= : :>=",
+            "while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})",
+            indent(body),
+            'end'
+          ].join("\n")
         end
 
         def sanitize_local(name)
           base = Kapusta.kebab_to_snake(name)
           base = base.gsub('?', '_q').gsub('!', '_bang')
           base = base.gsub(/[^a-zA-Z0-9_]/, '_')
-          base = "_#{base}" if base.empty? || base.match?(/\A\d/) || self.class::RUBY_KEYWORDS.include?(base)
+          if base.empty? || base.match?(/\A\d/) || base.match?(/\A[A-Z]/) || self.class::RUBY_KEYWORDS.include?(base)
+            base = "_#{base}"
+          end
           base
         end
       end

@@ -25,6 +25,14 @@ module Kapusta
       @vars.key?(name) || @parent&.defined?(name)
     end
 
+    def ruby_name_defined?(name)
+      @vars.value?(name) || @parent&.ruby_name_defined?(name)
+    end
+
+    def local_ruby_name_defined?(name)
+      @vars.value?(name)
+    end
+
     def set_existing!(name, value)
       if @vars.key?(name)
         @vars[name] = value

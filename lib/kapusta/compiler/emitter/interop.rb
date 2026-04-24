@@ -37,26 +37,40 @@ module Kapusta
         end
 
         def emit_module_expr(args, env)
-          emit_module_wrapper(args[0], emit_sequence(args[1..], env, :module, allow_method_definitions: true).first)
+          body = emit_sequence(args[1..], env, :module, allow_method_definitions: true, result: false).first
+          emit_module_wrapper(args[0], body)
         end
 
         def emit_class_expr(args, env)
           name_sym, supers, body_forms = split_class_args(args)
+          body = emit_sequence(body_forms, env, :class, allow_method_definitions: true, result: false).first
           emit_class_wrapper(name_sym, supers, env,
-                             emit_sequence(body_forms, env, :class, allow_method_definitions: true).first)
+                             body)
         end
 
         def emit_module_wrapper(name_sym, body)
           mod_var = temp('module')
-          <<~RUBY.chomp
-            (-> do
-              #{mod_var} = #{runtime_call(:ensure_module, 'self', name_sym.name.inspect)}
-              #{mod_var}.module_eval do
-                #{indent(body)}
-              end
-              #{mod_var}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent("#{mod_var} = #{runtime_call(:ensure_module, 'self', name_sym.name.inspect)}"),
+            indent("#{mod_var}.module_eval do"),
+            indent(body, 2),
+            indent('end'),
+            indent(mod_var),
+            'end).call'
+          ].join("\n")
+        end
+
+        def emit_direct_module_header(name_sym, body)
+          const_name = simple_constant_name(name_sym)
+          return nil unless const_name
+
+          [
+            "module #{const_name}",
+            indent(body),
+            'end',
+            const_name
+          ].join("\n")
         end
 
         def emit_class_wrapper(name_sym, supers, env, body)
@@ -67,15 +81,33 @@ module Kapusta
             else
               'Object'
             end
-          <<~RUBY.chomp
-            (-> do
-              #{klass_var} = #{runtime_call(:ensure_class, 'self', name_sym.name.inspect, super_code)}
-              #{klass_var}.class_eval do
-                #{indent(body)}
-              end
-              #{klass_var}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent("#{klass_var} = #{runtime_call(:ensure_class, 'self', name_sym.name.inspect, super_code)}"),
+            indent("#{klass_var}.class_eval do"),
+            indent(body, 2),
+            indent('end'),
+            indent(klass_var),
+            'end).call'
+          ].join("\n")
+        end
+
+        def emit_direct_class_header(name_sym, supers, body)
+          const_name = simple_constant_name(name_sym)
+          return nil unless const_name && supers.nil?
+
+          [
+            "class #{const_name}",
+            indent(body),
+            'end',
+            const_name
+          ].join("\n")
+        end
+
+        def simple_constant_name(name_sym)
+          return nil unless name_sym.is_a?(Sym) && name_sym.name.match?(/\A[A-Z]\w*\z/)
+
+          name_sym.name
         end
 
         def emit_try(args, env, current_scope)
@@ -103,8 +135,7 @@ module Kapusta
           lines = ['begin', indent(emit_expr(args[0], env, current_scope))]
           catches.each do |klass_form, bind_sym, body|
             rescue_env = env.child
-            rescue_name = temp(sanitize_local(bind_sym.name))
-            rescue_env.define(bind_sym.name, rescue_name)
+            rescue_name = define_local(rescue_env, bind_sym.name)
             body_code, = emit_sequence(body, rescue_env, current_scope, allow_method_definitions: false)
             rescue_line =
               if klass_form
@@ -176,7 +207,15 @@ module Kapusta
 
         def emit_callable_call(callee_code, args, env, current_scope)
           positional, kwargs, block = split_call_args(args, env, current_scope)
+          return emit_direct_callable_call(callee_code, positional) unless kwargs || block
+
           runtime_call(:call, callee_code, "[#{positional.join(', ')}]", kwargs, block)
+        end
+
+        def emit_direct_callable_call(callee_code, positional)
+          rendered_args = positional.join(', ')
+          suffix = rendered_args.empty? ? '.call' : ".call(#{rendered_args})"
+          "#{parenthesize(callee_code)}#{suffix}"
         end
 
         def emit_multisym_call(head, args, env, current_scope)
@@ -192,8 +231,19 @@ module Kapusta
               end
             method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
             positional, kwargs, block = split_call_args(args, env, current_scope)
+            if segments.length == 1 && !kwargs && !block && direct_method_name?(segments.last)
+              return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last), positional)
+            end
+
             runtime_call(:send_call, receiver, method_name, positional, kwargs, block)
           end
+        end
+
+        def emit_direct_method_call(receiver, method_name, positional)
+          args = positional.join(', ')
+          rendered_receiver = simple_expression?(receiver) ? receiver : parenthesize(receiver)
+          suffix = args.empty? ? method_name : "#{method_name}(#{args})"
+          "#{rendered_receiver}.#{suffix}"
         end
 
         def emit_self_call(name, args, env, current_scope)
@@ -243,6 +293,13 @@ module Kapusta
           raise Error, "undefined symbol: #{name}"
         end
 
+        def emit_gvar(sym)
+          ruby_name = global_name(sym.name)
+          return "$#{ruby_name}" if direct_global_name?(ruby_name)
+
+          runtime_call(:get_gvar, sym.name.inspect)
+        end
+
         def emit_multisym_value(sym, env)
           base_code, segments = multisym_base(sym.segments, env)
           return base_code if segments.empty?
@@ -269,7 +326,33 @@ module Kapusta
         end
 
         def parenthesize(code)
+          return code if simple_expression?(code)
+
           "(#{code})"
+        end
+
+        def direct_method_name?(name)
+          Kapusta.kebab_to_snake(name).match?(/\A[a-z_]\w*[!?=]?\z/)
+        end
+
+        def direct_global_name?(name)
+          name.match?(/\A[a-z_]\w*\z/)
+        end
+
+        def global_name(name)
+          Kapusta.kebab_to_snake(name).gsub(/[^a-zA-Z0-9_]/, '_')
+        end
+
+        def simple_expression?(code)
+          code.match?(/\A[a-z_]\w*\z/) ||
+            code.match?(/\A[A-Z]\w*(?:::[A-Z]\w*)*\z/) ||
+            code.match?(/\A[a-z_]\w*[!?=]?\([^()\n]*\)\z/) ||
+            code.match?(/\A\d+(?:\.\d+)?\z/) ||
+            code.match?(/\A[a-z_]\w*(?:\.[a-z_]\w*[!?=]?(?:\([^()\n]*\))?)+\z/) ||
+            code.match?(/\A:[a-zA-Z_]\w*[!?=]?\z/) ||
+            code.match?(/\A"(?:[^"\\]|\\.)*"\z/) ||
+            code.match?(/\A'(?:[^'\\]|\\.)*'\z/) ||
+            %w[nil true false self].include?(code)
         end
       end
     end

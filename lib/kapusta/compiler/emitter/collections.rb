@@ -36,10 +36,9 @@ module Kapusta
         def emit_accumulate(args, env, current_scope)
           bindings = args[0].items
           acc_name = bindings[0]
-          acc_var = temp(sanitize_local(acc_name.name))
           iter_bindings = Vec.new(bindings[2..])
           loop_env = env.child
-          loop_env.define(acc_name.name, acc_var)
+          acc_var = define_local(loop_env, acc_name.name)
           iter_code = emit_iteration(iter_bindings, loop_env, current_scope) do |iter_env|
             iter_env.define(acc_name.name, acc_var)
             emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first.then do |body|
@@ -58,12 +57,10 @@ module Kapusta
         def emit_faccumulate(args, env, current_scope)
           bindings = args[0].items
           acc_name = bindings[0]
-          acc_var = temp(sanitize_local(acc_name.name))
           loop_name = bindings[2]
-          loop_var = temp(sanitize_local(loop_name.name))
           loop_env = env.child
-          loop_env.define(acc_name.name, acc_var)
-          loop_env.define(loop_name.name, loop_var)
+          acc_var = define_local(loop_env, acc_name.name)
+          loop_var = define_local(loop_env, loop_name.name)
           body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
           accumulating_body = emit_sequence_value_assignment(acc_var, body_code)
           loop_code = emit_counted_loop(

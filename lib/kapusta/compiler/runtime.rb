@@ -20,12 +20,12 @@ module Kapusta
 
       HELPER_SOURCES = {
         kebab_to_snake: <<~RUBY.chomp,
-          def __kap_kebab_to_snake(name)
+          def kap_kebab_to_snake(name)
             name.tr('-', '_')
           end
         RUBY
         call: <<~'RUBY'.chomp,
-          def __kap_call(callee, positional, kwargs = nil, block = nil)
+          def kap_call(callee, positional, kwargs = nil, block = nil)
             raise "not callable: #{callee.inspect}" unless callee.respond_to?(:call)
 
             if block
@@ -36,7 +36,7 @@ module Kapusta
           end
         RUBY
         send_call: <<~RUBY.chomp,
-          def __kap_send_call(receiver, method_name, positional, kwargs = nil, block = nil)
+          def kap_send_call(receiver, method_name, positional, kwargs = nil, block = nil)
             if block
               if kwargs
                 receiver.public_send(method_name, *positional, **kwargs, &block)
@@ -51,7 +51,7 @@ module Kapusta
           end
         RUBY
         invoke_self: <<~RUBY.chomp,
-          def __kap_invoke_self(receiver, method_name, positional, kwargs = nil, block = nil)
+          def kap_invoke_self(receiver, method_name, positional, kwargs = nil, block = nil)
             if block
               if kwargs
                 receiver.send(method_name, *positional, **kwargs, &block)
@@ -64,7 +64,7 @@ module Kapusta
           end
         RUBY
         stringify: <<~'RUBY'.chomp,
-          def __kap_stringify(value)
+          def kap_stringify(value)
             render = nil
             render = lambda do |item|
               case item
@@ -91,23 +91,23 @@ module Kapusta
           end
         RUBY
         print_values: <<~'RUBY'.chomp,
-          def __kap_print_values(*values)
-            $stdout.puts(values.map { |value| __kap_stringify(value) }.join("\t"))
+          def kap_print_values(*values)
+            $stdout.puts(values.map { |value| kap_stringify(value) }.join("\t"))
             nil
           end
         RUBY
         concat: <<~RUBY.chomp,
-          def __kap_concat(values)
-            values.map { |value| __kap_stringify(value) }.join
+          def kap_concat(values)
+            values.map { |value| kap_stringify(value) }.join
           end
         RUBY
         get_path: <<~RUBY.chomp,
-          def __kap_get_path(obj, keys)
+          def kap_get_path(obj, keys)
             keys.reduce(obj) { |acc, key| acc[key] }
           end
         RUBY
         qget_path: <<~RUBY.chomp,
-          def __kap_qget_path(obj, keys)
+          def kap_qget_path(obj, keys)
             keys.each do |key|
               return nil if obj.nil?
 
@@ -117,64 +117,64 @@ module Kapusta
           end
         RUBY
         set_path: <<~RUBY.chomp,
-          def __kap_set_path(obj, keys, value)
+          def kap_set_path(obj, keys, value)
             target = obj
             keys[0...-1].each { |key| target = target[key] }
             target[keys.last] = value
           end
         RUBY
         method_path_value: <<~RUBY.chomp,
-          def __kap_method_path_value(base, segments)
-            segments.reduce(base) { |obj, segment| obj.public_send(__kap_kebab_to_snake(segment).to_sym) }
+          def kap_method_path_value(base, segments)
+            segments.reduce(base) { |obj, segment| obj.public_send(kap_kebab_to_snake(segment).to_sym) }
           end
         RUBY
         set_method_path: <<~'RUBY'.chomp,
-          def __kap_set_method_path(base, segments, value)
+          def kap_set_method_path(base, segments, value)
             target = base
             segments[0...-1].each do |segment|
-              target = target.public_send(__kap_kebab_to_snake(segment).to_sym)
+              target = target.public_send(kap_kebab_to_snake(segment).to_sym)
             end
-            setter = "#{__kap_kebab_to_snake(segments.last)}="
+            setter = "#{kap_kebab_to_snake(segments.last)}="
             target.public_send(setter.to_sym, value)
           end
         RUBY
         current_class_scope: <<~RUBY.chomp,
-          def __kap_current_class_scope(receiver)
+          def kap_current_class_scope(receiver)
             receiver.is_a?(Module) ? receiver : receiver.class
           end
         RUBY
         get_ivar: <<~'RUBY'.chomp,
-          def __kap_get_ivar(receiver, name)
-            receiver.instance_variable_get("@#{__kap_kebab_to_snake(name)}")
+          def kap_get_ivar(receiver, name)
+            receiver.instance_variable_get("@#{kap_kebab_to_snake(name)}")
           end
         RUBY
         set_ivar: <<~'RUBY'.chomp,
-          def __kap_set_ivar(receiver, name, value)
-            receiver.instance_variable_set("@#{__kap_kebab_to_snake(name)}", value)
+          def kap_set_ivar(receiver, name, value)
+            receiver.instance_variable_set("@#{kap_kebab_to_snake(name)}", value)
           end
         RUBY
         get_cvar: <<~'RUBY'.chomp,
-          def __kap_get_cvar(receiver, name)
-            __kap_current_class_scope(receiver).class_variable_get("@@#{__kap_kebab_to_snake(name)}")
+          def kap_get_cvar(receiver, name)
+            kap_current_class_scope(receiver).class_variable_get("@@#{kap_kebab_to_snake(name)}")
           end
         RUBY
         set_cvar: <<~'RUBY'.chomp,
-          def __kap_set_cvar(receiver, name, value)
-            __kap_current_class_scope(receiver).class_variable_set("@@#{__kap_kebab_to_snake(name)}", value)
+          def kap_set_cvar(receiver, name, value)
+            kap_current_class_scope(receiver).class_variable_set("@@#{kap_kebab_to_snake(name)}", value)
           end
         RUBY
         get_gvar: <<~'RUBY'.chomp,
-          def __kap_get_gvar(name)
-            Kernel.eval("$#{__kap_kebab_to_snake(name)}", binding, __FILE__, __LINE__)
+          def kap_get_gvar(name)
+            Kernel.eval("$#{kap_kebab_to_snake(name)}", binding, __FILE__, __LINE__)
           end
         RUBY
         set_gvar: <<~'RUBY'.chomp,
-          def __kap_set_gvar(name, value)
-            Kernel.eval("$#{__kap_kebab_to_snake(name)} = value", binding, __FILE__, __LINE__)
+          def kap_set_gvar(name, value)
+            Kernel.eval("$#{kap_kebab_to_snake(name)} = value", binding, __FILE__, __LINE__)
           end
         RUBY
         ensure_module: <<~RUBY.chomp,
-          def __kap_ensure_module(holder, path)
+          def kap_ensure_module(holder, path)
             segments = path.split('.')
             last = segments.pop
             scope = holder.is_a?(Module) ? holder : Object
@@ -198,7 +198,7 @@ module Kapusta
           end
         RUBY
         ensure_class: <<~RUBY.chomp,
-          def __kap_ensure_class(holder, path, super_class)
+          def kap_ensure_class(holder, path, super_class)
             segments = path.split('.')
             last = segments.pop
             scope = holder.is_a?(Module) ? holder : Object
@@ -222,14 +222,14 @@ module Kapusta
           end
         RUBY
         destructure: <<~RUBY.chomp,
-          def __kap_destructure(pattern, value)
+          def kap_destructure(pattern, value)
             bindings = {}
-            __kap_destructure_into(pattern, value, bindings)
+            kap_destructure_into(pattern, value, bindings)
             bindings
           end
         RUBY
         destructure_into: <<~'RUBY'.chomp,
-          def __kap_destructure_into(pattern, value, bindings)
+          def kap_destructure_into(pattern, value, bindings)
             case pattern[0]
             when :sym
               name = pattern[1]
@@ -241,18 +241,18 @@ module Kapusta
                 before = items[0...rest_idx]
                 rest_pattern = items[rest_idx][1]
                 before.each_with_index do |item, i|
-                  __kap_destructure_into(item, value ? value[i] : nil, bindings)
+                  kap_destructure_into(item, value ? value[i] : nil, bindings)
                 end
                 rest_value = value ? (value[rest_idx..] || []) : []
-                __kap_destructure_into(rest_pattern, rest_value, bindings)
+                kap_destructure_into(rest_pattern, rest_value, bindings)
               else
                 items.each_with_index do |item, i|
-                  __kap_destructure_into(item, value ? value[i] : nil, bindings)
+                  kap_destructure_into(item, value ? value[i] : nil, bindings)
                 end
               end
             when :hash
               pattern[1].each do |key, subpattern|
-                __kap_destructure_into(subpattern, value ? value[key] : nil, bindings)
+                kap_destructure_into(subpattern, value ? value[key] : nil, bindings)
               end
             when :ignore
               nil
@@ -262,13 +262,13 @@ module Kapusta
           end
         RUBY
         match_pattern: <<~RUBY.chomp,
-          def __kap_match_pattern(pattern, value)
+          def kap_match_pattern(pattern, value)
             bindings = {}
-            [__kap_match_pattern_into(pattern, value, bindings), bindings]
+            [kap_match_pattern_into(pattern, value, bindings), bindings]
           end
         RUBY
         match_pattern_into: <<~'RUBY'.chomp
-          def __kap_match_pattern_into(pattern, value, bindings)
+          def kap_match_pattern_into(pattern, value, bindings)
             case pattern[0]
             when :bind
               name = pattern[1]
@@ -293,14 +293,14 @@ module Kapusta
                 return false if array.length < before.length
 
                 before.each_with_index do |item, i|
-                  return false unless __kap_match_pattern_into(item, array[i], bindings)
+                  return false unless kap_match_pattern_into(item, array[i], bindings)
                 end
-                __kap_match_pattern_into(rest_pattern, array[rest_idx..], bindings)
+                kap_match_pattern_into(rest_pattern, array[rest_idx..], bindings)
               else
                 return false unless array.length >= items.length
 
                 items.each_with_index do |item, i|
-                  return false unless __kap_match_pattern_into(item, array[i], bindings)
+                  return false unless kap_match_pattern_into(item, array[i], bindings)
                 end
                 true
               end
@@ -309,7 +309,7 @@ module Kapusta
 
               pattern[1].each do |key, subpattern|
                 return false unless value.key?(key)
-                return false unless __kap_match_pattern_into(subpattern, value[key], bindings)
+                return false unless kap_match_pattern_into(subpattern, value[key], bindings)
               end
               true
             when :lit
@@ -319,7 +319,7 @@ module Kapusta
             when :or
               pattern[1].any? do |option|
                 option_bindings = bindings.dup
-                next false unless __kap_match_pattern_into(option, value, option_bindings)
+                next false unless kap_match_pattern_into(option, value, option_bindings)
 
                 bindings.replace(option_bindings)
                 true
@@ -334,7 +334,7 @@ module Kapusta
       module_function
 
       def helper_name(name)
-        "__kap_#{name}"
+        "kap_#{name}"
       end
 
       def helper_source(helpers)
@@ -366,7 +366,7 @@ module Kapusta
       helper_methods = []
 
       HELPER_SOURCES.each_key do |name|
-        helper_method = :"__kap_#{name}"
+        helper_method = :"kap_#{name}"
         define_singleton_method(name, instance_method(helper_method))
         helper_methods << helper_method
       end

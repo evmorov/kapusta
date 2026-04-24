@@ -10,8 +10,7 @@ module Kapusta
           if pattern.is_a?(Sym)
             return ['nil', env] if pattern.name == '_'
 
-            ruby_name = temp(sanitize_local(pattern.name))
-            env.define(pattern.name, ruby_name)
+            ruby_name = define_local(env, pattern.name)
             ["#{ruby_name} = #{value_code}", env]
           else
             bindings_var = temp('bindings')
@@ -20,8 +19,7 @@ module Kapusta
               "#{bindings_var} = #{runtime_call(:destructure, emit_pattern(pattern), value_code)}"
             ]
             pattern_names(pattern).each do |name|
-              ruby_name = temp(sanitize_local(name))
-              current_env.define(name, ruby_name)
+              ruby_name = define_local(current_env, name)
               lines << "#{ruby_name} = #{bindings_var}.fetch(#{name.inspect})"
             end
             [lines.join("\n"), current_env]
@@ -32,8 +30,7 @@ module Kapusta
           current_env = env
           lines = []
           binding_names.each do |name|
-            ruby_name = temp(sanitize_local(name))
-            current_env.define(name, ruby_name)
+            ruby_name = define_local(current_env, name)
             lines << "#{ruby_name} = #{bindings_var}.fetch(#{name.inspect})"
           end
           [lines.join("\n"), current_env]

@@ -79,7 +79,7 @@ module Kapusta
           when 'raise' then emit_raise(args, env, current_scope)
           when 'ivar' then runtime_call(:get_ivar, 'self', args[0].name.inspect)
           when 'cvar' then runtime_call(:get_cvar, 'self', args[0].name.inspect)
-          when 'gvar' then runtime_call(:get_gvar, args[0].name.inspect)
+          when 'gvar' then emit_gvar(args[0])
           when 'ruby' then "Kernel.eval(#{emit_expr(args[0], env, current_scope)})"
           when 'and' then emit_and(args, env, current_scope)
           when 'or' then emit_or(args, env, current_scope)
