@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE_DIR="$ROOT_DIR/examples"
+TARGET_DIR="$ROOT_DIR/examples-compiled"
+
+mkdir -p "$TARGET_DIR"
+
+shopt -s nullglob
+kap_files=("$SOURCE_DIR"/*.kap)
+
+if ((${#kap_files[@]} == 0)); then
+  printf 'No .kap files found in %s\n' "$SOURCE_DIR" >&2
+  exit 0
+fi
+
+for kap_file in "${kap_files[@]}"; do
+  name="$(basename "$kap_file" .kap)"
+  ruby_file="$TARGET_DIR/$name.rb"
+
+  "$ROOT_DIR/exe/kapusta" --compile "$kap_file" > "$ruby_file"
+  printf 'Compiled %s -> %s\n' "$kap_file" "$ruby_file"
+done
