@@ -42,15 +42,20 @@ module Kapusta
         end
 
         def emit_simple_lambda(pattern, body, env, current_scope)
-          body_env = env.child
-          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
-          body_code, = emit_sequence(body, body_env, current_scope, allow_method_definitions: false)
+          params, body_code = build_simple_block_parts(pattern, body, env, current_scope)
           header = params.empty? ? 'proc do' : "proc do |#{params.join(', ')}|"
           [
             header,
             indent(body_code),
             'end'
           ].join("\n")
+        end
+
+        def build_simple_block_parts(pattern, body, env, current_scope)
+          body_env = env.child
+          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
+          body_code, = emit_sequence(body, body_env, current_scope, allow_method_definitions: false)
+          [params, body_code]
         end
 
         def simple_parameter_pattern?(pattern)
@@ -172,9 +177,7 @@ module Kapusta
         end
 
         def emit_simple_method_body(pattern, body, env)
-          body_env = env.child
-          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
-          body_code, = emit_sequence(body, body_env, :toplevel, allow_method_definitions: false)
+          params, body_code = build_simple_block_parts(pattern, body, env, :toplevel)
           [params.empty? ? 'do' : "do |#{params.join(', ')}|", body_code]
         end
 
