@@ -675,15 +675,6 @@ module Kapusta
       end
     end
 
-    def fn_body(form)
-      args = list_rest(form)
-      if args[0].is_a?(Sym) && args[1].is_a?(Vec)
-        args.drop(2)
-      else
-        args.drop(1)
-      end
-    end
-
     def consecutive_requires?(previous, current)
       require_form?(previous) && require_form?(current)
     end

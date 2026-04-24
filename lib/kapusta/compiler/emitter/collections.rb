@@ -10,62 +10,27 @@ module Kapusta
           result_var = temp('result')
           iter_code = emit_iteration(args[0], env, current_scope) do |iter_env|
             body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
-            <<~RUBY.chomp
-              __kap_value = begin
-              #{indent(body)}
-              end
-              #{result_var} << __kap_value unless __kap_value.nil?
-            RUBY
+            emit_array_collection_step(result_var, body)
           end
-          <<~RUBY.chomp
-            (-> do
-              #{result_var} = []
-              #{iter_code}
-              #{result_var}
-            end).call
-          RUBY
+          emit_collection_result(result_var, '[]', iter_code)
         end
 
         def emit_collect(args, env, current_scope)
           result_var = temp('result')
           iter_code = emit_iteration(args[0], env, current_scope) do |iter_env|
             body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
-            <<~RUBY.chomp
-              __kap_pair = begin
-              #{indent(body)}
-              end
-              if __kap_pair.is_a?(Array) && __kap_pair.length == 2 && !__kap_pair[0].nil? && !__kap_pair[1].nil?
-                #{result_var}[__kap_pair[0]] = __kap_pair[1]
-              end
-            RUBY
+            emit_hash_collection_step(result_var, body)
           end
-          <<~RUBY.chomp
-            (-> do
-              #{result_var} = {}
-              #{iter_code}
-              #{result_var}
-            end).call
-          RUBY
+          emit_collection_result(result_var, '{}', iter_code)
         end
 
         def emit_fcollect(args, env, current_scope)
           result_var = temp('result')
           parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
           body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope, allow_method_definitions: false)
-          collecting_body = <<~RUBY.chomp
-            __kap_value = begin
-            #{indent(body_code)}
-            end
-            #{result_var} << __kap_value unless __kap_value.nil?
-          RUBY
+          collecting_body = emit_array_collection_step(result_var, body_code)
           loop_code = emit_counted_loop(**parsed, current_scope:, body_code: collecting_body)
-          <<~RUBY.chomp
-            (-> do
-              #{result_var} = []
-              #{indent(loop_code)}
-              #{result_var}
-            end).call
-          RUBY
+          emit_collection_result(result_var, '[]', loop_code)
         end
 
         def emit_accumulate(args, env, current_scope)
@@ -78,7 +43,7 @@ module Kapusta
           iter_code = emit_iteration(iter_bindings, loop_env, current_scope) do |iter_env|
             iter_env.define(acc_name.name, acc_var)
             emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first.then do |body|
-              "#{acc_var} = begin\n#{indent(body)}\nend"
+              emit_sequence_value_assignment(acc_var, body)
             end
           end
           <<~RUBY.chomp
@@ -100,7 +65,7 @@ module Kapusta
           loop_env.define(acc_name.name, acc_var)
           loop_env.define(loop_name.name, loop_var)
           body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
-          accumulating_body = "#{acc_var} = begin\n#{indent(body_code)}\nend"
+          accumulating_body = emit_sequence_value_assignment(acc_var, body_code)
           loop_code = emit_counted_loop(
             ruby_name: loop_var,
             start_code: emit_expr(bindings[3], env, current_scope),
@@ -209,6 +174,42 @@ module Kapusta
             code
           end.compact
           [codes.join("\n"), current_env]
+        end
+
+        def emit_collection_result(result_var, initial_code, iter_code)
+          <<~RUBY.chomp
+            (-> do
+              #{result_var} = #{initial_code}
+              #{indent(iter_code)}
+              #{result_var}
+            end).call
+          RUBY
+        end
+
+        def emit_array_collection_step(result_var, body_code)
+          value_var = temp('value')
+          <<~RUBY.chomp
+            #{emit_sequence_value_assignment(value_var, body_code)}
+            #{result_var} << #{value_var} unless #{value_var}.nil?
+          RUBY
+        end
+
+        def emit_hash_collection_step(result_var, body_code)
+          pair_var = temp('pair')
+          <<~RUBY.chomp
+            #{emit_sequence_value_assignment(pair_var, body_code)}
+            if #{pair_var}.is_a?(Array) && #{pair_var}.length == 2 && !#{pair_var}[0].nil? && !#{pair_var}[1].nil?
+              #{result_var}[#{pair_var}[0]] = #{pair_var}[1]
+            end
+          RUBY
+        end
+
+        def emit_sequence_value_assignment(target_var, body_code)
+          <<~RUBY.chomp
+            #{target_var} = begin
+            #{indent(body_code)}
+            end
+          RUBY
         end
       end
     end

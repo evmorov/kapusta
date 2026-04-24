@@ -63,6 +63,10 @@ RSpec.describe 'examples' do
     expect(run_example('counter.kap')).to eq("12\n")
   end
 
+  it 'contains-duplicate.kap' do
+    expect(run_example('contains-duplicate.kap')).to eq("true\nfalse\ntrue\n")
+  end
+
   it 'doto.kap' do
     expect(run_example('doto.kap')).to eq("1, 2, 3\n")
   end
