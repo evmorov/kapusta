@@ -118,42 +118,12 @@ module Kapusta
         end
 
         def emit_for(args, env, current_scope)
-          bindings = args[0].items
-          name = bindings[0]
-          start_code = emit_expr(bindings[1], env, current_scope)
-          finish_code = emit_expr(bindings[2], env, current_scope)
-          step_code = '1'
-          until_form = nil
-          i = 3
-          while i < bindings.length
-            if bindings[i].is_a?(Sym) && bindings[i].name == '&until'
-              until_form = bindings[i + 1]
-              i += 2
-            else
-              step_code = emit_expr(bindings[i], env, current_scope)
-              i += 1
-            end
-          end
-
-          loop_env = env.child
-          ruby_name = temp(sanitize_local(name.name))
-          loop_env.define(name.name, ruby_name)
-          body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
-          until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
-          cmp_var = temp('cmp')
-          step_var = temp('step')
-          finish_var = temp('finish')
+          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
+          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope, allow_method_definitions: false)
+          loop_code = emit_counted_loop(**parsed, current_scope:, body_code:)
           <<~RUBY.chomp
             (-> do
-              #{ruby_name} = #{start_code}
-              #{finish_var} = #{finish_code}
-              #{step_var} = #{step_code}
-              #{cmp_var} = #{step_var} >= 0 ? :<= : :>=
-              while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})
-                #{until_code}
-                #{indent(body_code)}
-                #{ruby_name} += #{step_var}
-              end
+              #{indent(loop_code)}
               nil
             end).call
           RUBY

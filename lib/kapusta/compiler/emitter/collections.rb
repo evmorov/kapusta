@@ -50,44 +50,19 @@ module Kapusta
 
         def emit_fcollect(args, env, current_scope)
           result_var = temp('result')
-          bindings = args[0].items
-          ruby_name = temp(sanitize_local(bindings[0].name))
-          loop_env = env.child
-          loop_env.define(bindings[0].name, ruby_name)
-          start_code = emit_expr(bindings[1], env, current_scope)
-          finish_code = emit_expr(bindings[2], env, current_scope)
-          step_code = '1'
-          until_form = nil
-          i = 3
-          while i < bindings.length
-            if bindings[i].is_a?(Sym) && bindings[i].name == '&until'
-              until_form = bindings[i + 1]
-              i += 2
-            else
-              step_code = emit_expr(bindings[i], env, current_scope)
-              i += 1
+          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
+          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope, allow_method_definitions: false)
+          collecting_body = <<~RUBY.chomp
+            __kap_value = begin
+            #{indent(body_code)}
             end
-          end
-          body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
-          until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
-          finish_var = temp('finish')
-          step_var = temp('step')
-          cmp_var = temp('cmp')
+            #{result_var} << __kap_value unless __kap_value.nil?
+          RUBY
+          loop_code = emit_counted_loop(**parsed, current_scope:, body_code: collecting_body)
           <<~RUBY.chomp
             (-> do
               #{result_var} = []
-              #{ruby_name} = #{start_code}
-              #{finish_var} = #{finish_code}
-              #{step_var} = #{step_code}
-              #{cmp_var} = #{step_var} >= 0 ? :<= : :>=
-              while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})
-                #{until_code}
-                __kap_value = begin
-                #{indent(body_code)}
-                end
-                #{result_var} << __kap_value unless __kap_value.nil?
-                #{ruby_name} += #{step_var}
-              end
+              #{indent(loop_code)}
               #{result_var}
             end).call
           RUBY
@@ -124,26 +99,22 @@ module Kapusta
           loop_env = env.child
           loop_env.define(acc_name.name, acc_var)
           loop_env.define(loop_name.name, loop_var)
-          start_code = emit_expr(bindings[3], env, current_scope)
-          finish_code = emit_expr(bindings[4], env, current_scope)
-          step_code = bindings[5] ? emit_expr(bindings[5], env, current_scope) : '1'
           body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
-          finish_var = temp('finish')
-          step_var = temp('step')
-          cmp_var = temp('cmp')
+          accumulating_body = "#{acc_var} = begin\n#{indent(body_code)}\nend"
+          loop_code = emit_counted_loop(
+            ruby_name: loop_var,
+            start_code: emit_expr(bindings[3], env, current_scope),
+            finish_code: emit_expr(bindings[4], env, current_scope),
+            step_code: bindings[5] ? emit_expr(bindings[5], env, current_scope) : '1',
+            until_form: nil,
+            loop_env:,
+            current_scope:,
+            body_code: accumulating_body
+          )
           <<~RUBY.chomp
             (-> do
               #{acc_var} = #{emit_expr(bindings[1], env, current_scope)}
-              #{loop_var} = #{start_code}
-              #{finish_var} = #{finish_code}
-              #{step_var} = #{step_code}
-              #{cmp_var} = #{step_var} >= 0 ? :<= : :>=
-              while #{loop_var}.public_send(#{cmp_var}, #{finish_var})
-                #{acc_var} = begin
-                #{indent(body_code)}
-                end
-                #{loop_var} += #{step_var}
-              end
+              #{indent(loop_code)}
               #{acc_var}
             end).call
           RUBY

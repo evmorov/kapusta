@@ -156,6 +156,47 @@ module Kapusta
           "#{runtime_helper(name)}(#{rendered_args.join(', ')})"
         end
 
+        def parse_counted_for_bindings(bindings, env, current_scope)
+          name_sym = bindings[0]
+          ruby_name = temp(sanitize_local(name_sym.name))
+          loop_env = env.child
+          loop_env.define(name_sym.name, ruby_name)
+          start_code = emit_expr(bindings[1], env, current_scope)
+          finish_code = emit_expr(bindings[2], env, current_scope)
+          step_code = '1'
+          until_form = nil
+          i = 3
+          while i < bindings.length
+            if bindings[i].is_a?(Sym) && bindings[i].name == '&until'
+              until_form = bindings[i + 1]
+              i += 2
+            else
+              step_code = emit_expr(bindings[i], env, current_scope)
+              i += 1
+            end
+          end
+          { ruby_name:, loop_env:, start_code:, finish_code:, step_code:, until_form: }
+        end
+
+        def emit_counted_loop(ruby_name:, start_code:, finish_code:, step_code:,
+                              until_form:, loop_env:, current_scope:, body_code:)
+          finish_var = temp('finish')
+          step_var = temp('step')
+          cmp_var = temp('cmp')
+          until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
+          <<~RUBY.chomp
+            #{ruby_name} = #{start_code}
+            #{finish_var} = #{finish_code}
+            #{step_var} = #{step_code}
+            #{cmp_var} = #{step_var} >= 0 ? :<= : :>=
+            while #{ruby_name}.public_send(#{cmp_var}, #{finish_var})
+              #{until_code}
+              #{indent(body_code)}
+              #{ruby_name} += #{step_var}
+            end
+          RUBY
+        end
+
         def sanitize_local(name)
           base = Kapusta.kebab_to_snake(name)
           base = base.gsub('?', '_q').gsub('!', '_bang')
