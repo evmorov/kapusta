@@ -41,6 +41,7 @@ Kapusta keeps most core Fennel forms. The main differences come from Ruby's runt
 | `string.format`, `table.insert`, etc. | use Ruby methods and stdlib instead                   |
 | `values` uses Lua multiple returns    | `values` lowers to a Ruby array, usually destructured |
 | `with-open`, `tail!`                  | not provided                                          |
+| macros                                | not provided for now                                  |
 
 Kapusta-specific additions:
 
