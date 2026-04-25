@@ -21,8 +21,7 @@ end
     end
     kap_result_1
   end).call
-  ps.each_with_index do |kap_value_3, kap_index_4|
-    p = kap_value_3
+  ps.each_with_index do |p, kap_index_3|
     p p
   end
   nil

@@ -2,13 +2,12 @@ def contains_duplicate?(nums)
   (-> do
     seen = (-> do
       kap_result_1 = {}
-        nums.each do |kap_value_2|
-        n = kap_value_2
-        kap_pair_3 = begin
+        nums.each do |n|
+        kap_pair_2 = begin
           [n, true]
         end
-        if kap_pair_3.is_a?(Array) && kap_pair_3.length == 2 && !kap_pair_3[0].nil? && !kap_pair_3[1].nil?
-          kap_result_1[kap_pair_3[0]] = kap_pair_3[1]
+        if kap_pair_2.is_a?(Array) && kap_pair_2.length == 2 && !kap_pair_2[0].nil? && !kap_pair_2[1].nil?
+          kap_result_1[kap_pair_2[0]] = kap_pair_2[1]
         end
       end
       kap_result_1

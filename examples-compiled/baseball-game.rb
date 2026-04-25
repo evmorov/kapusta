@@ -1,8 +1,7 @@
 def cal_points(ops)
   (-> do
     scores = []
-    ops.each do |kap_value_1|
-      op = kap_value_1
+    ops.each do |op|
       if op == "C"
         kap_thread_1 = scores.pop
         if kap_thread_1.nil?

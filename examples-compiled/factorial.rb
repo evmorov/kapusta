@@ -90,8 +90,7 @@ def factorial(n)
   end
   end).call
 end
-[0, 1, 5, 6, 10].each_with_index do |kap_value_8, kap_index_9|
-  n = kap_value_8
+[0, 1, 5, 6, 10].each_with_index do |n, kap_index_8|
   p(n, factorial(n))
 end
 nil

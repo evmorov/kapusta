@@ -2,17 +2,15 @@
   xs = [1, 2, 3, 4, 5]
   ys = (-> do
     kap_result_1 = []
-      xs.each_with_index do |kap_value_2, kap_index_3|
-      x = kap_value_2
-      kap_value_4 = begin
+      xs.each_with_index do |x, kap_index_2|
+      kap_value_3 = begin
         x * x
       end
-      kap_result_1 << kap_value_4 unless kap_value_4.nil?
+      kap_result_1 << kap_value_3 unless kap_value_3.nil?
     end
     kap_result_1
   end).call
-  ys.each_with_index do |kap_value_5, kap_index_6|
-    y = kap_value_5
+  ys.each_with_index do |y, kap_index_4|
     p y
   end
   nil

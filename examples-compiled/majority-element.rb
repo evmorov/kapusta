@@ -1,8 +1,7 @@
 def majority(nums)
   candidate = nil
   count = 0
-  nums.each do |kap_value_1|
-    n = kap_value_1
+  nums.each do |n|
     if count == 0
       candidate = n
     end

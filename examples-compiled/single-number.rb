@@ -1,8 +1,7 @@
 def single_number(nums)
   (-> do
     acc = 0
-    nums.each_with_index do |kap_value_1, kap_index_2|
-    n = kap_value_1
+    nums.each_with_index do |n, kap_index_1|
     acc = begin
       acc ^ n
     end
