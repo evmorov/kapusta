@@ -7,7 +7,7 @@ require "fileutils"
     FileUtils.mkdir_p(tmp_dir)
     File.write(path, body)
     p(File.read(path))
-    p((File.readlines(path)).length)
+    p(File.readlines(path).length)
   ensure
     FileUtils.rm_f(path)
   end

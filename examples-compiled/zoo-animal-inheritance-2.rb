@@ -41,5 +41,5 @@ Kapusta.require("./zoo-animal-1", relative_to: "/Users/evgenii.morozov/projects/
 end).call
 (-> do
   dog = Zoo::Dog.new("Poppy")
-  p((Zoo::Dog.superclass) == Zoo::Animal, dog.kingdom, dog.label, dog.bark)
+  p(Zoo::Dog.superclass == Zoo::Animal, dog.kingdom, dog.label, dog.bark)
 end).call

@@ -39,6 +39,6 @@ class MinStack
   s.pop
   p(s.top)
   p(s.get_min)
-  p((MinStack.superclass) == Object)
+  p(MinStack.superclass == Object)
 end
 MinStack
