@@ -8,7 +8,7 @@ module Kapusta
 
         def emit_pattern_bind(pattern, value_code, env)
           if pattern.is_a?(Sym)
-            return ['nil', env] if pattern.name == '_'
+            return ['', env] if pattern.name == '_'
 
             ruby_name = define_local(env, pattern)
             ["#{ruby_name} = #{value_code}", env]

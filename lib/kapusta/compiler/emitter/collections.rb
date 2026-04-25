@@ -156,7 +156,7 @@ module Kapusta
 
             code, current_env = emit_pattern_bind(pattern, value_code, current_env)
             code
-          end.compact
+          end.compact.reject(&:empty?)
           [codes.join("\n"), current_env]
         end
 

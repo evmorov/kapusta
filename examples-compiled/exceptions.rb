@@ -15,7 +15,6 @@ def parse_score(s)
   end
 end
 ["12", "oops"].each_with_index do |kap_value_1, kap_index_2|
-  nil
   s = kap_value_1
   p parse_score(s)
 end

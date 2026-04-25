@@ -46,7 +46,6 @@ def min_max(xs)
     lo = first
     hi = first
     rest.each_with_index do |kap_value_2, kap_index_3|
-      nil
       x = kap_value_2
       if x < lo
         lo = x

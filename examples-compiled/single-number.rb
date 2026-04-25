@@ -2,7 +2,6 @@ def single_number(nums)
   (-> do
     acc = 0
     nums.each_with_index do |kap_value_1, kap_index_2|
-    nil
     n = kap_value_1
     acc = begin
       acc ^ n

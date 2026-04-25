@@ -22,7 +22,6 @@ end
     kap_result_1
   end).call
   ps.each_with_index do |kap_value_3, kap_index_4|
-    nil
     p = kap_value_3
     p p
   end

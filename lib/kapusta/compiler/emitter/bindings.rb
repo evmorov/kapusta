@@ -242,7 +242,7 @@ module Kapusta
           body_code, = emit_sequence(body, child_env, current_scope,
                                      allow_method_definitions: false,
                                      result:)
-          [binding_codes.join("\n"), body_code]
+          [binding_codes.reject(&:empty?).join("\n"), body_code]
         end
 
         def join_code(*chunks)
@@ -258,7 +258,7 @@ module Kapusta
             ["#{ruby_name} = #{value_code}\nnil", env]
           else
             bind_code, env = emit_pattern_bind(target, value_code, env)
-            ["#{bind_code}\nnil", env]
+            [join_code(bind_code, 'nil'), env]
           end
         end
 
