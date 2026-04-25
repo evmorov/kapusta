@@ -4,8 +4,7 @@
   (set (ivar n) start))
 
 (fn tick []
-  (set (ivar n) (+ (ivar n) 1))
-  (ivar n))
+  (set (ivar n) (+ (ivar n) 1)))
 
 (fn value []
   (ivar n))

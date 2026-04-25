@@ -4,7 +4,6 @@ class Counter
   end
   def tick
     @n = @n + 1
-    @n
   end
   def value
     @n
