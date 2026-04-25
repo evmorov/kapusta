@@ -27,6 +27,6 @@ def roman_to_integer(s)
     total
   end).call
 end
-p(roman_to_integer("III"))
-p(roman_to_integer("LVIII"))
-p(roman_to_integer("MCMXCIV"))
+p roman_to_integer("III")
+p roman_to_integer("LVIII")
+p roman_to_integer("MCMXCIV")

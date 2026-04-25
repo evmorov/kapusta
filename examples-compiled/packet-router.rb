@@ -151,9 +151,9 @@ def packet_kind(packet)
   end
   end).call
 end
-p(inbox_line("Ada", [:score, "Ada", 9]))
-p(inbox_line("Ada", [:score, "Lin", 7]))
-p(inbox_line("Ada", [:profile, "Ada", nil]))
-p(score_delta("Ada", [:bonus, "Ada", 5]))
-p(score_delta("Ada", [:score, "Lin", 5]))
-p(packet_kind([:ping, 7, :fast]))
+p inbox_line("Ada", [:score, "Ada", 9])
+p inbox_line("Ada", [:score, "Lin", 7])
+p inbox_line("Ada", [:profile, "Ada", nil])
+p score_delta("Ada", [:bonus, "Ada", 5])
+p score_delta("Ada", [:score, "Lin", 5])
+p packet_kind([:ping, 7, :fast])

@@ -7,5 +7,5 @@ def pangram?(s)
     uniq.length == 26
   end).call
 end
-p(pangram?("The quick brown fox jumps over the lazy dog"))
-p(pangram?("Hello, world"))
+p pangram?("The quick brown fox jumps over the lazy dog")
+p pangram?("Hello, world")

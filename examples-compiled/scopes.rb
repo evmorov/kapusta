@@ -10,9 +10,9 @@ class ScopeCounter
   end
   a = ScopeCounter.new
   b = ScopeCounter.new
-  p(a.add!(5))
-  p(b.add!(4))
-  p(ScopeCounter.total)
-  p($last_total)
+  p a.add!(5)
+  p b.add!(4)
+  p ScopeCounter.total
+  p $last_total
 end
 ScopeCounter

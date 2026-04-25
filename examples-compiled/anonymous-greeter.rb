@@ -7,6 +7,6 @@
       "Hello, anonymous!"
     end
   end
-  p(greet.call(name))
-  p(greet.call("Ada"))
+  p greet.call(name)
+  p greet.call("Ada")
 end).call

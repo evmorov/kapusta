@@ -14,7 +14,7 @@
     end
     answer
   end
-  p(two_sum_hash.call([2, 7, 11, 15], 9, {}))
-  p(two_sum_hash.call([3, 2, 4], 6, {}))
-  p(two_sum_hash.call([1, 2, 3], 10, {}))
+  p two_sum_hash.call([2, 7, 11, 15], 9, {})
+  p two_sum_hash.call([3, 2, 4], 6, {})
+  p two_sum_hash.call([1, 2, 3], 10, {})
 end).call

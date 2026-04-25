@@ -15,6 +15,6 @@ class Counter
   c = Counter.new(10)
   c.tick
   c.tick
-  p(c.value)
+  p c.value
 end
 Counter

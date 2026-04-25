@@ -13,7 +13,7 @@ def plus_one(digits)
     digits
   end
 end
-p(plus_one([1, 2, 3]))
-p(plus_one([4, 3, 2, 1]))
-p(plus_one([9]))
-p(plus_one([9, 9]))
+p plus_one([1, 2, 3])
+p plus_one([4, 3, 2, 1])
+p plus_one([9])
+p plus_one([9, 9])

@@ -8,7 +8,7 @@ def climb_stairs(n)
   end
   curr
 end
-p(climb_stairs(2))
-p(climb_stairs(3))
-p(climb_stairs(5))
-p(climb_stairs(10))
+p climb_stairs(2)
+p climb_stairs(3)
+p climb_stairs(5)
+p climb_stairs(10)

@@ -2,12 +2,12 @@
   d3_q = 0 == (n % 3)
   d5_q = 0 == (n % 5)
   if d3_q && d5_q
-    p("FizzBuzz")
+    p "FizzBuzz"
   elsif d3_q
-    p("Fizz")
+    p "Fizz"
   elsif d5_q
-    p("Buzz")
+    p "Buzz"
   else
-    p(n)
+    p n
   end
 end

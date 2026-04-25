@@ -104,7 +104,7 @@ def strict(v)
   end
   end).call
 end
-p(loose(5))
-p(loose(nil))
-p(strict(5))
-p(strict(nil))
+p loose(5)
+p loose(nil)
+p strict(5)
+p strict(nil)

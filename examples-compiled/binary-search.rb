@@ -18,6 +18,6 @@ end
 (-> do
   found = binary_search([1, 3, 5, 7, 9, 11], 7)
   missing = binary_search([1, 3, 5, 7, 9, 11], 2)
-  p(found)
-  p(missing)
+  p found
+  p missing
 end).call

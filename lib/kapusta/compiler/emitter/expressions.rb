@@ -110,7 +110,10 @@ module Kapusta
         def emit_print(args, env, current_scope)
           return 'p' if args.empty?
 
-          "p(#{args.map { |arg| emit_expr(arg, env, current_scope) }.join(', ')})"
+          rendered = args.map { |arg| emit_expr(arg, env, current_scope) }
+          return "p #{rendered[0]}" if rendered.length == 1 && simple_expression?(rendered[0])
+
+          "p(#{rendered.join(', ')})"
         end
 
         def emit_string_part(arg, env, current_scope)

@@ -93,6 +93,6 @@ def describe_user(user)
   end
   end).call
 end
-p(describe_user({:name => "Ada", :stats => {:score => 9}}))
-p(describe_user({:name => "Lin"}))
-p(describe_user({}))
+p describe_user({:name => "Ada", :stats => {:score => 9}})
+p describe_user({:name => "Lin"})
+p describe_user({})

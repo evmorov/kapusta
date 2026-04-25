@@ -49,5 +49,5 @@ def format_record(record)
 end
 (-> do
   record = {:name => "Ada", :role => "engineer", :tags => ["ruby", "lisp"]}
-  p(format_record(record))
+  p format_record(record)
 end).call

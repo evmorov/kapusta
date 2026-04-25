@@ -117,4 +117,4 @@ def eval_expr(expr)
   end
   end).call
 end
-p(eval_expr([:add, [:num, 2], [:mul, [:num, 3], [:num, 4]]]))
+p eval_expr([:add, [:num, 2], [:mul, [:num, 3], [:num, 4]]])

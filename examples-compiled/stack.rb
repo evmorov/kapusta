@@ -35,10 +35,10 @@ class MinStack
   s.push(-2)
   s.push(0)
   s.push(-3)
-  p(s.get_min)
+  p s.get_min
   s.pop
-  p(s.top)
-  p(s.get_min)
+  p s.top
+  p s.get_min
   p(MinStack.superclass == Object)
 end
 MinStack

@@ -12,6 +12,6 @@ class Accumulator
   acc = Accumulator.new(10)
   acc.add!(5)
   acc.add!(7)
-  p(acc.value)
+  p acc.value
 end
 Accumulator

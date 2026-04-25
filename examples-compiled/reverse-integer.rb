@@ -14,7 +14,7 @@ def reverse_integer(x)
     result * sign
   end).call
 end
-p(reverse_integer(123))
-p(reverse_integer(-123))
-p(reverse_integer(120))
-p(reverse_integer(0))
+p reverse_integer(123)
+p reverse_integer(-123)
+p reverse_integer(120)
+p reverse_integer(0)

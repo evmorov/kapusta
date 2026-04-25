@@ -99,6 +99,6 @@ end
 [[0, 0], [0, 2], [3, 0], [3, 4]].each_with_index do |kap_value_10, kap_index_11|
   nil
   point = kap_value_10
-  p(point_kind(point))
+  p point_kind(point)
 end
 nil

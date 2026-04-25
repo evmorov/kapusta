@@ -5,6 +5,6 @@
   end).map do |w|
     w.upcase
   end).sort).each do |w|
-    p(w)
+    p w
   end
 end).call

@@ -19,6 +19,6 @@ def happy?(n)
     x == 1
   end).call
 end
-p(happy?(19))
-p(happy?(2))
-p(happy?(1))
+p happy?(19)
+p happy?(2)
+p happy?(1)

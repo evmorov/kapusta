@@ -4,5 +4,5 @@
   end).map do |n|
     n * n
   end
-  p(even_squares.join(", "))
+  p even_squares.join(", ")
 end).call

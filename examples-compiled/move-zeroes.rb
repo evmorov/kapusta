@@ -11,6 +11,6 @@ def move_zeroes(nums)
   end
   nums
 end
-p(move_zeroes([0, 1, 0, 3, 12]))
-p(move_zeroes([0]))
-p(move_zeroes([1, 2, 3]))
+p move_zeroes([0, 1, 0, 3, 12])
+p move_zeroes([0])
+p move_zeroes([1, 2, 3])

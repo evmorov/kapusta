@@ -12,6 +12,6 @@ def max_profit(prices)
   end
   best
 end
-p(max_profit([7, 1, 5, 3, 6, 4]))
-p(max_profit([7, 6, 4, 3, 1]))
-p(max_profit([2, 4, 1]))
+p max_profit([7, 1, 5, 3, 6, 4])
+p max_profit([7, 6, 4, 3, 1])
+p max_profit([2, 4, 1])

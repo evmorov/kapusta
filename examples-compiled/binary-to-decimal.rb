@@ -13,6 +13,6 @@ def binary_to_decimal(bits)
     value
   end).call
 end
-p(binary_to_decimal("1011"))
-p(binary_to_decimal("0"))
-p(binary_to_decimal("101010"))
+p binary_to_decimal("1011")
+p binary_to_decimal("0")
+p binary_to_decimal("101010")

@@ -22,5 +22,5 @@ def cal_points(ops)
     scores.sum
   end).call
 end
-p(cal_points(["5", "2", "C", "D", "+"]))
-p(cal_points(["5", "-2", "4", "C", "D", "9", "+", "+"]))
+p cal_points(["5", "2", "C", "D", "+"])
+p cal_points(["5", "-2", "4", "C", "D", "9", "+", "+"])

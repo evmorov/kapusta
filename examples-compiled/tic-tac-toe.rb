@@ -105,6 +105,6 @@ end
 [[["X", "X", "X"], ["O", "", ""], ["", "O", ""]], [["O", "X", "X"], ["O", "", "X"], ["O", "", ""]], [["X", "O", ""], ["", "X", "O"], ["", "", "X"]], [["X", "O", "X"], ["O", "X", "O"], ["O", "X", "O"]]].each_with_index do |kap_value_12, kap_index_13|
   nil
   board = kap_value_12
-  p(winner(board))
+  p winner(board)
 end
 nil

@@ -4,5 +4,5 @@
   kap_doto_1 = xs
   kap_doto_1.push(__doto__)
   kap_doto_1
-  p(xs.inspect)
+  p xs.inspect
 end).call

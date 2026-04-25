@@ -11,5 +11,5 @@
   end
     s
   end).call
-  p(total)
+  p total
 end).call

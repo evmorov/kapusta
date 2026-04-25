@@ -10,8 +10,8 @@ require "fileutils"
     File.open(path, "r", **{:encoding => "UTF-8"}) do |io|
       (-> do
         content = io.read
-        p(content.strip)
-        p(content.lines.length)
+        p content.strip
+        p content.lines.length
       end).call
     end
   ensure

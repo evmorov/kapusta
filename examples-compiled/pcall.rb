@@ -62,10 +62,10 @@ private :kap_destructure_into, :kap_destructure
   end)
   handled_ok = kap_bindings_3.fetch("handled-ok")
   handled = kap_bindings_3.fetch("handled")
-  p(ok)
-  p(value)
-  p(bad_ok)
-  p(error.class)
-  p(handled_ok)
-  p(handled)
+  p ok
+  p value
+  p bad_ok
+  p error.class
+  p handled_ok
+  p handled
 end).call

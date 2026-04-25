@@ -5,6 +5,6 @@ def palindrome?(s)
     normalized == normalized.reverse
   end).call
 end
-p(palindrome?("racecar"))
-p(palindrome?("A man, a plan, a canal: Panama"))
-p(palindrome?("kapusta"))
+p palindrome?("racecar")
+p palindrome?("A man, a plan, a canal: Panama")
+p palindrome?("kapusta")

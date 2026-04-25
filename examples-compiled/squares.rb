@@ -15,7 +15,7 @@
   ys.each_with_index do |kap_value_5, kap_index_6|
     nil
     y = kap_value_5
-    p(y)
+    p y
   end
   nil
 end).call

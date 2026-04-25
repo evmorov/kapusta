@@ -14,6 +14,6 @@ def majority(nums)
   end
   candidate
 end
-p(majority([3, 2, 3]))
-p(majority([2, 2, 1, 1, 1, 2, 2]))
-p(majority([1]))
+p majority([3, 2, 3])
+p majority([2, 2, 1, 1, 1, 2, 2])
+p majority([1])

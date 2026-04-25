@@ -5,5 +5,5 @@ def gcd(a, b)
     gcd(b, a % b)
   end
 end
-p(gcd(48, 36))
-p(gcd(270, 192))
+p gcd(48, 36)
+p gcd(270, 192)

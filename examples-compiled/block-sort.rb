@@ -3,5 +3,5 @@
   sorted = xs.sort do |a, b|
     b.public_send(:<=>, a)
   end
-  p(sorted.join(", "))
+  p sorted.join(", ")
 end).call

@@ -14,6 +14,6 @@ private :kap_qget_path
   missing = {}
   name = kap_qget_path(user, [:profile, :name])
   missing_name = kap_qget_path(missing, [:profile, :name])
-  p(name)
-  p(missing_name)
+  p name
+  p missing_name
 end).call
