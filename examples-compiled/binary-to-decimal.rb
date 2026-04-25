@@ -1,7 +1,7 @@
 def binary_to_decimal(bits)
   (-> do
     value = 0
-      0.step(bits.length - 1) do |i|
+    0.step(bits.length - 1) do |i|
       value = begin
         (value * 2) + (if bits[i] == "1"
           1

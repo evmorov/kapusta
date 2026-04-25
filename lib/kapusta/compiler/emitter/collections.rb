@@ -45,13 +45,13 @@ module Kapusta
               emit_sequence_value_assignment(acc_var, body)
             end
           end
-          <<~RUBY.chomp
-            (-> do
-              #{acc_var} = #{emit_expr(bindings[1], env, current_scope)}
-              #{iter_code}
-              #{acc_var}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent("#{acc_var} = #{emit_expr(bindings[1], env, current_scope)}"),
+            indent(iter_code),
+            indent(acc_var),
+            'end).call'
+          ].join("\n")
         end
 
         def emit_faccumulate(args, env, current_scope)
@@ -73,13 +73,13 @@ module Kapusta
             current_scope:,
             body_code: accumulating_body
           )
-          <<~RUBY.chomp
-            (-> do
-              #{acc_var} = #{emit_expr(bindings[1], env, current_scope)}
-              #{indent(loop_code)}
-              #{acc_var}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent("#{acc_var} = #{emit_expr(bindings[1], env, current_scope)}"),
+            indent(loop_code),
+            indent(acc_var),
+            'end).call'
+          ].join("\n")
         end
 
         def emit_hashfn(args, env, current_scope)
@@ -91,11 +91,7 @@ module Kapusta
           end
           hash_env.define('$...', args_var)
           body_code = emit_expr(args[0], hash_env, current_scope)
-          <<~RUBY.chomp
-            ->(*#{args_var}) do
-              #{body_code}
-            end
-          RUBY
+          ["->(*#{args_var}) do", indent(body_code), 'end'].join("\n")
         end
 
         def emit_iteration(bindings_vec, env, current_scope)
@@ -168,31 +164,32 @@ module Kapusta
         end
 
         def emit_collection_result(result_var, initial_code, iter_code)
-          <<~RUBY.chomp
-            (-> do
-              #{result_var} = #{initial_code}
-              #{indent(iter_code)}
-              #{result_var}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent("#{result_var} = #{initial_code}"),
+            indent(iter_code),
+            indent(result_var),
+            'end).call'
+          ].join("\n")
         end
 
         def emit_array_collection_step(result_var, body_code)
           value_var = temp('value')
-          <<~RUBY.chomp
-            #{emit_sequence_value_assignment(value_var, body_code)}
-            #{result_var} << #{value_var} unless #{value_var}.nil?
-          RUBY
+          [
+            emit_sequence_value_assignment(value_var, body_code),
+            "#{result_var} << #{value_var} unless #{value_var}.nil?"
+          ].join("\n")
         end
 
         def emit_hash_collection_step(result_var, body_code)
           pair_var = temp('pair')
-          <<~RUBY.chomp
-            #{emit_sequence_value_assignment(pair_var, body_code)}
-            if #{pair_var}.is_a?(Array) && #{pair_var}.length == 2 && !#{pair_var}[0].nil? && !#{pair_var}[1].nil?
-              #{result_var}[#{pair_var}[0]] = #{pair_var}[1]
-            end
-          RUBY
+          [
+            emit_sequence_value_assignment(pair_var, body_code),
+            "if #{pair_var}.is_a?(Array) && #{pair_var}.length == 2 && " \
+            "!#{pair_var}[0].nil? && !#{pair_var}[1].nil?",
+            indent("#{result_var}[#{pair_var}[0]] = #{pair_var}[1]"),
+            'end'
+          ].join("\n")
         end
 
         def emit_sequence_value_assignment(target_var, body_code)

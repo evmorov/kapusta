@@ -3,8 +3,8 @@
   total = (-> do
     s = 0
     xs.each_with_index do |x, _|
-    s = s + x
-  end
+      s = s + x
+    end
     s
   end).call
   p total
