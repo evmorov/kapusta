@@ -116,7 +116,8 @@ module Kapusta
         def emit_string_part(arg, env, current_scope)
           return arg.inspect if arg.is_a?(String)
 
-          "(#{emit_expr(arg, env, current_scope)}).to_s"
+          code = emit_expr(arg, env, current_scope)
+          "#{simple_expression?(code) ? code : "(#{code})"}.to_s"
         end
       end
     end

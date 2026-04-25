@@ -9,9 +9,9 @@ def parse_score(s)
   begin
     require_score(s)
   rescue ArgumentError => e
-    "bad: " + (s).to_s
+    "bad: " + s.to_s
   ensure
-    p("seen: " + (s).to_s)
+    p("seen: " + s.to_s)
   end
 end
 ["12", "oops"].each_with_index do |kap_value_1, kap_index_2|

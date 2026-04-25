@@ -106,7 +106,7 @@ def eval_expr(expr)
               kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
             if kap_match_2[0]
               kap_bindings_3 = kap_match_2[1]
-              Kernel.raise(ArgumentError.new("unknown op: " + (expr.inspect).to_s))
+              Kernel.raise(ArgumentError.new("unknown op: " + expr.inspect.to_s))
             else
                 nil
             end

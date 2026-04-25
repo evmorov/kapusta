@@ -75,7 +75,7 @@ def swap_kind(v)
     x = kap_bindings_5.fetch("x")
   y = kap_bindings_5.fetch("y")
     if true
-      (x).to_s + ":" + (y).to_s
+      x.to_s + ":" + y.to_s
     else
           kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
       if kap_match_2[0]

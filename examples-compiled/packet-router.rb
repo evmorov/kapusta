@@ -73,14 +73,14 @@ def inbox_line(user, event)
   if kap_match_6[0]
     kap_bindings_7 = kap_match_6[1]
     points = kap_bindings_7.fetch("points")
-  "score:" + (points).to_s
+  "score:" + points.to_s
   else
       kap_match_4 = kap_match_pattern([:vec, [[:lit, :profile], [:pin, user], [:bind, "city", true]]], kap_case_value_1)
     if kap_match_4[0]
       kap_bindings_5 = kap_match_4[1]
       city = kap_bindings_5.fetch("city")
     if city
-      "city:" + (city).to_s
+      "city:" + city.to_s
     else
       "city:nil"
     end
@@ -132,13 +132,13 @@ def packet_kind(packet)
   if kap_match_18[0]
     kap_bindings_19 = kap_match_18[1]
     seq = kap_bindings_19.fetch("seq")
-  "ping:" + (seq).to_s
+  "ping:" + seq.to_s
   else
       kap_match_16 = kap_match_pattern([:vec, [[:lit, :pong], [:bind, "seq", false]]], kap_case_value_13)
     if kap_match_16[0]
       kap_bindings_17 = kap_match_16[1]
       seq = kap_bindings_17.fetch("seq")
-    "pong:" + (seq).to_s
+    "pong:" + seq.to_s
     else
         kap_match_14 = kap_match_pattern([:wild], kap_case_value_13)
       if kap_match_14[0]

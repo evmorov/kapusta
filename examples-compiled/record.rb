@@ -44,7 +44,7 @@ def format_record(record)
     name = kap_bindings_1.fetch("name")
     role = kap_bindings_1.fetch("role")
     tags = kap_bindings_1.fetch("tags")
-    (name).to_s + " / " + (role).to_s + " / " + (tags.join(", ")).to_s
+    name.to_s + " / " + role.to_s + " / " + tags.join(", ").to_s
   end).call
 end
 (-> do

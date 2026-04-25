@@ -31,7 +31,7 @@ Kapusta.require("./zoo-animal-1", relative_to: "/Users/evgenii.morozov/projects/
   kap_class_1 = kap_ensure_class(self, "Zoo.Dog", Zoo::Animal)
   kap_class_1.class_eval do
     def label
-      (self.name).to_s + " the dog"
+      self.name.to_s + " the dog"
     end
     def bark
       "woof"

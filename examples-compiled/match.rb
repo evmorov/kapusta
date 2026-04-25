@@ -74,13 +74,13 @@ def describe_user(user)
     kap_bindings_7 = kap_match_6[1]
     name = kap_bindings_7.fetch("name")
   score = kap_bindings_7.fetch("score")
-  (name).to_s + ": " + (score).to_s
+  name.to_s + ": " + score.to_s
   else
       kap_match_4 = kap_match_pattern([:hash, [[:name, [:bind, "name", false]]]], kap_case_value_1)
     if kap_match_4[0]
       kap_bindings_5 = kap_match_4[1]
       name = kap_bindings_5.fetch("name")
-    (name).to_s + ": no score"
+    name.to_s + ": no score"
     else
         kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
       if kap_match_2[0]

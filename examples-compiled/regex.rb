@@ -92,6 +92,6 @@ end
   nil
 s = kap_value_6
   parsed = parse_date(s)
-p((s).to_s + " -> " + (parsed).to_s)
+p(s.to_s + " -> " + parsed.to_s)
 end
 nil

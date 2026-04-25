@@ -36,7 +36,7 @@ private :kap_ensure_class
       "animalia"
     end
     def label
-      (self.name).to_s + " the animal"
+      self.name.to_s + " the animal"
     end
   end
   kap_class_1
