@@ -1,7 +1,6 @@
 (fn palindrome? [s]
-  (let [lower (s.downcase)
-        normalized (lower.gsub (ruby "/[^a-z]/") "")]
-    (= normalized (normalized.reverse))))
+  (let [normalized (-> s (: :downcase) (: :gsub (ruby "/[^a-z]/") ""))]
+    (= normalized (: normalized :reverse))))
 
 (print (palindrome? "racecar"))
 (print (palindrome? "A man, a plan, a canal: Panama"))
