@@ -399,6 +399,10 @@ RSpec.describe 'examples' do
     expect(run_example('shapes.kap')).to eq("78.5\n9\n8\n0\n")
   end
 
+  it 'single-number.kap' do
+    expect(run_example('single-number.kap')).to eq("1\n4\n1\n")
+  end
+
   it 'squares.kap' do
     expect(run_example('squares.kap')).to eq("1\n4\n9\n16\n25\n")
   end

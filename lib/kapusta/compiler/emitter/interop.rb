@@ -21,11 +21,17 @@ module Kapusta
           runtime_call(:qget_path, object_code, "[#{keys}]")
         end
 
+        BINARY_OPERATOR_METHODS = %w[<=> ** << >> & | ^ === =~].freeze
+        private_constant :BINARY_OPERATOR_METHODS
+
         def emit_colon(args, env, current_scope)
           receiver = emit_expr(args[0], env, current_scope)
           method_form = args[1]
           positional, kwargs, block_form = split_call_args(args[2..], env, current_scope)
           literal_name = method_form if method_form.is_a?(Symbol) || method_form.is_a?(String)
+          if literal_name && binary_operator_call?(literal_name.to_s, positional, kwargs, block_form)
+            return emit_binary_operator_call(receiver, literal_name.to_s, positional[0])
+          end
           if literal_name && direct_method_name?(literal_name.to_s)
             return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s),
                                            positional, kwargs, block_form, env, current_scope)
@@ -35,6 +41,15 @@ module Kapusta
           block = emit_block_proc(block_form, env, current_scope)
           parts = build_call_args([method_name, *positional], kwargs, block)
           "#{parenthesize(receiver)}.public_send(#{parts})"
+        end
+
+        def binary_operator_call?(name, positional, kwargs, block_form)
+          BINARY_OPERATOR_METHODS.include?(name) &&
+            positional.length == 1 && !kwargs && !block_form
+        end
+
+        def emit_binary_operator_call(receiver, operator, arg_code)
+          "#{parenthesize(receiver)} #{operator} #{parenthesize(arg_code)}"
         end
 
         def emit_require(arg, env, current_scope)
@@ -310,6 +325,9 @@ module Kapusta
           else
             receiver = emit_method_path(base_code, segments[0...-1])
             positional, kwargs, block_form = split_call_args(args, env, current_scope)
+            if binary_operator_call?(segments.last, positional, kwargs, block_form)
+              return emit_binary_operator_call(receiver, segments.last, positional[0])
+            end
             if direct_method_name?(segments.last)
               return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last),
                                              positional, kwargs, block_form, env, current_scope)

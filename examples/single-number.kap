@@ -1,0 +1,7 @@
+(fn single-number [nums]
+  (accumulate [acc 0 _ n (ipairs nums)]
+    (: acc :^ n)))
+
+(print (single-number [2 2 1]))
+(print (single-number [4 1 2 1 2]))
+(print (single-number [1]))
