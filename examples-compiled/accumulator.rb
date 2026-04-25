@@ -3,7 +3,7 @@ class Accumulator
     @total = start
   end
   def add!(n)
-    @total = (@total) + n
+    @total = @total + n
     self
   end
   def value

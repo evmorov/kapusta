@@ -1,7 +1,7 @@
 class ScopeCounter
   @@total = 0
   def add!(n)
-    @@total = (@@total) + n
+    @@total = @@total + n
     $last_total = @@total
     @@total
   end

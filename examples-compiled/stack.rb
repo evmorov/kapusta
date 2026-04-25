@@ -26,10 +26,10 @@ class MinStack
     end).call
   end
   def top
-    (@xs)[-1]
+    @xs[-1]
   end
   def get_min
-    (@mins)[-1]
+    @mins[-1]
   end
   s = MinStack.new
   s.push(-2)

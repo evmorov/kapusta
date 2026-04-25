@@ -404,6 +404,8 @@ module Kapusta
 
         def simple_expression?(code)
           code.match?(/\A[a-z_]\w*\z/) ||
+            code.match?(/\A@@?[a-z_]\w*\z/) ||
+            code.match?(/\A\$[a-zA-Z_]\w*\z/) ||
             code.match?(/\A[A-Z]\w*(?:::[A-Z]\w*)*\z/) ||
             code.match?(/\A[a-z_]\w*[!?=]?\([^()\n]*\)\z/) ||
             code.match?(/\A\d+(?:\.\d+)?\z/) ||

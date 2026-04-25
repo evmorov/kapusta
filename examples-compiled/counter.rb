@@ -3,7 +3,7 @@ class Counter
     @n = start
   end
   def tick
-    @n = (@n) + 1
+    @n = @n + 1
     @n
   end
   def value
