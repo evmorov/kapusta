@@ -266,8 +266,9 @@ module Kapusta
           until_code = until_form ? "break if #{emit_expr(until_form, loop_env, current_scope)}" : nil
           body = [until_code, body_code].compact.reject(&:empty?).join("\n")
           step_part = step_code == '1' ? '' : ", #{step_code}"
+          block_args = ruby_name == '_' ? '' : " |#{ruby_name}|"
           [
-            "#{parenthesize(start_code)}.step(#{finish_code}#{step_part}) do |#{ruby_name}|",
+            "#{parenthesize(start_code)}.step(#{finish_code}#{step_part}) do#{block_args}",
             indent(body),
             'end'
           ].join("\n")

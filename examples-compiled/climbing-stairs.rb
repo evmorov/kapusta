@@ -1,7 +1,7 @@
 def climb_stairs(n)
   prev = 1
   curr = 1
-  2.step(n) do |_|
+  2.step(n) do
     _next = prev + curr
     prev = curr
     curr = _next
