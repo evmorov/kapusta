@@ -3,6 +3,5 @@
 /.rubocop_cache
 /Gemfile.lock
 /coverage
-/examples-compiled
 /pkg
 /tmp
