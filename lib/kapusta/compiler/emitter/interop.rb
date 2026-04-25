@@ -163,7 +163,14 @@ module Kapusta
             end
           end
 
-          lines = ['begin', indent(emit_expr(args[0], env, current_scope))]
+          body_form = args[0]
+          body_code =
+            if body_form.is_a?(List) && body_form.head.is_a?(Sym) && body_form.head.name == 'do'
+              emit_sequence(body_form.rest, env, current_scope, allow_method_definitions: false).first
+            else
+              emit_expr(body_form, env, current_scope)
+            end
+          lines = ['begin', indent(body_code)]
           catches.each do |klass_form, bind_sym, body|
             rescue_env = env.child
             rescue_name = define_local(rescue_env, bind_sym.name)
