@@ -102,7 +102,7 @@ def winner(board)
   end
   end).call
 end
-[[["X", "X", "X"], ["O", "", ""], ["", "O", ""]], [["O", "X", "X"], ["O", "", "X"], ["O", "", ""]], [["X", "O", ""], ["", "X", "O"], ["", "", "X"]], [["X", "O", "X"], ["O", "X", "O"], ["O", "X", "O"]]].each_with_index do |board, kap_index_12|
+[[["X", "X", "X"], ["O", "", ""], ["", "O", ""]], [["O", "X", "X"], ["O", "", "X"], ["O", "", ""]], [["X", "O", ""], ["", "X", "O"], ["", "", "X"]], [["X", "O", "X"], ["O", "X", "O"], ["O", "X", "O"]]].each_with_index do |board, _|
   p winner(board)
 end
 nil

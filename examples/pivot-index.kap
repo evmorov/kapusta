@@ -1,0 +1,13 @@
+(fn pivot-index [nums]
+  (var total 0)
+  (each [n nums] (set total (+ total n)))
+  (var left 0)
+  (var found -1)
+  (each [i n (ipairs nums)]
+    (when (and (= found -1) (= left (- total left n))) (set found i))
+    (set left (+ left n)))
+  found)
+
+(print (pivot-index [1 7 3 6 5 6]))
+(print (pivot-index [1 2 3]))
+(print (pivot-index [2 1 -1]))

@@ -280,6 +280,10 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'pivot-index.kap' do
+    expect(run_example('pivot-index.kap')).to eq("3\n-1\n0\n")
+  end
+
   it 'points.kap' do
     expect(run_example('points.kap')).to eq(<<~OUT)
       "origin"

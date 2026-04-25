@@ -142,8 +142,8 @@ module Kapusta
         end
 
         def bind_iteration_param(pattern, fallback_name, env)
-          if pattern.is_a?(Sym) && !pattern.dotted? && pattern.name != '_'
-            ruby_name = define_local(env, pattern.name)
+          if pattern.is_a?(Sym) && !pattern.dotted?
+            ruby_name = pattern.name == '_' ? '_' : define_local(env, pattern.name)
             [ruby_name, nil]
           else
             tmp = temp(fallback_name)

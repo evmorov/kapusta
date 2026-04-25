@@ -2,7 +2,7 @@
   xs = [10, 20, 30, 40]
   total = (-> do
     s = 0
-    xs.each_with_index do |x, kap_index_1|
+    xs.each_with_index do |x, _|
     s = begin
       s + x
     end

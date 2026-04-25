@@ -100,7 +100,7 @@ def area(shape)
   end
   end).call
 end
-[[:circle, 5], [:square, 3], [:rect, 2, 4], [:dot]].each_with_index do |s, kap_index_10|
+[[:circle, 5], [:square, 3], [:rect, 2, 4], [:dot]].each_with_index do |s, _|
   p area(s)
 end
 nil

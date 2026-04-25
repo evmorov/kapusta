@@ -45,7 +45,7 @@ def min_max(xs)
     rest = kap_bindings_1.fetch("rest")
     lo = first
     hi = first
-    rest.each_with_index do |x, kap_index_2|
+    rest.each_with_index do |x, _|
       if x < lo
         lo = x
       end
@@ -57,8 +57,8 @@ def min_max(xs)
   end).call
 end
 (-> do
-  kap_bindings_3 = kap_destructure([:vec, [[:sym, "lo"], [:sym, "hi"]]], min_max([3, 1, 4, 1, 5, 9, 2, 6]))
-  lo = kap_bindings_3.fetch("lo")
-  hi = kap_bindings_3.fetch("hi")
+  kap_bindings_2 = kap_destructure([:vec, [[:sym, "lo"], [:sym, "hi"]]], min_max([3, 1, 4, 1, 5, 9, 2, 6]))
+  lo = kap_bindings_2.fetch("lo")
+  hi = kap_bindings_2.fetch("hi")
   p(lo, hi)
 end).call

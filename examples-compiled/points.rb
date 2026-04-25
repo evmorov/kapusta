@@ -96,7 +96,7 @@ def point_kind(point)
   end
   end).call
 end
-[[0, 0], [0, 2], [3, 0], [3, 4]].each_with_index do |point, kap_index_10|
+[[0, 0], [0, 2], [3, 0], [3, 4]].each_with_index do |point, _|
   p point_kind(point)
 end
 nil
