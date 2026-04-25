@@ -110,7 +110,7 @@ end
 define_singleton_method(:describe, Object.instance_method(:describe).bind(self))
 [-3, 0, 1, 2, 99].each_with_index do |kap_value_10, kap_index_11|
   nil
-n = kap_value_10
+  n = kap_value_10
   p(n, describe(n))
 end
 nil

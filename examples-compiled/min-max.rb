@@ -47,13 +47,13 @@ def min_max(xs)
     hi = first
     rest.each_with_index do |kap_value_2, kap_index_3|
       nil
-    x = kap_value_2
+      x = kap_value_2
       if x < lo
-      lo = x
-    end
-    if x > hi
-      hi = x
-    end
+        lo = x
+      end
+      if x > hi
+        hi = x
+      end
     end
     [lo, hi]
   end).call

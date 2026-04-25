@@ -4,13 +4,13 @@ def majority(nums)
   nums.each do |kap_value_1|
     n = kap_value_1
     if count == 0
-    candidate = n
-  end
-  if n == candidate
-    count = count + 1
-  else
-    count = count - 1
-  end
+      candidate = n
+    end
+    if n == candidate
+      count = count + 1
+    else
+      count = count - 1
+    end
   end
   candidate
 end

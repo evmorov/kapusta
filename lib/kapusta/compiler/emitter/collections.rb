@@ -113,12 +113,9 @@ module Kapusta
                 [[binding_pats[0], index_var], [binding_pats[1], value_var]], body_env
               )
               body_code = yield(body_env)
-              return <<~RUBY.chomp
-                #{emit_expr(iter_expr.items[1], env, current_scope)}.each_with_index do |#{value_var}, #{index_var}|
-                  #{bind_code}
-                  #{body_code}
-                end
-              RUBY
+              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}" \
+                       ".each_with_index do |#{value_var}, #{index_var}|"
+              return iteration_block(header, bind_code, body_code)
             when 'pairs'
               key_var = temp('key')
               value_var = temp('value')
@@ -126,12 +123,8 @@ module Kapusta
               bind_code, body_env = emit_iteration_bindings([[binding_pats[0], key_var], [binding_pats[1], value_var]],
                                                             body_env)
               body_code = yield(body_env)
-              return <<~RUBY.chomp
-                #{emit_expr(iter_expr.items[1], env, current_scope)}.each do |#{key_var}, #{value_var}|
-                  #{bind_code}
-                  #{body_code}
-                end
-              RUBY
+              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}.each do |#{key_var}, #{value_var}|"
+              return iteration_block(header, bind_code, body_code)
             end
           end
 
@@ -141,25 +134,19 @@ module Kapusta
             body_env = env.child
             bind_code, body_env = emit_iteration_bindings([[binding_pats[0], value_var]], body_env)
             body_code = yield(body_env)
-            <<~RUBY.chomp
-              #{coll_code}.each do |#{value_var}|
-                #{bind_code}
-                #{body_code}
-              end
-            RUBY
+            iteration_block("#{coll_code}.each do |#{value_var}|", bind_code, body_code)
           else
             parts_var = temp('parts')
             body_env = env.child
             pairs = binding_pats.each_with_index.map { |pattern, i| [pattern, "#{parts_var}[#{i}]"] }
             bind_code, body_env = emit_iteration_bindings(pairs, body_env)
             body_code = yield(body_env)
-            <<~RUBY.chomp
-              #{coll_code}.each do |*#{parts_var}|
-                #{bind_code}
-                #{body_code}
-              end
-            RUBY
+            iteration_block("#{coll_code}.each do |*#{parts_var}|", bind_code, body_code)
           end
+        end
+
+        def iteration_block(header, bind_code, body_code)
+          [header, indent(join_code(bind_code, body_code)), 'end'].join("\n")
         end
 
         def emit_iteration_bindings(pairs, env)

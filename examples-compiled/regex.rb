@@ -90,8 +90,8 @@ def parse_date(s)
 end
 ["2026-04-23", "hello", "1999-12-31"].each_with_index do |kap_value_6, kap_index_7|
   nil
-s = kap_value_6
+  s = kap_value_6
   parsed = parse_date(s)
-p(s.to_s + " -> " + parsed.to_s)
+  p(s.to_s + " -> " + parsed.to_s)
 end
 nil
