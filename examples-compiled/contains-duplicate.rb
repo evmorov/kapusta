@@ -3,9 +3,7 @@ def contains_duplicate?(nums)
     seen = (-> do
       kap_result_1 = {}
         nums.each do |n|
-        kap_pair_2 = begin
-          [n, true]
-        end
+        kap_pair_2 = [n, true]
         if kap_pair_2.is_a?(Array) && kap_pair_2.length == 2 && !kap_pair_2[0].nil? && !kap_pair_2[1].nil?
           kap_result_1[kap_pair_2[0]] = kap_pair_2[1]
         end

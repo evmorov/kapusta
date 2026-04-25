@@ -3,9 +3,7 @@
   ys = (-> do
     kap_result_1 = []
       xs.each_with_index do |x, _|
-      kap_value_2 = begin
-        x * x
-      end
+      kap_value_2 = x * x
       kap_result_1 << kap_value_2 unless kap_value_2.nil?
     end
     kap_result_1

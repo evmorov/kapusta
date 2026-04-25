@@ -2,9 +2,7 @@ def single_number(nums)
   (-> do
     acc = 0
     nums.each_with_index do |n, _|
-    acc = begin
-      acc ^ n
-    end
+    acc = acc ^ n
   end
     acc
   end).call

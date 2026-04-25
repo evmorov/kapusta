@@ -3,9 +3,7 @@
   total = (-> do
     s = 0
     xs.each_with_index do |x, _|
-    s = begin
-      s + x
-    end
+    s = s + x
   end
     s
   end).call

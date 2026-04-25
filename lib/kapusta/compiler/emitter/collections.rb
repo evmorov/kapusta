@@ -196,11 +196,9 @@ module Kapusta
         end
 
         def emit_sequence_value_assignment(target_var, body_code)
-          <<~RUBY.chomp
-            #{target_var} = begin
-            #{indent(body_code)}
-            end
-          RUBY
+          return "#{target_var} = #{body_code}" unless body_code.include?("\n")
+
+          ["#{target_var} = begin", indent(body_code), 'end'].join("\n")
         end
       end
     end
