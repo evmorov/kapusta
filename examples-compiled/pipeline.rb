@@ -1,5 +1,5 @@
 (-> do
-    words = ["red", "green", "blue", "black", "olive"]
+  words = ["red", "green", "blue", "black", "olive"]
   (((words.select do |w|
     w.length < 5
   end).map do |w|

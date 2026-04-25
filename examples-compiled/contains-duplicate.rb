@@ -1,6 +1,6 @@
 def contains_duplicate?(nums)
   (-> do
-      seen = (-> do
+    seen = (-> do
       kap_result_1 = {}
         nums.each do |kap_value_2|
         n = kap_value_2

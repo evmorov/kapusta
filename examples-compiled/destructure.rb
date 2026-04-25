@@ -39,7 +39,7 @@ end
 private :kap_destructure_into, :kap_destructure
 
 (-> do
-    kap_bindings_1 = kap_destructure([:vec, [[:sym, "a"], [:sym, "b"], [:sym, "c"]]], [1, 2, 3])
+  kap_bindings_1 = kap_destructure([:vec, [[:sym, "a"], [:sym, "b"], [:sym, "c"]]], [1, 2, 3])
   a = kap_bindings_1.fetch("a")
   b = kap_bindings_1.fetch("b")
   c = kap_bindings_1.fetch("c")

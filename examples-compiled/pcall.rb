@@ -39,7 +39,7 @@ end
 private :kap_destructure_into, :kap_destructure
 
 (-> do
-    kap_bindings_1 = kap_destructure([:vec, [[:sym, "ok"], [:sym, "value"]]], begin
+  kap_bindings_1 = kap_destructure([:vec, [[:sym, "ok"], [:sym, "value"]]], begin
     [true, send(:Integer, "12")]
   rescue StandardError => e
     [false, e]

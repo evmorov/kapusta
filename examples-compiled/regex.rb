@@ -68,7 +68,7 @@ private :kap_match_pattern_into, :kap_match_pattern
 
 def parse_date(s)
   (-> do
-      re = Kernel.eval("/\\A(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})\\z/")
+    re = Kernel.eval("/\\A(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})\\z/")
     (-> do
       kap_case_value_1 = re.match(s)
       kap_match_4 = kap_match_pattern([:lit, nil], kap_case_value_1)

@@ -1,5 +1,5 @@
 (-> do
-    __doto__ = 99
+  __doto__ = 99
   xs = []
   kap_doto_1 = xs
   kap_doto_1.push(__doto__)

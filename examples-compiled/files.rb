@@ -1,6 +1,6 @@
 require "fileutils"
 (-> do
-    tmp_dir = File.expand_path("tmp", Dir.pwd)
+  tmp_dir = File.expand_path("tmp", Dir.pwd)
   path = File.join(tmp_dir, "file-io-example.txt")
   body = "Ada\nLin"
   begin

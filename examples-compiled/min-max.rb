@@ -40,7 +40,7 @@ private :kap_destructure_into, :kap_destructure
 
 def min_max(xs)
   (-> do
-      kap_bindings_1 = kap_destructure([:vec, [[:sym, "first"], [:rest, [:sym, "rest"]]]], xs)
+    kap_bindings_1 = kap_destructure([:vec, [[:sym, "first"], [:rest, [:sym, "rest"]]]], xs)
     first = kap_bindings_1.fetch("first")
     rest = kap_bindings_1.fetch("rest")
     lo = first
@@ -59,7 +59,7 @@ def min_max(xs)
   end).call
 end
 (-> do
-    kap_bindings_4 = kap_destructure([:vec, [[:sym, "lo"], [:sym, "hi"]]], min_max([3, 1, 4, 1, 5, 9, 2, 6]))
+  kap_bindings_4 = kap_destructure([:vec, [[:sym, "lo"], [:sym, "hi"]]], min_max([3, 1, 4, 1, 5, 9, 2, 6]))
   lo = kap_bindings_4.fetch("lo")
   hi = kap_bindings_4.fetch("hi")
   p(lo, hi)

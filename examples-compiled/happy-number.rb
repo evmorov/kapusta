@@ -10,7 +10,7 @@ def sum_of_squares(n)
 end
 def happy?(n)
   (-> do
-      seen = {}
+    seen = {}
     x = n
     while (x != 1) && !seen.key?(x)
       seen[x] = true

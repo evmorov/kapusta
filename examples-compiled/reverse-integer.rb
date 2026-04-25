@@ -1,6 +1,6 @@
 def reverse_integer(x)
   (-> do
-      sign = if x < 0
+    sign = if x < 0
       -1
     else
       1

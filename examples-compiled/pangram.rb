@@ -1,6 +1,6 @@
 def pangram?(s)
   (-> do
-      lower = s.downcase
+    lower = s.downcase
     letters = lower.gsub(Kernel.eval("/[^a-z]/"), "")
     chars = letters.chars
     uniq = chars.uniq

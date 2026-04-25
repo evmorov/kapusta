@@ -1,6 +1,6 @@
 def palindrome?(s)
   (-> do
-      lower = s.downcase
+    lower = s.downcase
     normalized = lower.gsub(Kernel.eval("/[^a-z]/"), "")
     normalized == normalized.reverse
   end).call

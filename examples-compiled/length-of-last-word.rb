@@ -1,6 +1,6 @@
 def length_of_last_word(s)
   (-> do
-      words = s.strip.split
+    words = s.strip.split
     words[-1].length
   end).call
 end

@@ -1,6 +1,6 @@
 def cal_points(ops)
   (-> do
-      scores = []
+    scores = []
     ops.each do |kap_value_1|
       op = kap_value_1
       if op == "C"

@@ -21,7 +21,7 @@ class MinStack
     mins = @mins
     mins.pop
     (-> do
-        xs = @xs
+      xs = @xs
       xs.pop
     end).call
   end

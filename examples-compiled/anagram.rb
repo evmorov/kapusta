@@ -1,6 +1,6 @@
 def normalize_word(word)
   (-> do
-      lower = word.downcase
+    lower = word.downcase
     chars = lower.chars
     sorted = chars.sort
     sorted.join

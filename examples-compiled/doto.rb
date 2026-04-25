@@ -1,6 +1,6 @@
 (-> do
-    xs = (-> do
-      kap_doto_1 = []
+  xs = (-> do
+    kap_doto_1 = []
     kap_doto_1.push(1)
     kap_doto_1.push(2)
     kap_doto_1.push(3)

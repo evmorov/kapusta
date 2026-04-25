@@ -1,5 +1,5 @@
 (-> do
-    xs = [1, 2, 3, 4, 5]
+  xs = [1, 2, 3, 4, 5]
   ys = (-> do
     kap_result_1 = []
       xs.each_with_index do |kap_value_2, kap_index_3|

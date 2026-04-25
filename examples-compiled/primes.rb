@@ -9,7 +9,7 @@ def prime?(n)
   (n > 1) && ok
 end
 (-> do
-    ps = (-> do
+  ps = (-> do
     kap_result_1 = []
       2.step(30) do |n|
       kap_value_2 = begin

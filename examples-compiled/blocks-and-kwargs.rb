@@ -1,6 +1,6 @@
 require "fileutils"
 (-> do
-    tmp_dir = File.expand_path("tmp", Dir.pwd)
+  tmp_dir = File.expand_path("tmp", Dir.pwd)
   path = File.join(tmp_dir, "blocks-and-kwargs.txt")
   begin
     FileUtils.mkdir_p(tmp_dir)
@@ -9,7 +9,7 @@ require "fileutils"
     end
     File.open(path, "r", **{:encoding => "UTF-8"}) do |io|
       (-> do
-          content = io.read
+        content = io.read
         p(content.strip)
         p(content.lines.length)
       end).call

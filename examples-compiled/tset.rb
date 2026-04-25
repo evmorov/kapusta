@@ -1,5 +1,5 @@
 (-> do
-    person = {:name => "Ada"}
+  person = {:name => "Ada"}
   person[:city] = "Amsterdam"
   p(person)
   p(person[:city])

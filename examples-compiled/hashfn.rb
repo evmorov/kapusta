@@ -1,5 +1,5 @@
 (-> do
-    add = ->(*kap_args_1) do
+  add = ->(*kap_args_1) do
     kap_args_1[0] + kap_args_1[1]
   end
   triple = ->(*kap_args_2) do

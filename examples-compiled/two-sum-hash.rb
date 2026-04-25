@@ -1,5 +1,5 @@
 (-> do
-    two_sum_hash = proc do |nums, target, seen|
+  two_sum_hash = proc do |nums, target, seen|
     i = 0
     answer = nil
     while (i < nums.length) && (answer == nil)

@@ -4,7 +4,7 @@ class ValidParenthesesSolution
   end
   def valid?(s)
     (-> do
-        pairs = @pairs
+      pairs = @pairs
       stack = []
       chars = s.chars
       i = 0
@@ -13,7 +13,7 @@ class ValidParenthesesSolution
         ch = chars[i]
         if pairs.key?(ch)
           if (-> do
-              kap_thread_1 = stack.pop
+            kap_thread_1 = stack.pop
             if kap_thread_1 == nil
               nil
             else

@@ -19,11 +19,11 @@ def fetch_name(user)
   kap_qget_path(user, [:profile, :name])
 end
 (-> do
-    thread_last = append("!", wrap("[", "]", append(" Lovelace", "Ada")))
+  thread_last = append("!", wrap("[", "]", append(" Lovelace", "Ada")))
   maybe_name = (-> do
-      kap_thread_3 = (-> do
-        kap_thread_2 = (-> do
-          kap_thread_1 = {:profile => {:name => "Ada"}}
+    kap_thread_3 = (-> do
+      kap_thread_2 = (-> do
+        kap_thread_1 = {:profile => {:name => "Ada"}}
         if kap_thread_1 == nil
           nil
         else
@@ -43,9 +43,9 @@ end
     end
   end).call
   missing_name = (-> do
-      kap_thread_6 = (-> do
-        kap_thread_5 = (-> do
-          kap_thread_4 = {:profile => nil}
+    kap_thread_6 = (-> do
+      kap_thread_5 = (-> do
+        kap_thread_4 = {:profile => nil}
         if kap_thread_4 == nil
           nil
         else
@@ -65,8 +65,8 @@ end
     end
   end).call
   thread_first = (-> do
-      kap_thread_8 = (-> do
-        kap_thread_7 = "kapusta"
+    kap_thread_8 = (-> do
+      kap_thread_7 = "kapusta"
       if kap_thread_7 == nil
         nil
       else
@@ -80,8 +80,8 @@ end
     end
   end).call
   missing_first = (-> do
-      kap_thread_10 = (-> do
-        kap_thread_9 = nil
+    kap_thread_10 = (-> do
+      kap_thread_9 = nil
       if kap_thread_9 == nil
         nil
       else

@@ -1,5 +1,5 @@
 (-> do
-    xs = [10, 20, 30, 40]
+  xs = [10, 20, 30, 40]
   total = (-> do
     s = 0
     xs.each_with_index do |kap_value_1, kap_index_2|

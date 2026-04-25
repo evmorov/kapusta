@@ -40,7 +40,7 @@ private :kap_destructure_into, :kap_destructure
 
 def format_record(record)
   (-> do
-      kap_bindings_1 = kap_destructure([:hash, [[:name, [:sym, "name"]], [:role, [:sym, "role"]], [:tags, [:sym, "tags"]]]], record)
+    kap_bindings_1 = kap_destructure([:hash, [[:name, [:sym, "name"]], [:role, [:sym, "role"]], [:tags, [:sym, "tags"]]]], record)
     name = kap_bindings_1.fetch("name")
     role = kap_bindings_1.fetch("role")
     tags = kap_bindings_1.fetch("tags")
@@ -48,6 +48,6 @@ def format_record(record)
   end).call
 end
 (-> do
-    record = {:name => "Ada", :role => "engineer", :tags => ["ruby", "lisp"]}
+  record = {:name => "Ada", :role => "engineer", :tags => ["ruby", "lisp"]}
   p(format_record(record))
 end).call

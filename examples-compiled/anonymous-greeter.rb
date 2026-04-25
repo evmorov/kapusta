@@ -1,5 +1,5 @@
 (-> do
-    name = nil
+  name = nil
   greet = proc do |value|
     if value
       "Hello, " + value.to_s + "!"

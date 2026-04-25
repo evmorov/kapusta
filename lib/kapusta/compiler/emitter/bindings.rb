@@ -213,11 +213,11 @@ module Kapusta
 
         def emit_let(args, env, current_scope)
           binding_code, body_code = emit_let_parts(args, env, current_scope, result: true)
-          <<~RUBY.chomp
-            (-> do
-              #{indent(join_code(binding_code, body_code))}
-            end).call
-          RUBY
+          [
+            '(-> do',
+            indent(join_code(binding_code, body_code)),
+            'end).call'
+          ].join("\n")
         end
 
         def emit_let_statement(args, env, current_scope)
