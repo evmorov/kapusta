@@ -7,13 +7,13 @@ Gem::Specification.new do |spec|
   spec.version = Kapusta::VERSION
   spec.authors = ['Evgenii Morozov']
   spec.homepage = 'https://github.com/evmorov/kapusta'
+  spec.license = 'MIT'
 
   spec.summary = 'A Lisp for the Ruby runtime'
   spec.description = 'Kapusta is a Lisp for the Ruby runtime.'
   spec.required_ruby_version = '>= 3.1'
 
   spec.metadata['rubygems_mfa_required'] = 'true'
-  spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = spec.homepage
   spec.metadata['bug_tracker_uri'] = "#{spec.homepage}/issues"
 
