@@ -1,8 +1,8 @@
 (fn normalize-word [word]
-  (let [lower (word.downcase)
-        chars (lower.chars)
-        sorted (chars.sort)]
-    (sorted.join)))
+  (-> word
+      (: :downcase)
+      (: :chars)
+      (: :sort)))
 
 (fn anagram? [a b]
   (= (normalize-word a)
