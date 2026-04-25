@@ -422,6 +422,7 @@ module Kapusta
             code.match?(/\A:[a-zA-Z_]\w*[!?=]?\z/) ||
             code.match?(/\A"(?:[^"\\]|\\.)*"\z/) ||
             code.match?(/\A'(?:[^'\\]|\\.)*'\z/) ||
+            code.match?(/\A\[[^\[\]\n]*\]\z/) ||
             %w[nil true false self].include?(code) ||
             negation_simple?(code)
         end
