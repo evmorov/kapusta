@@ -24,19 +24,19 @@ end
     kap_thread_3 = (-> do
       kap_thread_2 = (-> do
         kap_thread_1 = {:profile => {:name => "Ada"}}
-        if kap_thread_1 == nil
+        if kap_thread_1.nil?
           nil
         else
           fetch_name(kap_thread_1)
         end
       end).call
-      if kap_thread_2 == nil
+      if kap_thread_2.nil?
         nil
       else
         append("!", kap_thread_2)
       end
     end).call
-    if kap_thread_3 == nil
+    if kap_thread_3.nil?
       nil
     else
       wrap("<", ">", kap_thread_3)
@@ -46,19 +46,19 @@ end
     kap_thread_6 = (-> do
       kap_thread_5 = (-> do
         kap_thread_4 = {:profile => nil}
-        if kap_thread_4 == nil
+        if kap_thread_4.nil?
           nil
         else
           fetch_name(kap_thread_4)
         end
       end).call
-      if kap_thread_5 == nil
+      if kap_thread_5.nil?
         nil
       else
         append("!", kap_thread_5)
       end
     end).call
-    if kap_thread_6 == nil
+    if kap_thread_6.nil?
       nil
     else
       wrap("<", ">", kap_thread_6)
@@ -67,13 +67,13 @@ end
   thread_first = (-> do
     kap_thread_8 = (-> do
       kap_thread_7 = "kapusta"
-      if kap_thread_7 == nil
+      if kap_thread_7.nil?
         nil
       else
         kap_thread_7.upcase
       end
     end).call
-    if kap_thread_8 == nil
+    if kap_thread_8.nil?
       nil
     else
       kap_thread_8.reverse
@@ -82,13 +82,13 @@ end
   missing_first = (-> do
     kap_thread_10 = (-> do
       kap_thread_9 = nil
-      if kap_thread_9 == nil
+      if kap_thread_9.nil?
         nil
       else
         kap_thread_9.upcase
       end
     end).call
-    if kap_thread_10 == nil
+    if kap_thread_10.nil?
       nil
     else
       kap_thread_10.reverse

@@ -14,7 +14,7 @@ class ValidParenthesesSolution
         if pairs.key?(ch)
           if (-> do
             kap_thread_1 = stack.pop
-            if kap_thread_1 == nil
+            if kap_thread_1.nil?
               nil
             else
               kap_thread_1 == pairs[ch]

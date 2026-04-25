@@ -2,7 +2,7 @@
   two_sum_hash = proc do |nums, target, seen|
     i = 0
     answer = nil
-    while (i < nums.length) && (answer == nil)
+    while (i < nums.length) && answer.nil?
       n = nums[i]
       complement = target - n
       if seen.key?(complement)

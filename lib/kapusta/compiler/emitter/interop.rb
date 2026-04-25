@@ -218,6 +218,9 @@ module Kapusta
         def emit_compare(args, env, current_scope, operator)
           values = args.map { |arg| emit_expr(arg, env, current_scope) }
           return 'true' if values.length <= 1
+          if (nil_pred = nil_predicate(args, values, operator, negate: false))
+            return nil_pred
+          end
 
           (0...(values.length - 1)).map do |i|
             "#{parenthesize(values[i])} #{operator} #{parenthesize(values[i + 1])}"
@@ -227,10 +230,25 @@ module Kapusta
         def emit_compare_any(args, env, current_scope, operator)
           values = args.map { |arg| emit_expr(arg, env, current_scope) }
           return 'false' if values.length <= 1
+          if (nil_pred = nil_predicate(args, values, operator, negate: true))
+            return nil_pred
+          end
 
           (0...(values.length - 1)).map do |i|
             "#{parenthesize(values[i])} #{operator} #{parenthesize(values[i + 1])}"
           end.join(' || ')
+        end
+
+        def nil_predicate(args, values, operator, negate:)
+          return unless args.length == 2
+          return unless (operator == '==' && !negate) || (operator == '!=' && negate)
+
+          nil_idx = args.find_index(&:nil?)
+          return unless nil_idx
+
+          other = values[1 - nil_idx]
+          receiver = simple_expression?(other) ? other : parenthesize(other)
+          "#{'!' if negate}#{receiver}.nil?"
         end
 
         def emit_reduce(args, env, current_scope, empty_value, operator)

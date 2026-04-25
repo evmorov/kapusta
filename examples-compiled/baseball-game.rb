@@ -5,7 +5,7 @@ def cal_points(ops)
       op = kap_value_1
       if op == "C"
         kap_thread_1 = scores.pop
-        if kap_thread_1 == nil
+        if kap_thread_1.nil?
           nil
         else
           kap_thread_1.abs

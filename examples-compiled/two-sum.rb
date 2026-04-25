@@ -1,9 +1,9 @@
 def two_sum(xs, target)
   i = 0
   answer = nil
-  while (i < xs.length) && (answer == nil)
+  while (i < xs.length) && answer.nil?
     j = i + 1
-    while (j < xs.length) && (answer == nil)
+    while (j < xs.length) && answer.nil?
       if (xs[i] + xs[j]) == target
         answer = [i, j]
       end

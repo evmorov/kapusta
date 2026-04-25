@@ -2,7 +2,7 @@ def binary_search(xs, target)
   lo = 0
   hi = xs.length - 1
   answer = nil
-  while (lo <= hi) && (answer == nil)
+  while (lo <= hi) && answer.nil?
     mid = ((lo + hi) / 2).floor
     guess = xs[mid]
     if guess == target
