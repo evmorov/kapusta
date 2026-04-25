@@ -26,8 +26,9 @@ module Kapusta
           method_form = args[1]
           positional, kwargs, block = split_call_args(args[2..], env, current_scope)
           literal_name = method_form if method_form.is_a?(Symbol) || method_form.is_a?(String)
-          if literal_name && !kwargs && !block && direct_method_name?(literal_name.to_s)
-            return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s), positional)
+          if literal_name && direct_method_name?(literal_name.to_s)
+            return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s),
+                                           positional, kwargs, block)
           end
 
           method_name = emit_method_name(method_form, env, current_scope)
@@ -289,8 +290,9 @@ module Kapusta
           else
             receiver = emit_method_path(base_code, segments[0...-1])
             positional, kwargs, block = split_call_args(args, env, current_scope)
-            if !kwargs && !block && direct_method_name?(segments.last)
-              return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last), positional)
+            if direct_method_name?(segments.last)
+              return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last),
+                                             positional, kwargs, block)
             end
 
             method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
@@ -310,10 +312,10 @@ module Kapusta
           end
         end
 
-        def emit_direct_method_call(receiver, method_name, positional)
-          args = positional.join(', ')
+        def emit_direct_method_call(receiver, method_name, positional, kwargs = nil, block = nil)
+          parts = build_call_args(positional, kwargs, block)
           rendered_receiver = simple_expression?(receiver) ? receiver : parenthesize(receiver)
-          suffix = args.empty? ? method_name : "#{method_name}(#{args})"
+          suffix = parts.empty? ? method_name : "#{method_name}(#{parts})"
           "#{rendered_receiver}.#{suffix}"
         end
 
