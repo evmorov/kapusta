@@ -24,14 +24,15 @@ module Kapusta
         def emit_colon(args, env, current_scope)
           receiver = emit_expr(args[0], env, current_scope)
           method_form = args[1]
-          positional, kwargs, block = split_call_args(args[2..], env, current_scope)
+          positional, kwargs, block_form = split_call_args(args[2..], env, current_scope)
           literal_name = method_form if method_form.is_a?(Symbol) || method_form.is_a?(String)
           if literal_name && direct_method_name?(literal_name.to_s)
             return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s),
-                                           positional, kwargs, block)
+                                           positional, kwargs, block_form, env, current_scope)
           end
 
           method_name = emit_method_name(method_form, env, current_scope)
+          block = emit_block_proc(block_form, env, current_scope)
           parts = build_call_args([method_name, *positional], kwargs, block)
           "#{parenthesize(receiver)}.public_send(#{parts})"
         end
@@ -254,7 +255,8 @@ module Kapusta
         end
 
         def emit_callable_call(callee_code, args, env, current_scope)
-          positional, kwargs, block = split_call_args(args, env, current_scope)
+          positional, kwargs, block_form = split_call_args(args, env, current_scope)
+          block = emit_block_proc(block_form, env, current_scope)
           rendered = build_call_args(positional, kwargs, block)
           suffix = rendered.empty? ? '.call' : ".call(#{rendered})"
           "#{parenthesize(callee_code)}#{suffix}"
@@ -289,13 +291,14 @@ module Kapusta
             emit_callable_call(base_code, args, env, current_scope)
           else
             receiver = emit_method_path(base_code, segments[0...-1])
-            positional, kwargs, block = split_call_args(args, env, current_scope)
+            positional, kwargs, block_form = split_call_args(args, env, current_scope)
             if direct_method_name?(segments.last)
               return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(segments.last),
-                                             positional, kwargs, block)
+                                             positional, kwargs, block_form, env, current_scope)
             end
 
             method_name = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
+            block = emit_block_proc(block_form, env, current_scope)
             parts = build_call_args([method_name, *positional], kwargs, block)
             "#{receiver}.public_send(#{parts})"
           end
@@ -312,25 +315,30 @@ module Kapusta
           end
         end
 
-        def emit_direct_method_call(receiver, method_name, positional, kwargs = nil, block = nil)
+        def emit_direct_method_call(receiver, method_name, positional, kwargs = nil,
+                                    block_form = nil, env = nil, current_scope = nil)
+          attached = block_form && emit_attached_block(block_form, env, current_scope)
+          block = block_form && !attached ? emit_block_proc(block_form, env, current_scope) : nil
           parts = build_call_args(positional, kwargs, block)
           rendered_receiver = simple_expression?(receiver) ? receiver : parenthesize(receiver)
-          suffix = parts.empty? ? method_name : "#{method_name}(#{parts})"
-          "#{rendered_receiver}.#{suffix}"
+          call = parts.empty? ? method_name : "#{method_name}(#{parts})"
+          call = "#{call} #{attached}" if attached
+          "#{rendered_receiver}.#{call}"
         end
 
         def emit_self_call(name, args, env, current_scope)
-          positional, kwargs, block = split_call_args(args, env, current_scope)
+          positional, kwargs, block_form = split_call_args(args, env, current_scope)
+          block = emit_block_proc(block_form, env, current_scope)
           method_name = Kapusta.kebab_to_snake(name).to_sym.inspect
           parts = build_call_args([method_name, *positional], kwargs, block)
           "send(#{parts})"
         end
 
         def split_call_args(args, env, current_scope)
-          block = nil
+          block_form = nil
           remaining = args
           if !remaining.empty? && block_form?(remaining.last)
-            block = emit_expr(remaining.last, env, current_scope)
+            block_form = remaining.last
             remaining = remaining[0...-1]
           end
 
@@ -341,7 +349,24 @@ module Kapusta
             kwargs = nil
             positional = remaining.map { |arg| emit_expr(arg, env, current_scope) }
           end
-          [positional, kwargs, block]
+          [positional, kwargs, block_form]
+        end
+
+        def emit_block_proc(block_form, env, current_scope)
+          block_form && emit_expr(block_form, env, current_scope)
+        end
+
+        def emit_attached_block(block_form, env, current_scope)
+          return unless block_form.is_a?(List) && block_form.head.is_a?(Sym)
+          return unless %w[fn lambda λ].include?(block_form.head.name)
+
+          pattern = block_form.items[1]
+          return unless pattern.is_a?(Vec) && simple_parameter_pattern?(pattern)
+
+          body = block_form.items[2..]
+          params, body_code = build_simple_block_parts(pattern, body, env, current_scope)
+          header = params.empty? ? 'do' : "do |#{params.join(', ')}|"
+          [header, indent(body_code), 'end'].join("\n")
         end
 
         def emit_method_name(form, env, current_scope)

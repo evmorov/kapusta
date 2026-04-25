@@ -1,10 +1,10 @@
 (-> do
     words = ["red", "green", "blue", "black", "olive"]
-  (((words.select(&proc do |w|
+  (((words.select do |w|
     w.length < 5
-  end)).map(&proc do |w|
+  end).map do |w|
     w.upcase
-  end)).sort).each(&proc do |w|
+  end).sort).each do |w|
     p(w)
-  end)
+  end
 end).call

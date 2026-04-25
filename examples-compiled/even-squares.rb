@@ -1,8 +1,8 @@
 (-> do
-    even_squares = ([1, 2, 3, 4, 5, 6].select(&proc do |n|
+    even_squares = ([1, 2, 3, 4, 5, 6].select do |n|
     n.even?
-  end)).map(&proc do |n|
+  end).map do |n|
     n * n
-  end)
+  end
   p(even_squares.join(", "))
 end).call
