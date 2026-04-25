@@ -16,7 +16,7 @@ def cal_points(ops)
       elsif op == "+"
         scores.push(scores[-1] + scores[-2])
       else
-        scores.push(send(:Integer, op))
+        scores.push(op.to_i)
       end
     end
     scores.sum

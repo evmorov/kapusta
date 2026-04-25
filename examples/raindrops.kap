@@ -7,7 +7,7 @@
   (when (div? n 5) (add-drop "Plang"))
   (when (div? n 7) (add-drop "Plong"))
   (if (empty? drops)
-      (tostring n)
+      (: n :to-s)
       (drops.join)))
 
 (print (raindrops 15))

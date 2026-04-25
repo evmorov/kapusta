@@ -346,10 +346,23 @@ module Kapusta
 
         def emit_self_call(name, args, env, current_scope)
           positional, kwargs, block_form = split_call_args(args, env, current_scope)
+          snake = Kapusta.kebab_to_snake(name)
+          if direct_method_name?(snake)
+            return emit_direct_self_call(snake, positional, kwargs, block_form, env, current_scope)
+          end
+
           block = emit_block_proc(block_form, env, current_scope)
-          method_name = Kapusta.kebab_to_snake(name).to_sym.inspect
+          method_name = snake.to_sym.inspect
           parts = build_call_args([method_name, *positional], kwargs, block)
-          "send(#{parts})"
+          "public_send(#{parts})"
+        end
+
+        def emit_direct_self_call(method_name, positional, kwargs, block_form, env, current_scope)
+          attached = block_form && emit_attached_block(block_form, env, current_scope)
+          block = block_form && !attached ? emit_block_proc(block_form, env, current_scope) : nil
+          parts = build_call_args(positional, kwargs, block)
+          call = parts.empty? ? "#{method_name}()" : "#{method_name}(#{parts})"
+          attached ? "#{call} #{attached}" : call
         end
 
         def split_call_args(args, env, current_scope)

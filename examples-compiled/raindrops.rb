@@ -19,7 +19,7 @@ def raindrops(n)
     add_drop.call("Plong")
   end
   if empty_q.call(drops)
-    send(:tostring, n)
+    n.to_s
   else
     drops.join
   end

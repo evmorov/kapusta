@@ -38,23 +38,26 @@ end
 
 private :kap_destructure_into, :kap_destructure
 
+def parse_int(s)
+  Kernel.public_send(:Integer, s)
+end
 (-> do
   kap_bindings_1 = kap_destructure([:vec, [[:sym, "ok"], [:sym, "value"]]], begin
-    [true, send(:Integer, "12")]
+    [true, parse_int("12")]
   rescue StandardError => e
     [false, e]
   end)
   ok = kap_bindings_1.fetch("ok")
   value = kap_bindings_1.fetch("value")
   kap_bindings_2 = kap_destructure([:vec, [[:sym, "bad-ok"], [:sym, "error"]]], begin
-    [true, send(:Integer, "oops")]
+    [true, parse_int("oops")]
   rescue StandardError => e
     [false, e]
   end)
   bad_ok = kap_bindings_2.fetch("bad-ok")
   error = kap_bindings_2.fetch("error")
   kap_bindings_3 = kap_destructure([:vec, [[:sym, "handled-ok"], [:sym, "handled"]]], begin
-    [true, send(:Integer, "oops")]
+    [true, parse_int("oops")]
   rescue StandardError => e
     [false, (proc do |e|
       e.message

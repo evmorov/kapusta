@@ -2,7 +2,7 @@ def require_score(s)
   if s == "oops"
     Kernel.raise(ArgumentError.new("not a number"))
   else
-    send(:Integer, s)
+    s.to_i
   end
 end
 def parse_score(s)

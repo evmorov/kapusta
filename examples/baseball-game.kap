@@ -4,7 +4,7 @@
       (if (= op "C") (do (-?> (scores.pop) (: :abs)) nil)
           (= op "D") (scores.push (* 2 (. scores -1)))
           (= op "+") (scores.push (+ (. scores -1) (. scores -2)))
-          (scores.push (Integer op))))
+          (scores.push (: op :to-i))))
     scores.sum))
 
 (print (cal-points ["5" "2" "C" "D" "+"]))
