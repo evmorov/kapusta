@@ -33,22 +33,60 @@ module Kapusta
         def emit_accumulate(args, env, current_scope)
           bindings = args[0].items
           acc_name = bindings[0]
-          iter_bindings = Vec.new(bindings[2..])
-          loop_env = env.child
-          acc_var = define_local(loop_env, acc_name.name)
-          iter_code = emit_iteration(iter_bindings, loop_env, current_scope) do |iter_env|
-            iter_env.define(acc_name.name, acc_var)
-            emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first.then do |body|
-              emit_sequence_value_assignment(acc_var, body)
-            end
+          init_code = emit_expr(bindings[1], env, current_scope)
+          iter_items = bindings[2..]
+          iter_expr = iter_items.last
+          binding_pats = iter_items[0...-1]
+
+          body_env = env.child
+          acc_var = define_local(body_env, acc_name.name)
+
+          inject_code = try_emit_inject(iter_expr, binding_pats, body_env, env, current_scope, acc_var,
+                                        init_code, args[1..])
+          return inject_code if inject_code
+
+          iter_code = emit_iteration(Vec.new(iter_items), body_env, current_scope) do |iter_env|
+            body_code, = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false)
+            emit_sequence_value_assignment(acc_var, body_code)
           end
           [
             '(-> do',
-            indent("#{acc_var} = #{emit_expr(bindings[1], env, current_scope)}"),
+            indent("#{acc_var} = #{init_code}"),
             indent(iter_code),
             indent(acc_var),
             'end).call'
           ].join("\n")
+        end
+
+        def try_emit_inject(iter_expr, binding_pats, body_env, env, current_scope, acc_var, init_code, body_forms)
+          return unless iter_expr.is_a?(List) && iter_expr.head.is_a?(Sym)
+
+          coll_code = emit_expr(iter_expr.items[1], env, current_scope)
+          case iter_expr.head.name
+          when 'ipairs'
+            value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
+            if ignored_pattern?(binding_pats[0])
+              body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
+              return inject_block(coll_code, "#{acc_var}, #{value_var}", init_code, value_bind || '', body_code)
+            end
+            index_var, index_bind = bind_iteration_param(binding_pats[0], 'index', body_env)
+            bind_code = [index_bind, value_bind].compact.join("\n")
+            body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
+            inject_block("#{coll_code}.each_with_index", "#{acc_var}, (#{value_var}, #{index_var})",
+                         init_code, bind_code, body_code)
+          when 'pairs'
+            key_var, key_bind = bind_iteration_param(binding_pats[0], 'key', body_env)
+            value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
+            bind_code = [key_bind, value_bind].compact.join("\n")
+            body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
+            inject_block(coll_code, "#{acc_var}, (#{key_var}, #{value_var})",
+                         init_code, bind_code, body_code)
+          end
+        end
+
+        def inject_block(receiver, params, init_code, bind_code, body_code)
+          inner = join_code(bind_code, body_code)
+          ["#{receiver}.inject(#{init_code}) do |#{params}|", indent(inner), 'end'].join("\n")
         end
 
         def emit_faccumulate(args, env, current_scope)

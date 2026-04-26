@@ -1,11 +1,7 @@
 (-> do
   xs = [10, 20, 30, 40]
-  total = (-> do
-    s = 0
-    xs.each do |x|
-      s += x
-    end
-    s
-  end).call
+  total = xs.inject(0) do |s, x|
+    s + x
+  end
   p total
 end).call

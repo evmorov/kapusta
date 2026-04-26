@@ -6,12 +6,8 @@ def manhattan(edge)
   end).call
 end
 def total_distance(edges)
-  (-> do
-    total = 0
-    edges.each do |edge|
-      total += manhattan(edge)
-    end
-    total
-  end).call
+  edges.inject(0) do |total, edge|
+    total + manhattan(edge)
+  end
 end
 p total_distance([{:from => [0, 0], :to => [3, 4]}, {:from => [1, 1], :to => [4, 5]}])
