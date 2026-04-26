@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "== rspec =="
 bundle exec rspec
+
+echo "== rubocop -A =="
 bundle exec rubocop -A
+
+echo "== kapfmt =="
+for file in examples/*.kap; do ./exe/kapfmt --fix "$file"; done
+
+echo "== fennel parity =="
 bin/fennel-parity
+
+echo "== compile examples =="
 bin/compile-examples
 
-echo
-echo "Success!"
+echo "== Success! =="
