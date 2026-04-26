@@ -263,7 +263,8 @@ module Kapusta
 
         def sanitize_local(name)
           base = Kapusta.kebab_to_snake(name.respond_to?(:name) ? name.name : name)
-          base = base.gsub('?', '_q').gsub('!', '_bang')
+          base = base.sub(/\A\?/, 'q_').gsub('?', '_q')
+          base = base.sub(/\A!/, 'bang_').gsub('!', '_bang')
           base = base.gsub(/[^a-zA-Z0-9_]/, '_')
           if base.empty? || base.match?(/\A\d/) || base.match?(/\A[A-Z]/) || self.class::RUBY_KEYWORDS.include?(base)
             base = "_#{base}"

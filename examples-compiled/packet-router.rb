@@ -4,9 +4,9 @@ def inbox_line(user, event)
     case kap_case_value_1
     in [:score, ^(user), points, *] if !points.nil?
       "score:" + points.to_s
-    in [:profile, ^(user), city, *]
-      if city
-        "city:" + city.to_s
+    in [:profile, ^(user), q_city, *]
+      if q_city
+        "city:" + q_city.to_s
       else
         "city:nil"
       end
@@ -21,10 +21,10 @@ def score_delta(user, event)
   (-> do
     kap_case_value_2 = event
     case kap_case_value_2
-    in [:bonus, ^(user), points, *] if !points.nil? && points > 0 && points < 10
-      points
-    in [:score, ^(user), points, *] if !points.nil? && points > 0 && points < 10
-      points
+    in [:bonus, ^(user), p, *] if !p.nil? && p > 0 && p < 10
+      p
+    in [:score, ^(user), p, *] if !p.nil? && p > 0 && p < 10
+      p
     in _
       0
     else

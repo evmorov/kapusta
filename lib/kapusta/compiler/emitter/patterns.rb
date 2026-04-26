@@ -79,8 +79,7 @@ module Kapusta
             if sub.is_a?(Sym)
               raise PatternNotTranslatable if sub.name == '_'
 
-              bind_name = sub.name.start_with?('?') ? sub.name.delete_prefix('?') : sub.name
-              ruby_name = define_local(current_env, bind_name)
+              ruby_name = define_local(current_env, sub.name)
               lines << "#{ruby_name} = #{access}"
             else
               sub_code, current_env = try_emit_native_pattern_bind(sub, access, current_env) ||
@@ -96,8 +95,7 @@ module Kapusta
           when Sym
             return ['_', env, nil] if pattern.name == '_'
 
-            bind_name = pattern.name.start_with?('?') ? pattern.name.delete_prefix('?') : pattern.name
-            ruby_name = define_local(env, bind_name)
+            ruby_name = define_local(env, pattern.name)
             [ruby_name, env, nil]
           when Vec
             inner = []
@@ -137,8 +135,7 @@ module Kapusta
 
           return '*' if sym.name == '_'
 
-          bind_name = sym.name.start_with?('?') ? sym.name.delete_prefix('?') : sym.name
-          "*#{define_local(env, bind_name)}"
+          "*#{define_local(env, sym.name)}"
         end
 
         class PatternNotTranslatable < StandardError; end
@@ -179,12 +176,11 @@ module Kapusta
           return '_' if name == '_'
 
           if nil_allowing_pattern_name?(name)
-            bind_name = name.start_with?('?') ? name.delete_prefix('?') : name
-            raise PatternNotTranslatable if state[:bound_names].key?(bind_name)
+            raise PatternNotTranslatable if state[:bound_names].key?(name)
 
-            state[:bound_names][bind_name] = true
-            state[:binding_names] << bind_name
-            sanitize_local(bind_name)
+            state[:bound_names][name] = true
+            state[:binding_names] << name
+            sanitize_local(name)
           else
             binding = mode == :match ? env.lookup_if_defined(name) : nil
             if state[:bound_names].key?(name)

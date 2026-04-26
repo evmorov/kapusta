@@ -29,6 +29,7 @@ COMPATIBLE = %w[
   match.kap
   min-max.kap
   or-patterns.kap
+  packet-router.kap
   points.kap
   primes.kap
   safe-lookup.kap
