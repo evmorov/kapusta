@@ -54,33 +54,27 @@ module Kapusta
         end
 
         def emit_require(arg, env, current_scope)
-          path_code =
-            case arg
-            when Sym then arg.name.inspect
-            when Symbol then arg.to_s.inspect
-            when String then arg.inspect
-            else "(#{emit_expr(arg, env, current_scope)}).to_s"
-            end
-          if kapusta_require?(arg)
-            return [
-              'require "kapusta" unless defined?(Kapusta)',
-              "Kapusta.require(#{path_code}, relative_to: __FILE__)"
-            ].join("\n")
+          literal = require_path_literal(arg)
+          if literal&.match?(%r{\A\.\.?/})
+            cleaned = literal.delete_suffix('.kap')
+            return "require_relative #{cleaned.inspect}"
           end
 
+          path_code =
+            if literal
+              literal.inspect
+            else
+              "(#{emit_expr(arg, env, current_scope)}).to_s"
+            end
           "require #{path_code}"
         end
 
-        def kapusta_require?(arg)
-          path =
-            case arg
-            when Sym then arg.name
-            when Symbol then arg.to_s
-            when String then arg
-            end
-          return false unless path
-
-          path.end_with?('.kap') || path.start_with?('./', '../') || File.absolute_path?(path)
+        def require_path_literal(arg)
+          case arg
+          when Sym then arg.name
+          when Symbol then arg.to_s
+          when String then arg
+          end
         end
 
         def emit_module_expr(args, env)

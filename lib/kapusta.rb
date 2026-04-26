@@ -12,10 +12,12 @@ module Kapusta
   @loaded_kapusta_features = {}
 
   def self.eval(source, path: '(eval)', **_opts)
+    install!
     Compiler.run(source, path:)
   end
 
   def self.dofile(path, **_opts)
+    install!
     source = File.read(path)
     self.eval(source, path:)
   end
@@ -25,6 +27,7 @@ module Kapusta
   end
 
   def self.require(feature, relative_to: nil)
+    install!
     feature = feature.to_s
     local_path = resolve_require_path(feature, relative_to:)
 
@@ -35,10 +38,31 @@ module Kapusta
   end
 
   def self.install!
-    @install ||= begin
-      Kernel.require 'rubygems'
-      true
+    return if @installed
+
+    @installed = true
+    Kernel.module_eval do
+      alias_method :__kapusta_original_require_relative, :require_relative
+      private :__kapusta_original_require_relative
+
+      def require_relative(path)
+        kap_path = Kapusta.send(:resolve_kap_relative, path, caller_locations(1, 1).first)
+        return Kapusta.send(:require_kapusta_file, kap_path) if kap_path
+
+        __kapusta_original_require_relative(path)
+      end
     end
+  end
+
+  def self.resolve_kap_relative(path, location)
+    return unless path.is_a?(String) && location
+
+    base_file = location.absolute_path || location.path
+    return unless base_file
+
+    full = File.expand_path(path, File.dirname(File.expand_path(base_file)))
+    candidates = full.end_with?('.kap') ? [full] : ["#{full}.kap"]
+    candidates.find { |c| File.file?(c) }
   end
 
   def self.resolve_require_path(feature, relative_to:)
@@ -88,5 +112,5 @@ module Kapusta
   end
 
   private_class_method :resolve_require_path, :local_feature?, :require_base_dir,
-                       :existing_feature_path, :require_kapusta_file
+                       :existing_feature_path, :require_kapusta_file, :resolve_kap_relative
 end
