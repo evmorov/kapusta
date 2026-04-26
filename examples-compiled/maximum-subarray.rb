@@ -8,9 +8,7 @@ def max_subarray(nums)
     else
       n
     end
-    if curr > best
-      best = curr
-    end
+    best = curr if curr > best
   end
   best
 end

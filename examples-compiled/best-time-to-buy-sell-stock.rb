@@ -3,12 +3,8 @@ def max_profit(prices)
   best = 0
   1.step(prices.length - 1) do |i|
     p = prices[i]
-    if p < min_price
-      min_price = p
-    end
-    if (p - min_price) > best
-      best = p - min_price
-    end
+    min_price = p if p < min_price
+    best = p - min_price if (p - min_price) > best
   end
   best
 end

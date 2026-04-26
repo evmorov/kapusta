@@ -2,9 +2,7 @@ def majority(nums)
   candidate = nil
   count = 0
   nums.each do |n|
-    if count == 0
-      candidate = n
-    end
+    candidate = n if count == 0
     if n == candidate
       count += 1
     else

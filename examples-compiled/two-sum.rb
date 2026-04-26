@@ -4,9 +4,7 @@ def two_sum(xs, target)
   while (i < xs.length) && answer.nil?
     j = i + 1
     while (j < xs.length) && answer.nil?
-      if (xs[i] + xs[j]) == target
-        answer = [i, j]
-      end
+      answer = [i, j] if (xs[i] + xs[j]) == target
       j += 1
     end
     i += 1

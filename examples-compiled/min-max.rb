@@ -4,12 +4,8 @@ def min_max(xs)
     lo = first
     hi = first
     rest.each do |x|
-      if x < lo
-        lo = x
-      end
-      if x > hi
-        hi = x
-      end
+      lo = x if x < lo
+      hi = x if x > hi
     end
     [lo, hi]
   end).call

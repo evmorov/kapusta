@@ -16,6 +16,8 @@ module Kapusta
 
           cond = emit_expr(args[0], env, current_scope)
           truthy = emit_if_branch(args[1], env, current_scope)
+          return "#{truthy} if #{cond}" if args.length == 2 && !truthy.include?("\n") && !cond.include?("\n")
+
           lines = ["if #{cond}", indent(truthy)]
           append_else_lines(lines, args[2..], env, current_scope)
           lines << 'end'
