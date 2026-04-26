@@ -1,0 +1,156 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'open3'
+
+ROOT = File.expand_path('..', __dir__)
+EXAMPLES = File.join(ROOT, 'examples')
+KAPUSTA = File.join(ROOT, 'exe', 'kapusta')
+KAPFMT = File.join(ROOT, 'exe', 'kapfmt')
+
+COMPATIBLE = %w[
+  ackermann.kap
+  anonymous-greeter.kap
+  climbing-stairs.kap
+  describe.kap
+  destructure.kap
+  factorial.kap
+  fib.kap
+  fizzbuzz.kap
+  gcd.kap
+  hashfn.kap
+  leap-year.kap
+  macros-dbg.kap
+  macros-multi.kap
+  macros-swap.kap
+  macros-thrice-if.kap
+  macros-unless.kap
+  macros-when-let.kap
+  match.kap
+  min-max.kap
+  or-patterns.kap
+  points.kap
+  primes.kap
+  safe-lookup.kap
+  shapes.kap
+  squares.kap
+  sum.kap
+  tic-tac-toe.kap
+  underscore-patterns.kap
+].freeze
+
+def run(cmd, file)
+  out, err, status = Open3.capture3(cmd, file, chdir: EXAMPLES)
+  [out, err, status]
+rescue StandardError => e
+  ['', e.message, nil]
+end
+
+def strip_outer_quotes(line)
+  if line.length >= 2 && line.start_with?('"') && line.end_with?('"')
+    line[1..-2]
+  else
+    line
+  end
+end
+
+def normalize_kapusta(out)
+  out.lines.map { |l| strip_outer_quotes(l.chomp) }
+end
+
+def normalize_fennel(out)
+  # Lua's `print` joins multiple args with TAB on one line; Ruby's `p`
+  # prints each on its own line. Split tabs so the two layouts line up.
+  out.lines.flat_map { |l| l.chomp.split("\t") }
+end
+
+def unified_diff(label_kap, kap_lines, label_fnl, fnl_lines)
+  max = [kap_lines.length, fnl_lines.length].max
+  rows = []
+  (0...max).each do |i|
+    la = kap_lines[i]
+    lb = fnl_lines[i]
+    next if la == lb
+
+    rows << format('  line %<n>3d  %<a>s: %<la>s',
+                   n: i + 1, a: label_kap, la: la.inspect)
+    rows << format('           %<b>s: %<lb>s',
+                   b: label_fnl, lb: lb.inspect)
+  end
+  rows.join("\n")
+end
+
+def check_format(path)
+  k_out, k_err, k_status = run(KAPFMT, path)
+  f_out, f_err, f_status = run('fnlfmt', path)
+
+  return "kapfmt exited #{k_status&.exitstatus}: #{k_err.strip}" if k_status.nil? || !k_status.success?
+  return "fnlfmt exited #{f_status&.exitstatus}: #{f_err.strip}" if f_status.nil? || !f_status.success?
+  return if k_out == f_out
+
+  k_lines = k_out.lines.map(&:chomp)
+  f_lines = f_out.lines.map(&:chomp)
+  "format differs:\n#{unified_diff('kapfmt', k_lines, 'fnlfmt', f_lines)}"
+end
+
+def check_run(path)
+  k_out, k_err, k_status = run(KAPUSTA, path)
+  f_out, f_err, f_status = run('fennel', path)
+
+  return "kapusta exited #{k_status&.exitstatus}: #{k_err.strip}" if k_status.nil? || !k_status.success?
+  return "fennel exited #{f_status&.exitstatus}: #{f_err.strip}" if f_status.nil? || !f_status.success?
+
+  k_lines = normalize_kapusta(k_out)
+  f_lines = normalize_fennel(f_out)
+  return if k_lines == f_lines
+
+  if k_lines.length == f_lines.length
+    "output differs:\n#{unified_diff('kapusta', k_lines, 'fennel', f_lines)}"
+  else
+    "line count differs (kapusta=#{k_lines.length}, fennel=#{f_lines.length})"
+  end
+end
+
+def check(name)
+  path = File.join(EXAMPLES, name)
+  return [:miss, "missing file: #{path}"] unless File.exist?(path)
+
+  fmt_reason = check_format(path)
+  return [:fail, fmt_reason] if fmt_reason
+
+  run_reason = check_run(path)
+  return [:fail, run_reason] if run_reason
+
+  [:ok, nil]
+end
+
+puts "Checking #{COMPATIBLE.size} compatible examples (kapfmt vs fnlfmt, kapusta vs fennel)...\n\n"
+
+failures = []
+COMPATIBLE.each do |name|
+  status, reason = check(name)
+  case status
+  when :ok
+    puts "OK    #{name}"
+  when :miss
+    failures << [name, reason]
+    puts "MISS  #{name}"
+  when :fail
+    failures << [name, reason]
+    puts "FAIL  #{name}"
+  end
+end
+
+puts
+if failures.empty?
+  puts "All #{COMPATIBLE.size} compatible examples produce matching output."
+  exit 0
+else
+  puts "#{failures.size} of #{COMPATIBLE.size} examples failed:\n\n"
+  failures.each do |name, reason|
+    puts "  * #{name}"
+    reason.each_line { |l| puts "    #{l.rstrip}" }
+    puts
+  end
+  exit 1
+end

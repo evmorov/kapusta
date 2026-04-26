@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bundle exec rspec
+bundle exec rubocop -A
+bin/fennel-parity
+bin/compile-examples
+
+echo
+echo "All good"

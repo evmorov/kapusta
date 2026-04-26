@@ -345,6 +345,35 @@ module Kapusta
       append_suffix(lines, ')')
     end
 
+    def append_prefix_form(lines, form, indent, current_first_line, inline_prefix, layouts, layout_index)
+      if blank_line?(form)
+        lines << ''
+        return [current_first_line, false, layout_index]
+      end
+      if comment?(form)
+        lines << indent_block(render(form, indent + INDENT), INDENT)
+        return [current_first_line, false, layout_index]
+      end
+
+      rendered = render(form, indent + current_first_line.length + 1, layout: layouts[layout_index])
+      rendered_lines = rendered.lines.map(&:chomp)
+      candidate_first = "#{current_first_line} #{rendered_lines.first}"
+
+      if inline_prefix && fits?(candidate_first, indent)
+        lines[-1] = candidate_first
+        if rendered_lines.length == 1
+          [candidate_first, true, layout_index + 1]
+        else
+          hanging = ' ' * (current_first_line.length + 1)
+          rendered_lines.drop(1).each { |line| lines << "#{hanging}#{line}" }
+          [current_first_line, false, layout_index + 1]
+        end
+      else
+        lines << indent_block(rendered, INDENT)
+        [current_first_line, false, layout_index + 1]
+      end
+    end
+
     def render_prefix_body_form(head, prefix_forms, body_forms, indent, layouts: [], force_body_multiline: false)
       line = "(#{head}"
       lines = [line]
@@ -353,28 +382,8 @@ module Kapusta
       inline_prefix = true
 
       prefix_forms.each do |form|
-        if blank_line?(form)
-          lines << ''
-          inline_prefix = false
-          next
-        end
-        if comment?(form)
-          lines << indent_block(render(form, indent + INDENT), INDENT)
-          inline_prefix = false
-          next
-        end
-
-        rendered = render(form, indent + INDENT, layout: layouts[layout_index])
-        layout_index += 1
-        candidate = "#{current_first_line} #{rendered}"
-
-        if inline_prefix && single_line?(rendered) && fits?(candidate, indent)
-          current_first_line = candidate
-          lines[0] = current_first_line
-        else
-          lines << indent_block(rendered, INDENT)
-          inline_prefix = false
-        end
+        current_first_line, inline_prefix, layout_index =
+          append_prefix_form(lines, form, indent, current_first_line, inline_prefix, layouts, layout_index)
       end
 
       body_forms.each do |form|
@@ -565,15 +574,44 @@ module Kapusta
       flat = flat_render(vec)
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(vec, top_level:, layout:)
 
-      if layout == :pairwise && !contains_comments?(vec.items)
-        render_pairwise_vec(vec, indent)
-      else
-        lines = ['[']
-        vec.items.each do |item|
-          lines << indent_block(render(item, indent + INDENT), INDENT)
-        end
-        append_suffix(lines, ']')
+      return render_pairwise_vec(vec, indent) if layout == :pairwise && !contains_comments?(vec.items)
+      return render_filled_vec(vec, indent) if !contains_comments?(vec.items) && !vec.items.empty?
+
+      lines = ['[']
+      vec.items.each do |item|
+        lines << indent_block(render(item, indent + INDENT), INDENT)
       end
+      append_suffix(lines, ']')
+    end
+
+    def render_filled_vec(vec, indent)
+      output_lines = ['[']
+
+      vec.items.each_with_index do |item, idx|
+        if idx.zero?
+          item_col = output_lines.last.length
+          rendered_lines = render(item, indent + item_col).lines.map(&:chomp)
+          output_lines[-1] += rendered_lines.first
+          rendered_lines.drop(1).each { |line| output_lines << ((' ' * item_col) + line) }
+          next
+        end
+
+        inline_col = output_lines.last.length + 1
+        flat = flat_render(item)
+
+        if flat && indent + inline_col + flat.length <= MAX_WIDTH
+          output_lines[-1] += " #{flat}"
+        elsif flat && indent + 1 + flat.length <= MAX_WIDTH
+          output_lines << " #{flat}"
+        else
+          rendered_lines = render(item, indent + inline_col).lines.map(&:chomp)
+          output_lines[-1] += " #{rendered_lines.first}"
+          rendered_lines.drop(1).each { |line| output_lines << ((' ' * inline_col) + line) }
+        end
+      end
+
+      output_lines[-1] += ']'
+      output_lines.join("\n")
     end
 
     def render_pairwise_vec(vec, indent)

@@ -210,15 +210,14 @@ RSpec.describe Kapusta::Formatter do
       end
 
       expect(output).to eq(<<~KAP)
-        (let
-          [
-            profile
-            {:name "Ada"
-             ; active user
-             :active true}
-            ; next binding
-            role
-            "Engineer"]
+        (let [
+               profile
+               {:name "Ada"
+                ; active user
+                :active true}
+               ; next binding
+               role
+               "Engineer"]
           (print profile role))
       KAP
     end
