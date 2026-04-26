@@ -3,7 +3,7 @@ def sum_of_squares(n)
   total = 0
   while x > 0
     d = x % 10
-    total = total + (d * d)
+    total += (d * d)
     x = (x / 10).floor
   end
   total

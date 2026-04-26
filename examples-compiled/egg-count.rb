@@ -6,7 +6,7 @@ def egg_count(number)
   eggs = 0
   while n > 0
     if odd_q.call(n)
-      eggs = eggs + 1
+      eggs += 1
     end
     n = (n / 2).floor
   end

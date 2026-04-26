@@ -1,7 +1,7 @@
 def pivot_index(nums)
   total = 0
   nums.each do |n|
-    total = total + n
+    total += n
   end
   left = 0
   found = -1
@@ -9,7 +9,7 @@ def pivot_index(nums)
     if (found == -1) && (left == (total - left - n))
       found = i
     end
-    left = left + n
+    left += n
   end
   found
 end

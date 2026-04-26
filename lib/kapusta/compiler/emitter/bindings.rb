@@ -281,9 +281,20 @@ module Kapusta
               else
                 define_local(env, target.name)
               end
-            ["#{ruby_name} = #{value_code}", env]
+            [emit_assignment(ruby_name, value_code), env]
           else
             [emit_set_target(target, value_code, env, current_scope), env]
+          end
+        end
+
+        def emit_assignment(lhs, value_code)
+          prefix = "#{lhs} "
+          if value_code.start_with?(prefix) &&
+             (m = value_code[prefix.length..].match(/\A(\S+) (.*)\z/m)) &&
+             !m[1].include?('=')
+            "#{lhs} #{m[1]}= #{m[2]}"
+          else
+            "#{lhs} = #{value_code}"
           end
         end
 
@@ -302,7 +313,7 @@ module Kapusta
               last = segments.last
               snake = Kapusta.kebab_to_snake(last)
               if direct_method_name?(last)
-                "#{receiver}.#{snake} = #{value_code}"
+                emit_assignment("#{receiver}.#{snake}", value_code)
               else
                 "#{receiver}.public_send(:\"#{snake}=\", #{value_code})"
               end
@@ -310,7 +321,7 @@ module Kapusta
               binding = env.lookup(target.name)
               emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
 
-              "#{binding} = #{value_code}"
+              emit_assignment(binding, value_code)
             end
           when List
             head = target.head
@@ -319,13 +330,13 @@ module Kapusta
               keys = target.items[2..].map { |item| emit_expr(item, env, current_scope) }
               receiver = simple_expression?(object_code) ? object_code : parenthesize(object_code)
               prefix = keys[0...-1].map { |k| "[#{k}]" }.join
-              "#{receiver}#{prefix}[#{keys.last}] = #{value_code}"
+              emit_assignment("#{receiver}#{prefix}[#{keys.last}]", value_code)
             elsif head.is_a?(Sym) && head.name == 'ivar'
-              "@#{Kapusta.kebab_to_snake(target.items[1].name)} = #{value_code}"
+              emit_assignment("@#{Kapusta.kebab_to_snake(target.items[1].name)}", value_code)
             elsif head.is_a?(Sym) && head.name == 'cvar'
-              "@@#{Kapusta.kebab_to_snake(target.items[1].name)} = #{value_code}"
+              emit_assignment("@@#{Kapusta.kebab_to_snake(target.items[1].name)}", value_code)
             elsif head.is_a?(Sym) && head.name == 'gvar'
-              "$#{global_name(target.items[1].name)} = #{value_code}"
+              emit_assignment("$#{global_name(target.items[1].name)}", value_code)
             else
               emit_error!("bad set target: #{target.inspect}")
             end

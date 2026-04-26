@@ -27,7 +27,7 @@ class ValidParenthesesSolution
         else
           stack.push(ch)
         end
-        i = i + 1
+        i += 1
       end
       ok && stack.empty?
     end).call

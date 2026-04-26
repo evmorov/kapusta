@@ -5,7 +5,7 @@ def plus_one(digits)
     total = digits[i] + carry
     digits[i] = total % 10
     carry = (total / 10).floor
-    i = i - 1
+    i -= 1
   end
   if carry > 0
     digits.unshift(carry)

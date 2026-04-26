@@ -3,7 +3,7 @@ def move_zeroes(nums)
   0.step(nums.length - 1) do |read|
     if nums[read] != 0
       nums[write] = nums[read]
-      write = write + 1
+      write += 1
     end
   end
   write.step(nums.length - 1) do |i|

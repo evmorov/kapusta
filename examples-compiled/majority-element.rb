@@ -6,9 +6,9 @@ def majority(nums)
       candidate = n
     end
     if n == candidate
-      count = count + 1
+      count += 1
     else
-      count = count - 1
+      count -= 1
     end
   end
   candidate

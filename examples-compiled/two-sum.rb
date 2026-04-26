@@ -7,9 +7,9 @@ def two_sum(xs, target)
       if (xs[i] + xs[j]) == target
         answer = [i, j]
       end
-      j = j + 1
+      j += 1
     end
-    i = i + 1
+    i += 1
   end
   answer
 end

@@ -13,12 +13,12 @@ def roman_to_integer(s)
         0
       end
       subtract_q = curr < ahead
-      total = total + (if subtract_q
+      total += (if subtract_q
         ahead - curr
       else
         curr
       end)
-      i = i + (if subtract_q
+      i += (if subtract_q
         2
       else
         1
