@@ -42,14 +42,14 @@ module Kapusta
 
     @installed = true
     Kernel.module_eval do
-      alias_method :__kapusta_original_require_relative, :require_relative
-      private :__kapusta_original_require_relative
-
       def require_relative(path)
-        kap_path = Kapusta.send(:resolve_kap_relative, path, caller_locations(1, 1).first)
+        location = caller_locations(1, 1).first
+        kap_path = Kapusta.send(:resolve_kap_relative, path, location)
         return Kapusta.send(:require_kapusta_file, kap_path) if kap_path
 
-        __kapusta_original_require_relative(path)
+        base_file = location&.absolute_path || location&.path
+        target = base_file ? File.expand_path(path, File.dirname(base_file)) : path
+        Kernel.require(target)
       end
     end
   end
