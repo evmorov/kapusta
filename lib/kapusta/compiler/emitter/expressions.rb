@@ -96,9 +96,43 @@ module Kapusta
           when '/' then emit_div(args, env, current_scope)
           when '%' then args.map { |arg| parenthesize(emit_expr(arg, env, current_scope)) }.join(' % ')
           when 'print' then emit_print(args, env, current_scope)
+          when 'quasi-sym' then "Kapusta::Sym.new(#{emit_expr(args[0], env, current_scope)})"
+          when 'quasi-list' then "Kapusta::List.new([#{args.map { |a| emit_expr(a, env, current_scope) }.join(', ')}])"
+          when 'quasi-list-tail' then emit_quasi_list_tail(args, env, current_scope)
+          when 'quasi-vec' then "Kapusta::Vec.new([#{args.map { |a| emit_expr(a, env, current_scope) }.join(', ')}])"
+          when 'quasi-vec-tail' then emit_quasi_vec_tail(args, env, current_scope)
+          when 'quasi-hash' then emit_quasi_hash(args, env, current_scope)
+          when 'quasi-gensym' then emit_quasi_gensym(args[0], env, current_scope)
+          when 'macro', 'macros', 'import-macros'
+            emit_error!("#{name} must appear at the top level and is consumed by the macro expander")
           else
             emit_error!("unknown special form: #{name}")
           end
+        end
+
+        def emit_quasi_list_tail(args, env, current_scope)
+          head_items = args[0]
+          tail_expr = emit_expr(args[1], env, current_scope)
+          head_code = head_items.items.map { |item| emit_expr(item, env, current_scope) }.join(', ')
+          "Kapusta::List.new([#{head_code}, *#{parenthesize(tail_expr)}])"
+        end
+
+        def emit_quasi_vec_tail(args, env, current_scope)
+          head_items = args[0]
+          tail_expr = emit_expr(args[1], env, current_scope)
+          head_code = head_items.items.map { |item| emit_expr(item, env, current_scope) }.join(', ')
+          "Kapusta::Vec.new([#{head_code}, *#{parenthesize(tail_expr)}])"
+        end
+
+        def emit_quasi_gensym(arg, env, current_scope)
+          "Kapusta::Compiler::MacroExpander.fresh_gensym(#{emit_expr(arg, env, current_scope)})"
+        end
+
+        def emit_quasi_hash(args, env, current_scope)
+          pairs = args.each_slice(2).map do |key, value|
+            "[#{emit_expr(key, env, current_scope)}, #{emit_expr(value, env, current_scope)}]"
+          end
+          "Kapusta::HashLit.new([#{pairs.join(', ')}])"
         end
 
         def emit_concat(args, env, current_scope)

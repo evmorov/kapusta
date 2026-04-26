@@ -3,6 +3,7 @@
 require_relative 'error'
 require_relative 'compiler/normalizer'
 require_relative 'compiler/emitter'
+require_relative 'compiler/macro_expander'
 
 module Kapusta
   module Compiler
@@ -27,10 +28,17 @@ module Kapusta
       = not= < <= > >=
       + - * / %
       print
+      macro macros import-macros
+      quasi-sym quasi-list quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym
     ].freeze
 
     def self.compile(source, path: '(kapusta)')
       forms = Reader.read_all(source)
+      expanded = MacroExpander.new.expand_all(forms)
+      compile_forms(expanded, path:)
+    end
+
+    def self.compile_forms(forms, path: '(kapusta)')
       normalized = Normalizer.new.normalize_all(forms)
       Emitter.new(path:).emit_file(normalized)
     end

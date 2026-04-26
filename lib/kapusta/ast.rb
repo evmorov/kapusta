@@ -9,6 +9,8 @@ module Kapusta
     end
   end
 
+  BlankLine = Class.new
+
   class Sym
     attr_reader :name
 
@@ -74,17 +76,25 @@ module Kapusta
 
   class Vec
     attr_reader :items
+    attr_accessor :multiline_source
 
     def initialize(items)
       @items = items
+      @multiline_source = false
+    end
+
+    def to_ary
+      @items
     end
   end
 
   class HashLit
     attr_reader :entries
+    attr_accessor :multiline_source
 
     def initialize(entries)
       @entries = entries
+      @multiline_source = false
     end
 
     def pairs
@@ -98,9 +108,11 @@ module Kapusta
 
   class List
     attr_reader :items
+    attr_accessor :multiline_source
 
     def initialize(items)
       @items = items
+      @multiline_source = false
     end
 
     def head
@@ -113,6 +125,36 @@ module Kapusta
 
     def empty?
       @items.empty?
+    end
+  end
+
+  class AutoGensym < Sym
+    def inspect
+      "#<AutoGensym #{@name}#>"
+    end
+  end
+
+  class Quasiquote
+    attr_reader :form
+
+    def initialize(form)
+      @form = form
+    end
+  end
+
+  class Unquote
+    attr_reader :form
+
+    def initialize(form)
+      @form = form
+    end
+  end
+
+  class UnquoteSplice
+    attr_reader :form
+
+    def initialize(form)
+      @form = form
     end
   end
 end

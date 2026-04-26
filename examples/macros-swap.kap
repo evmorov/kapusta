@@ -1,0 +1,9 @@
+(macro swap! [a b]
+  `(let [tmp# ,a]
+     (set ,a ,b)
+     (set ,b tmp#)))
+
+(var x 1)
+(var y 2)
+(swap! x y)
+(print x y)

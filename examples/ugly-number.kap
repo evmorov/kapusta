@@ -1,0 +1,22 @@
+(macro floor-div [a b]
+  `(: (/ ,a ,b) :floor))
+
+(macro divide-out! [v d]
+  `(while (= 0 (% ,v ,d))
+     (set ,v (floor-div ,v ,d))))
+
+(fn ugly? [n]
+  (var x n)
+  (if (<= n 0)
+      false
+      (do
+        (divide-out! x 2)
+        (divide-out! x 3)
+        (divide-out! x 5)
+        (= x 1))))
+
+(print (ugly? 6))
+(print (ugly? 1))
+(print (ugly? 14))
+(print (ugly? 0))
+(print (ugly? 30))

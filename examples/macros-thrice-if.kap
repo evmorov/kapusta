@@ -1,0 +1,18 @@
+(macro thrice-if [condition result]
+  (fn step [i]
+    (if (< 0 i)
+        `(if ,condition
+             (do
+               ,result
+               ,(step (- i 1))))))
+
+  (step 3))
+
+(var counter 0)
+
+(fn ready? [] (< counter 5))
+
+(fn tick [] (set counter (+ counter 1)) (print "tick" counter))
+
+(thrice-if (ready?) (tick))
+(print "final" counter)

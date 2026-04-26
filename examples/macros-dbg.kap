@@ -1,0 +1,9 @@
+(macro dbg [expr]
+  `(let [v# ,expr]
+     (print "dbg" v#)
+     v#))
+
+(let [result (dbg (+ 1 2 3))]
+  (print "result" result))
+
+(dbg (* 10 (+ 2 3)))

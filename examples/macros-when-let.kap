@@ -1,0 +1,7 @@
+(macro when-let [[name val] & body]
+  `(let [,name ,val]
+     (when ,name ,(unpack body))))
+
+(when-let [x (+ 1 2)] (print "got" x))
+(when-let [y nil] (print "should not print"))
+(print "done")

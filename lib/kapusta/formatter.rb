@@ -114,36 +114,33 @@ module Kapusta
       raise Error, e.message
     end
 
-    def separator_for(previous, current)
-      if consecutive_requires?(previous, current) ||
-         (groupable_top_level_form?(previous) && groupable_top_level_form?(current))
-        "\n"
-      else
-        "\n\n"
-      end
+    def separator_for(_previous, _current)
+      "\n"
     end
 
     def top_level_entries(forms)
       entries = []
       leading_comments = []
+      pending_blank = false
 
       forms.each do |form|
-        if comment?(form)
+        if form.is_a?(BlankLine)
+          pending_blank = true
+        elsif comment?(form)
           leading_comments << form
         else
-          entries << { comments: leading_comments, form: }
+          entries << { comments: leading_comments, form:, blank_before: pending_blank }
           leading_comments = []
+          pending_blank = false
         end
       end
 
-      entries << { comments: leading_comments, form: nil } unless leading_comments.empty?
+      entries << { comments: leading_comments, form: nil, blank_before: pending_blank } unless leading_comments.empty?
       entries
     end
 
-    def separator_for_entries(previous, current)
-      return "\n" unless previous[:form] && current[:form]
-
-      separator_for(previous[:form], current[:form])
+    def separator_for_entries(_previous, current)
+      current[:blank_before] ? "\n\n" : "\n"
     end
 
     def render_top_level_entry(entry)
@@ -156,6 +153,14 @@ module Kapusta
       form.is_a?(Comment)
     end
 
+    def blank_line?(form)
+      form.is_a?(BlankLine)
+    end
+
+    def non_semantic?(form)
+      comment?(form) || blank_line?(form)
+    end
+
     def render(form, indent, layout: nil, top_level: false, force_expand: false)
       flat = flat_render(form)
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(form, top_level:, layout:)
@@ -165,30 +170,65 @@ module Kapusta
       when List then render_list(form, indent, top_level:)
       when Vec then render_vec(form, indent, layout:, top_level:, force_expand:)
       when HashLit then render_hash(form, indent)
+      when Quasiquote then render_prefix('`', form.form, indent, force_expand:)
+      when Unquote then render_prefix(',', form.form, indent, force_expand:)
+      when UnquoteSplice then render_prefix(',@', form.form, indent, force_expand:)
       else
         flat || raise(Error, "cannot format form: #{form.inspect}")
       end
+    end
+
+    def render_prefix(prefix, inner, indent, force_expand: false)
+      rendered = render(inner, indent + prefix.length, force_expand:)
+      lines = rendered.lines(chomp: true)
+      pad = ' ' * prefix.length
+      lines.each_with_index.map { |line, i| i.zero? ? "#{prefix}#{line}" : "#{pad}#{line}" }.join("\n")
     end
 
     def flat_render(form)
       case form
       when Comment
         nil
+      when AutoGensym
+        "#{form.name}#"
       when Sym
         form.name
       when Vec
         return if contains_comments?(form.items)
+        return if multiline_in_source?(form)
 
-        "[#{form.items.map { |item| flat_render(item) }.join(' ')}]"
+        rendered = form.items.map { |item| flat_render(item) }
+        return if rendered.any?(&:nil?)
+
+        "[#{rendered.join(' ')}]"
       when HashLit
         return if contains_comments?(form.entries)
+        return if multiline_in_source?(form)
 
-        "{#{form.pairs.map { |key, value| flat_hash_pair(key, value) }.join(' ')}}"
+        rendered = form.pairs.map { |key, value| flat_hash_pair(key, value) }
+        return if rendered.any?(&:nil?)
+
+        "{#{rendered.join(' ')}}"
       when List
         return if contains_comments?(form.items)
         return "##{flat_render(semantic_items(form.items)[1])}" if hashfn_literal?(form)
+        return if multiline_in_source?(form)
+        return if let_with_multiple_bindings?(form)
+        return if let_with_nested_binding_value?(form)
 
-        "(#{form.items.map { |item| flat_render(item) }.join(' ')})"
+        rendered = form.items.map { |item| flat_render(item) }
+        return if rendered.any?(&:nil?)
+
+        "(#{rendered.join(' ')})"
+      when Quasiquote
+        inner = flat_render(form.form)
+        inner ? "`#{inner}" : nil
+      when Unquote
+        inner = flat_render(form.form)
+        inner ? ",#{inner}" : nil
+      when UnquoteSplice
+        inner = flat_render(form.form)
+        inner ? ",@#{inner}" : nil
       when String, Numeric, true, false, nil
         form.inspect
       when Symbol
@@ -207,7 +247,7 @@ module Kapusta
       raw_args = list_raw_rest(list)
 
       case head_name
-      when 'fn', 'lambda', 'λ' then render_fn(head_name, list, indent, top_level:)
+      when 'fn', 'lambda', 'λ', 'macro' then render_fn(head_name, list, indent, top_level:)
       when 'let' then render_let(list, indent)
       when 'do', 'finally' then render_prefix_body_form(head_name, [], raw_args, indent)
       when 'try' then render_try(list, indent)
@@ -237,7 +277,12 @@ module Kapusta
       raw_args = list_raw_rest(list)
       prefix_length = args[0].is_a?(Sym) && args[1].is_a?(Vec) ? 2 : 1
       raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
-      render_prefix_body_form(head, raw_prefix, raw_body, indent, force_body_multiline: top_level)
+      force = top_level || fn_body_has_quasi_list?(raw_body)
+      render_prefix_body_form(head, raw_prefix, raw_body, indent, force_body_multiline: force)
+    end
+
+    def fn_body_has_quasi_list?(body_forms)
+      body_forms.any? { |form| form.is_a?(Quasiquote) && form.form.is_a?(List) }
     end
 
     def render_catch(list, indent)
@@ -308,6 +353,11 @@ module Kapusta
       inline_prefix = true
 
       prefix_forms.each do |form|
+        if blank_line?(form)
+          lines << ''
+          inline_prefix = false
+          next
+        end
         if comment?(form)
           lines << indent_block(render(form, indent + INDENT), INDENT)
           inline_prefix = false
@@ -328,6 +378,10 @@ module Kapusta
       end
 
       body_forms.each do |form|
+        if blank_line?(form)
+          lines << ''
+          next
+        end
         if comment?(form)
           lines << indent_block(render(form, indent + INDENT), INDENT)
           next
@@ -356,8 +410,8 @@ module Kapusta
         return flat if inline_three_arg_if?(args) && flat && fits?(flat, indent)
 
         lines << "(if #{render(args[0], indent + '(if '.length)}"
-        lines << "#{hanging}#{render(args[1], indent + '(if '.length)}"
-        lines << "#{hanging}#{render(args[2], indent + '(if '.length)}"
+        lines << prefix_continuation(hanging, render(args[1], indent + '(if '.length))
+        lines << prefix_continuation(hanging, render(args[2], indent + '(if '.length))
         return append_suffix(lines, ')')
       end
 
@@ -368,7 +422,7 @@ module Kapusta
           lines << "(if #{first_pair}"
         else
           lines << "(if #{render(args[0], indent + '(if '.length)}"
-          lines << "#{hanging}#{render(args[1], indent + '(if '.length)}"
+          lines << prefix_continuation(hanging, render(args[1], indent + '(if '.length))
         end
         index = 2
       else
@@ -382,17 +436,23 @@ module Kapusta
           if pair
             lines << "#{hanging}#{pair}"
           else
-            lines << "#{hanging}#{render(args[index], indent + '(if '.length)}"
-            lines << "#{hanging}#{render(args[index + 1], indent + '(if '.length)}"
+            lines << prefix_continuation(hanging, render(args[index], indent + '(if '.length))
+            lines << prefix_continuation(hanging, render(args[index + 1], indent + '(if '.length))
           end
           index += 2
         else
-          lines << "#{hanging}#{render(args[index], indent + '(if '.length)}"
+          lines << prefix_continuation(hanging, render(args[index], indent + '(if '.length))
           index += 1
         end
       end
 
       append_suffix(lines, ')')
+    end
+
+    def prefix_continuation(prefix, rendered)
+      first_line, *rest = rendered.lines(chomp: true)
+      pad = ' ' * prefix.length
+      ["#{prefix}#{first_line}", *rest.map { |line| "#{pad}#{line}" }].join("\n")
     end
 
     def render_case(head, args, indent)
@@ -567,33 +627,45 @@ module Kapusta
     def render_hash(hash, indent)
       flat = flat_render(hash)
       return flat if flat && fits?(flat, indent)
+      return '{}' if hash.entries.empty?
 
-      lines = ['{']
+      output_lines = []
 
-      hash.entries.each do |entry|
+      hash.entries.each_with_index do |entry, idx|
         if comment?(entry)
-          lines << indent_block(render(entry, indent + INDENT), INDENT)
-        else
-          key, value = entry
-          pair = flat_hash_pair(key, value)
-          if pair && fits?(pair, indent + INDENT)
-            lines << indent_block(pair, INDENT)
-          else
-            lines << indent_block(render_hash_key(key), INDENT)
-            lines << indent_block(render(value, indent + INDENT), INDENT)
-          end
+          output_lines << "#{idx.zero? ? '{' : ' '}#{render(entry, indent + 1)}"
+          next
         end
+
+        key, value = entry
+        first_pair = output_lines.empty?
+        if hash_shorthand?(key, value)
+          output_lines << "#{first_pair ? '{' : ' '}: #{value.name}"
+          next
+        end
+
+        key_str = render_hash_key(key)
+        value_col = indent + 1 + key_str.length + 1
+        rendered_value = render(value, value_col)
+        value_lines = rendered_value.lines(chomp: true)
+
+        prefix = "#{first_pair ? '{' : ' '}#{key_str} "
+        output_lines << "#{prefix}#{value_lines.first}"
+        pad = ' ' * prefix.length
+        value_lines.drop(1).each { |line| output_lines << "#{pad}#{line}" }
       end
 
-      append_suffix(lines, '}')
+      output_lines[-1] = "#{output_lines[-1]}}"
+      output_lines.join("\n")
     end
 
     def flat_hash_pair(key, value)
-      if hash_shorthand?(key, value)
-        ": #{value.name}"
-      else
-        "#{render_hash_key(key)} #{flat_render(value)}"
-      end
+      return ": #{value.name}" if hash_shorthand?(key, value)
+
+      rendered_value = flat_render(value)
+      return unless rendered_value
+
+      "#{render_hash_key(key)} #{rendered_value}"
     end
 
     def render_hash_key(key)
@@ -642,16 +714,17 @@ module Kapusta
         items[0].name == 'hashfn'
     end
 
-    def allow_flat?(form, top_level:, layout:)
+    def allow_flat?(form, top_level: false, layout: nil)
       return false if layout == :pairwise && form.is_a?(Vec) && semantic_items(form.items).length > 2
       return true unless form.is_a?(List)
+      return true if !multiline_in_source?(form) && form.respond_to?(:multiline_source)
 
       head = list_head(form)
       return true unless head.is_a?(Sym)
 
       case head.name
-      when 'fn', 'lambda', 'λ', 'when', 'unless', 'for', 'each', 'icollect', 'collect', 'fcollect', 'accumulate',
-           'faccumulate'
+      when 'fn', 'lambda', 'λ', 'macro', 'when', 'unless', 'for', 'each', 'icollect', 'collect', 'fcollect',
+           'accumulate', 'faccumulate'
         !top_level
       else
         !%w[let case match try catch finally do -> ->> -?> -?>> doto].include?(head.name)
@@ -659,14 +732,16 @@ module Kapusta
     end
 
     def force_multiline_body?(form)
+      return force_multiline_body?(form.form) if form.is_a?(Quasiquote)
       return false unless form.is_a?(List)
+      return true if multiline_in_source?(form)
 
       head = list_head(form)
       return false unless head.is_a?(Sym)
 
       case head.name
       when 'if', 'case', 'match', 'let', 'try', 'catch', 'finally', 'do', 'for', '->', '->>', '-?>', '-?>>', 'doto',
-           'fn', 'lambda', 'λ'
+           'fn', 'lambda', 'λ', 'macro'
         true
       else
         flat = flat_render(form)
@@ -674,27 +749,43 @@ module Kapusta
       end
     end
 
-    def consecutive_requires?(previous, current)
-      require_form?(previous) && require_form?(current)
+    def multiline_in_source?(form)
+      form.respond_to?(:multiline_source) && form.multiline_source
     end
 
-    def groupable_top_level_form?(form)
-      return true if require_form?(form)
-      return false unless form.is_a?(List) && flat_render(form)
-
+    def let_with_multiple_bindings?(form)
       head = list_head(form)
-      return false unless head.is_a?(Sym)
+      return false unless head.is_a?(Sym) && head.name == 'let'
 
-      !%w[fn module class let].include?(head.name)
+      bindings = semantic_items(form.items)[1]
+      return false unless bindings.is_a?(Vec)
+
+      semantic_items(bindings.items).length > 2
     end
 
-    def require_form?(form)
-      return false unless form.is_a?(List)
+    def let_with_nested_binding_value?(form)
+      head = list_head(form)
+      return false unless head.is_a?(Sym) && head.name == 'let'
 
-      items = semantic_items(form.items)
-      items.length == 2 &&
-        items[0].is_a?(Sym) &&
-        items[0].name == 'require'
+      bindings = semantic_items(form.items)[1]
+      return false unless bindings.is_a?(Vec)
+
+      semantic_items(bindings.items).each_slice(2).any? do |_pattern, value|
+        value && contains_collection?(value)
+      end
+    end
+
+    def contains_collection?(form)
+      case form
+      when List then semantic_items(form.items).any? { |item| collection?(item) }
+      when Vec then form.items.any? { |item| collection?(item) }
+      when HashLit then form.pairs.any? { |k, v| collection?(k) || collection?(v) }
+      else false
+      end
+    end
+
+    def collection?(form)
+      form.is_a?(List) || form.is_a?(Vec) || form.is_a?(HashLit)
     end
 
     def fn_form?(form)
@@ -784,11 +875,11 @@ module Kapusta
     end
 
     def contains_comments?(items)
-      items.any? { |item| comment?(item) }
+      items.any? { |item| non_semantic?(item) }
     end
 
     def semantic_items(items)
-      items.reject { |item| comment?(item) }
+      items.reject { |item| non_semantic?(item) }
     end
 
     def list_head(list)

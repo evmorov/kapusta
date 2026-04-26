@@ -1,0 +1,7 @@
+(macro unless [condition & body]
+  `(if (not ,condition)
+       (do
+         ,(unpack body))))
+
+(unless false (print "shown") (print "also shown"))
+(unless true (print "hidden"))

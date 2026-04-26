@@ -1,0 +1,12 @@
+(macros {:my-min (fn [x y]
+                   `(let [x# ,x
+                          y# ,y]
+                      (if (< x# y#) x# y#)))
+         :my-max (fn [x y]
+                   `(let [x# ,x
+                          y# ,y]
+                      (if (< x# y#) y# x#)))})
+
+(print (my-min 10 20))
+(print (my-max 10 20))
+(print (my-min 7 7))

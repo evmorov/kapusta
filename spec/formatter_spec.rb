@@ -213,10 +213,9 @@ RSpec.describe Kapusta::Formatter do
         (let
           [
             profile
-            {
-              :name "Ada"
-              ; active user
-              :active true}
+            {:name "Ada"
+             ; active user
+             :active true}
             ; next binding
             role
             "Engineer"]

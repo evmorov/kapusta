@@ -500,4 +500,55 @@ RSpec.describe 'examples' do
   it 'subtract-product-sum.kap' do
     expect(run_example('subtract-product-sum.kap')).to eq("15\n21\n0\n")
   end
+
+  it 'ugly-number.kap' do
+    expect(run_example('ugly-number.kap')).to eq("true\ntrue\nfalse\nfalse\ntrue\n")
+  end
+
+  it 'macros-unless.kap' do
+    expect(run_example('macros-unless.kap')).to eq(<<~OUT)
+      "shown"
+      "also shown"
+    OUT
+  end
+
+  it 'macros-swap.kap' do
+    expect(run_example('macros-swap.kap')).to eq("2\n1\n")
+  end
+
+  it 'macros-when-let.kap' do
+    expect(run_example('macros-when-let.kap')).to eq(<<~OUT)
+      "got"
+      3
+      "done"
+    OUT
+  end
+
+  it 'macros-multi.kap' do
+    expect(run_example('macros-multi.kap')).to eq("10\n20\n7\n")
+  end
+
+  it 'macros-thrice-if.kap' do
+    expect(run_example('macros-thrice-if.kap')).to eq(<<~OUT)
+      "tick"
+      1
+      "tick"
+      2
+      "tick"
+      3
+      "final"
+      3
+    OUT
+  end
+
+  it 'macros-dbg.kap' do
+    expect(run_example('macros-dbg.kap')).to eq(<<~OUT)
+      "dbg"
+      6
+      "result"
+      6
+      "dbg"
+      50
+    OUT
+  end
 end
