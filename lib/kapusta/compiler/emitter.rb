@@ -27,14 +27,12 @@ module Kapusta
       def initialize(path:)
         @path = path
         @temp_index = 0
-        @runtime_helpers = []
       end
 
       def emit_file(forms)
         env = Env.new
         body = emit_forms_with_headers(forms, env, :toplevel)
-        helpers = Runtime.helper_source(@runtime_helpers)
-        [helpers, body].reject(&:empty?).join("\n\n") << "\n"
+        "#{body}\n"
       end
     end
   end

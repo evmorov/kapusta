@@ -57,8 +57,8 @@ module Kapusta
 
         def emit_case(args, env, current_scope, mode)
           value_var = temp('case_value')
-          native_body = try_emit_native_case(value_var, args[1..], env, current_scope, mode)
-          body = native_body || build_case_clauses(value_var, args[1..], env, current_scope, mode)
+          body = try_emit_native_case(value_var, args[1..], env, current_scope, mode)
+          emit_error!('case/match clauses use patterns this compiler cannot translate') unless body
           [
             '(-> do',
             indent("#{value_var} = #{emit_expr(args[0], env, current_scope)}"),
@@ -103,74 +103,6 @@ module Kapusta
           guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
           body_code = emit_expr(body, arm_env, current_scope)
           ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
-        end
-
-        def build_case_clauses(value_var, clauses, env, current_scope, mode)
-          return 'nil' if clauses.empty?
-
-          pattern = clauses[0]
-          body = clauses[1]
-          else_code = build_case_clauses(value_var, clauses[2..], env, current_scope, mode)
-          emit_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-        end
-
-        def emit_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-          if where_pattern?(pattern)
-            emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-          else
-            emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-          end
-        end
-
-        def emit_simple_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-          match_var = temp('match')
-          bindings_var = temp('bindings')
-          plan = pattern_match_plan(pattern, env, mode:, allow_pins: false)
-          arm_env = env.child
-          assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
-          body_code = emit_expr(body, arm_env, current_scope)
-          arm_body = [assign_code, body_code].reject(&:empty?).join("\n")
-          <<~RUBY.chomp
-            #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
-            if #{match_var}[0]
-              #{bindings_var} = #{match_var}[1]
-              #{arm_body}
-            else
-              #{indent(else_code)}
-            end
-          RUBY
-        end
-
-        def emit_guarded_case_clause(value_var, pattern, body, else_code, env, current_scope, mode)
-          inner = pattern.items[1]
-          guards = pattern.items[2..]
-          match_var = temp('match')
-          bindings_var = temp('bindings')
-          plan = pattern_match_plan(inner, env, mode:, allow_pins: mode == :case)
-          arm_env = env.child
-          assign_code, arm_env = emit_bindings_from_match(plan[:bindings], bindings_var, arm_env)
-          guard_code = emit_case_guards(guards, arm_env, current_scope)
-          body_code = emit_expr(body, arm_env, current_scope)
-          bindings_line = assign_code.empty? ? '' : "\n  #{assign_code}"
-          <<~RUBY.chomp
-            #{match_var} = #{runtime_call(:match_pattern, plan[:pattern], value_var)}
-            if #{match_var}[0]
-              #{bindings_var} = #{match_var}[1]#{bindings_line}
-              if #{guard_code}
-                #{body_code}
-              else
-                #{indent(else_code, 2)}
-              end
-            else
-              #{indent(else_code)}
-            end
-          RUBY
-        end
-
-        def emit_case_guards(guards, env, current_scope)
-          return 'true' if guards.empty?
-
-          guards.map { |guard| parenthesize(emit_expr(guard, env, current_scope)) }.join(' && ')
         end
 
         def emit_while(args, env, current_scope)

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'error'
-require_relative 'compiler/runtime'
 require_relative 'compiler/normalizer'
 require_relative 'compiler/emitter'
 

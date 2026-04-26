@@ -219,19 +219,6 @@ module Kapusta
           source_name.is_a?(GeneratedSym)
         end
 
-        def runtime_helper(name)
-          helper = name.to_sym
-          @runtime_helpers << helper unless @runtime_helpers.include?(helper)
-          Runtime.helper_name(helper)
-        end
-
-        def runtime_call(name, *args)
-          rendered_args = args.map do |arg|
-            arg.is_a?(Array) ? "[#{arg.join(', ')}]" : arg || 'nil'
-          end
-          "#{runtime_helper(name)}(#{rendered_args.join(', ')})"
-        end
-
         def method_binding?(binding)
           binding.is_a?(Env::MethodBinding)
         end
