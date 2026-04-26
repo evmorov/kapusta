@@ -97,65 +97,65 @@ module Kapusta
         end
 
         def emit_module_wrapper(name_sym, body)
-          mod_var = temp('module')
-          [
-            '(-> do',
-            indent("#{mod_var} = #{runtime_call(:ensure_module, 'self', name_sym.name.inspect)}"),
-            indent("#{mod_var}.module_eval do"),
-            indent(body, 2),
-            indent('end'),
-            indent(mod_var),
-            'end).call'
-          ].join("\n")
+          segments = constant_segments(name_sym)
+          emit_error!("invalid module name: #{name_sym.name}") unless segments
+          inner = build_nested_module(segments, body)
+          ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
         end
 
         def emit_direct_module_header(name_sym, body)
-          const_name = simple_constant_name(name_sym)
-          return unless const_name
+          segments = constant_segments(name_sym)
+          return unless segments
 
-          [
-            "module #{const_name}",
-            indent(body),
-            'end',
-            const_name
-          ].join("\n")
+          [build_nested_module(segments, body), segments.join('::')].join("\n")
         end
 
         def emit_class_wrapper(name_sym, supers, env, body)
-          klass_var = temp('class')
-          super_code =
-            if supers.is_a?(Vec) && !supers.items.empty?
-              emit_expr(supers.items.first, env, :toplevel)
-            else
-              'Object'
-            end
-          [
-            '(-> do',
-            indent("#{klass_var} = #{runtime_call(:ensure_class, 'self', name_sym.name.inspect, super_code)}"),
-            indent("#{klass_var}.class_eval do"),
-            indent(body, 2),
-            indent('end'),
-            indent(klass_var),
-            'end).call'
-          ].join("\n")
+          segments = constant_segments(name_sym)
+          emit_error!("invalid class name: #{name_sym.name}") unless segments
+          super_code = class_super_code(supers, env)
+          inner = build_nested_class(segments, super_code, body)
+          ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
         end
 
-        def emit_direct_class_header(name_sym, supers, body)
-          const_name = simple_constant_name(name_sym)
-          return unless const_name && supers.nil?
+        def emit_direct_class_header(name_sym, supers, body, env)
+          segments = constant_segments(name_sym)
+          return unless segments
 
-          [
-            "class #{const_name}",
-            indent(body),
-            'end',
-            const_name
-          ].join("\n")
+          super_code = class_super_code(supers, env)
+          [build_nested_class(segments, super_code, body), segments.join('::')].join("\n")
         end
 
-        def simple_constant_name(name_sym)
-          return unless name_sym.is_a?(Sym) && name_sym.name.match?(/\A[A-Z]\w*\z/)
+        def constant_segments(name_sym)
+          return unless name_sym.is_a?(Sym)
 
-          name_sym.name
+          segments = name_sym.dotted? ? name_sym.segments : [name_sym.name]
+          return unless segments.all? { |s| s.match?(/\A[A-Z]\w*\z/) }
+
+          segments
+        end
+
+        def class_super_code(supers, env)
+          return unless supers.is_a?(Vec) && !supers.items.empty?
+
+          emit_expr(supers.items.first, env, :toplevel)
+        end
+
+        def build_nested_module(segments, body)
+          inner = ["module #{segments.last}", indent(body), 'end'].join("\n")
+          wrap_in_modules(segments[0...-1], inner)
+        end
+
+        def build_nested_class(segments, super_code, body)
+          header = super_code ? "class #{segments.last} < #{super_code}" : "class #{segments.last}"
+          inner = [header, indent(body), 'end'].join("\n")
+          wrap_in_modules(segments[0...-1], inner)
+        end
+
+        def wrap_in_modules(parents, inner)
+          parents.reverse.reduce(inner) do |acc, mod_name|
+            ["module #{mod_name}", indent(acc), 'end'].join("\n")
+          end
         end
 
         def emit_try(args, env, current_scope)

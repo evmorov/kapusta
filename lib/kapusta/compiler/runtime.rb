@@ -19,54 +19,6 @@ module Kapusta
             obj
           end
         RUBY
-        ensure_module: <<~RUBY.chomp,
-          def kap_ensure_module(holder, path)
-            segments = path.split('.')
-            last = segments.pop
-            scope = holder.is_a?(Module) ? holder : Object
-            segments.each do |segment|
-              scope =
-                if scope.const_defined?(segment, false)
-                  scope.const_get(segment, false)
-                else
-                  mod = Module.new
-                  scope.const_set(segment, mod)
-                  mod
-                end
-            end
-            if scope.const_defined?(last, false)
-              scope.const_get(last, false)
-            else
-              mod = Module.new
-              scope.const_set(last, mod)
-              mod
-            end
-          end
-        RUBY
-        ensure_class: <<~RUBY.chomp,
-          def kap_ensure_class(holder, path, super_class)
-            segments = path.split('.')
-            last = segments.pop
-            scope = holder.is_a?(Module) ? holder : Object
-            segments.each do |segment|
-              scope =
-                if scope.const_defined?(segment, false)
-                  scope.const_get(segment, false)
-                else
-                  mod = Module.new
-                  scope.const_set(segment, mod)
-                  mod
-                end
-            end
-            if scope.const_defined?(last, false)
-              scope.const_get(last, false)
-            else
-              klass = Class.new(super_class)
-              scope.const_set(last, klass)
-              klass
-            end
-          end
-        RUBY
         destructure: <<~RUBY.chomp,
           def kap_destructure(pattern, value)
             bindings = {}

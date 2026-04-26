@@ -62,7 +62,7 @@ module Kapusta
           else
             name_sym, supers, = split_class_args(form.items[1..])
             body = emit_forms_with_headers(remaining_forms, env, :class, result: false)
-            emit_direct_class_header(name_sym, supers, body) || emit_class_wrapper(name_sym, supers, env, body)
+            emit_direct_class_header(name_sym, supers, body, env) || emit_class_wrapper(name_sym, supers, env, body)
           end
         end
 
