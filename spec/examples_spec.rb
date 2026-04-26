@@ -484,6 +484,10 @@ RSpec.describe 'examples' do
     expect(run_example('majority-element.kap')).to eq("3\n2\n1\n")
   end
 
+  it 'manhattan-distance.kap' do
+    expect(run_example('manhattan-distance.kap')).to eq("14\n")
+  end
+
   it 'plus-one.kap' do
     expect(run_example('plus-one.kap')).to eq(<<~OUT)
       [1, 2, 4]
