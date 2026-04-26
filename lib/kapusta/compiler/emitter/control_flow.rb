@@ -57,13 +57,42 @@ module Kapusta
 
         def emit_case(args, env, current_scope, mode)
           value_var = temp('case_value')
-          body = build_case_clauses(value_var, args[1..], env, current_scope, mode)
-          <<~RUBY.chomp
-            (-> do
-              #{value_var} = #{emit_expr(args[0], env, current_scope)}
-              #{body}
-            end).call
-          RUBY
+          native_body = try_emit_native_case(value_var, args[1..], env, current_scope, mode)
+          body = native_body || build_case_clauses(value_var, args[1..], env, current_scope, mode)
+          [
+            '(-> do',
+            indent("#{value_var} = #{emit_expr(args[0], env, current_scope)}"),
+            indent(body),
+            'end).call'
+          ].join("\n")
+        end
+
+        def try_emit_native_case(value_var, clauses, env, current_scope, mode)
+          arms = []
+          i = 0
+          while i < clauses.length
+            pattern = clauses[i]
+            body = clauses[i + 1]
+            inner, where_guards = if where_pattern?(pattern)
+                                    [pattern.items[1], pattern.items[2..]]
+                                  else
+                                    [pattern, []]
+                                  end
+            allow_pins = !where_guards.empty? && mode == :case
+            plan = native_pattern_plan(inner, env, mode:, allow_pins:)
+            return unless plan
+
+            arm_env = env.child
+            plan[:bindings].each { |name| arm_env.define(name, sanitize_local(name)) }
+            guard_codes = plan[:guards] +
+                          where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
+            guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
+            body_code = emit_expr(body, arm_env, current_scope)
+            arms << ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
+            i += 2
+          end
+          arms << ['else', indent('nil')].join("\n")
+          ["case #{value_var}", *arms, 'end'].join("\n")
         end
 
         def build_case_clauses(value_var, clauses, env, current_scope, mode)

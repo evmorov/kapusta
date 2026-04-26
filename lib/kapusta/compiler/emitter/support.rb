@@ -128,7 +128,7 @@ module Kapusta
             return [emit_for_statement(form.rest, env, current_scope), env]
           when 'each'
             code = emit_each_statement(form.rest, env, current_scope)
-            return ["#{code}\nnil", env] if result_needed
+            return ["#{code}\nnil", env] if result_needed && current_scope != :toplevel
 
             return [code, env]
           end

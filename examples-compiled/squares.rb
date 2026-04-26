@@ -11,5 +11,4 @@
   ys.each_with_index do |y, _|
     p y
   end
-  nil
 end).call

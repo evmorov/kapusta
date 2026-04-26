@@ -17,4 +17,3 @@ end
 ["12", "oops"].each_with_index do |s, _|
   p parse_score(s)
 end
-nil

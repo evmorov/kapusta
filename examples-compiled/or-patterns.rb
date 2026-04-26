@@ -70,14 +70,23 @@ def swap_kind(v)
   (-> do
     kap_case_value_1 = v
     kap_match_4 = kap_match_pattern([:or, [[:vec, [[:lit, :pair], [:bind, "x", false], [:bind, "y", false]]], [:vec, [[:lit, :flipped], [:bind, "y", false], [:bind, "x", false]]]]], kap_case_value_1)
-  if kap_match_4[0]
-    kap_bindings_5 = kap_match_4[1]
-    x = kap_bindings_5.fetch("x")
-  y = kap_bindings_5.fetch("y")
-    if true
-      x.to_s + ":" + y.to_s
+    if kap_match_4[0]
+      kap_bindings_5 = kap_match_4[1]
+      x = kap_bindings_5.fetch("x")
+    y = kap_bindings_5.fetch("y")
+      if true
+        x.to_s + ":" + y.to_s
+      else
+            kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
+        if kap_match_2[0]
+          kap_bindings_3 = kap_match_2[1]
+          "other"
+        else
+            nil
+        end
+      end
     else
-          kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
+        kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
       if kap_match_2[0]
         kap_bindings_3 = kap_match_2[1]
         "other"
@@ -85,15 +94,6 @@ def swap_kind(v)
           nil
       end
     end
-  else
-      kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
-    if kap_match_2[0]
-      kap_bindings_3 = kap_match_2[1]
-      "other"
-    else
-        nil
-    end
-  end
   end).call
 end
 p swap_kind([:pair, 1, 2])

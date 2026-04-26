@@ -69,86 +69,64 @@ private :kap_match_pattern_into, :kap_match_pattern
 def inbox_line(user, event)
   (-> do
     kap_case_value_1 = event
-    kap_match_6 = kap_match_pattern([:vec, [[:lit, :score], [:pin, user], [:bind, "points", false]]], kap_case_value_1)
-  if kap_match_6[0]
-    kap_bindings_7 = kap_match_6[1]
-    points = kap_bindings_7.fetch("points")
-  "score:" + points.to_s
-  else
-      kap_match_4 = kap_match_pattern([:vec, [[:lit, :profile], [:pin, user], [:bind, "city", true]]], kap_case_value_1)
-    if kap_match_4[0]
-      kap_bindings_5 = kap_match_4[1]
-      city = kap_bindings_5.fetch("city")
-    if city
-      "city:" + city.to_s
-    else
-      "city:nil"
-    end
-    else
-        kap_match_2 = kap_match_pattern([:wild], kap_case_value_1)
-      if kap_match_2[0]
-        kap_bindings_3 = kap_match_2[1]
-        "other"
+    case kap_case_value_1
+    in [:score, ^(user), points, *] if !points.nil?
+      "score:" + points.to_s
+    in [:profile, ^(user), city, *]
+      if city
+        "city:" + city.to_s
       else
-          nil
+        "city:nil"
       end
+    in _
+      "other"
+    else
+      nil
     end
-  end
   end).call
 end
 def score_delta(user, event)
   (-> do
-    kap_case_value_8 = event
-    kap_match_11 = kap_match_pattern([:or, [[:vec, [[:lit, :bonus], [:pin, user], [:bind, "points", false]]], [:vec, [[:lit, :score], [:pin, user], [:bind, "points", false]]]]], kap_case_value_8)
-  if kap_match_11[0]
-    kap_bindings_12 = kap_match_11[1]
-    points = kap_bindings_12.fetch("points")
-    if (points > 0) && (points < 10)
-      points
+    kap_case_value_2 = event
+    kap_match_5 = kap_match_pattern([:or, [[:vec, [[:lit, :bonus], [:pin, user], [:bind, "points", false]]], [:vec, [[:lit, :score], [:pin, user], [:bind, "points", false]]]]], kap_case_value_2)
+    if kap_match_5[0]
+      kap_bindings_6 = kap_match_5[1]
+      points = kap_bindings_6.fetch("points")
+      if (points > 0) && (points < 10)
+        points
+      else
+            kap_match_3 = kap_match_pattern([:wild], kap_case_value_2)
+        if kap_match_3[0]
+          kap_bindings_4 = kap_match_3[1]
+          0
+        else
+            nil
+        end
+      end
     else
-          kap_match_9 = kap_match_pattern([:wild], kap_case_value_8)
-      if kap_match_9[0]
-        kap_bindings_10 = kap_match_9[1]
+        kap_match_3 = kap_match_pattern([:wild], kap_case_value_2)
+      if kap_match_3[0]
+        kap_bindings_4 = kap_match_3[1]
         0
       else
           nil
       end
     end
-  else
-      kap_match_9 = kap_match_pattern([:wild], kap_case_value_8)
-    if kap_match_9[0]
-      kap_bindings_10 = kap_match_9[1]
-      0
-    else
-        nil
-    end
-  end
   end).call
 end
 def packet_kind(packet)
   (-> do
-    kap_case_value_13 = packet
-    kap_match_18 = kap_match_pattern([:vec, [[:lit, :ping], [:bind, "seq", false]]], kap_case_value_13)
-  if kap_match_18[0]
-    kap_bindings_19 = kap_match_18[1]
-    seq = kap_bindings_19.fetch("seq")
-  "ping:" + seq.to_s
-  else
-      kap_match_16 = kap_match_pattern([:vec, [[:lit, :pong], [:bind, "seq", false]]], kap_case_value_13)
-    if kap_match_16[0]
-      kap_bindings_17 = kap_match_16[1]
-      seq = kap_bindings_17.fetch("seq")
-    "pong:" + seq.to_s
+    kap_case_value_7 = packet
+    case kap_case_value_7
+    in [:ping, seq, *] if !seq.nil?
+      "ping:" + seq.to_s
+    in [:pong, seq, *] if !seq.nil?
+      "pong:" + seq.to_s
+    in _
+      "other"
     else
-        kap_match_14 = kap_match_pattern([:wild], kap_case_value_13)
-      if kap_match_14[0]
-        kap_bindings_15 = kap_match_14[1]
-        "other"
-      else
-          nil
-      end
+      nil
     end
-  end
   end).call
 end
 p inbox_line("Ada", [:score, "Ada", 9])

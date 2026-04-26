@@ -24,5 +24,4 @@ end
   ps.each_with_index do |p, _|
     p p
   end
-  nil
 end).call

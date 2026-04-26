@@ -44,6 +44,133 @@ module Kapusta
           }
         end
 
+        class PatternNotTranslatable < StandardError; end
+
+        def native_pattern_plan(pattern, env, mode:, allow_pins:)
+          state = { bound_names: {}, binding_names: [], guards: [] }
+          ruby_pattern = compile_native_pattern(pattern, env, mode:, allow_pins:, state:)
+          {
+            pattern: ruby_pattern,
+            guards: state[:guards],
+            bindings: state[:binding_names]
+          }
+        rescue PatternNotTranslatable
+          nil
+        end
+
+        def compile_native_pattern(pattern, env, mode:, allow_pins:, state:)
+          case pattern
+          when Sym then compile_native_symbol(pattern, env, mode:, state:)
+          when Vec then compile_native_sequence(pattern.items, env, mode:, allow_pins:, state:)
+          when HashLit then compile_native_hash(pattern, env, mode:, allow_pins:, state:)
+          when List
+            if pin_pattern?(pattern)
+              compile_native_pin(pattern, env, mode:, allow_pins:)
+            elsif or_pattern?(pattern)
+              compile_native_or(pattern, env, mode:, allow_pins:, state:)
+            else
+              compile_native_sequence(pattern.items, env, mode:, allow_pins:, state:)
+            end
+          when nil then 'nil'
+          when Symbol, String, Numeric, true, false then pattern.inspect
+          else raise PatternNotTranslatable
+          end
+        end
+
+        def compile_native_symbol(pattern, env, mode:, state:)
+          name = pattern.name
+          return '_' if name == '_'
+
+          if nil_allowing_pattern_name?(name)
+            bind_name = name.start_with?('?') ? name.delete_prefix('?') : name
+            raise PatternNotTranslatable if state[:bound_names].key?(bind_name)
+
+            state[:bound_names][bind_name] = true
+            state[:binding_names] << bind_name
+            sanitize_local(bind_name)
+          else
+            binding = mode == :match ? env.lookup_if_defined(name) : nil
+            if state[:bound_names].key?(name)
+              raise PatternNotTranslatable
+            elsif binding
+              "^(#{binding_value_code(binding)})"
+            else
+              state[:bound_names][name] = true
+              state[:binding_names] << name
+              ruby = sanitize_local(name)
+              state[:guards] << "!#{ruby}.nil?"
+              ruby
+            end
+          end
+        end
+
+        def compile_native_sequence(items, env, mode:, allow_pins:, state:)
+          parts = []
+          has_rest = false
+          i = 0
+          while i < items.length
+            if rest_pattern_marker?(items, i)
+              has_rest = true
+              sub = items[i + 1]
+              raise PatternNotTranslatable unless sub.is_a?(Sym)
+
+              if sub.name == '_'
+                parts << '*'
+              else
+                state[:bound_names][sub.name] = true
+                state[:binding_names] << sub.name
+                parts << "*#{sanitize_local(sub.name)}"
+              end
+              i += 2
+            else
+              parts << compile_native_pattern(items[i], env, mode:, allow_pins:, state:)
+              i += 1
+            end
+          end
+          parts << '*' unless has_rest
+          "[#{parts.join(', ')}]"
+        end
+
+        def compile_native_hash(pattern, env, mode:, allow_pins:, state:)
+          pairs = pattern.pairs.map do |key, value|
+            raise PatternNotTranslatable unless key.is_a?(Symbol)
+
+            "#{key}: #{compile_native_pattern(value, env, mode:, allow_pins:, state:)}"
+          end
+          "{#{pairs.join(', ')}}"
+        end
+
+        def compile_native_pin(pattern, env, mode:, allow_pins:)
+          raise PatternNotTranslatable unless allow_pins && mode == :case
+
+          name_sym = pattern.items[1]
+          raise PatternNotTranslatable unless name_sym.is_a?(Sym)
+
+          binding = env.lookup_if_defined(name_sym.name)
+          raise PatternNotTranslatable unless binding
+
+          "^(#{binding_value_code(binding)})"
+        end
+
+        def compile_native_or(pattern, env, mode:, allow_pins:, state:)
+          initial_bound = state[:bound_names].dup
+          initial_names = state[:binding_names].length
+          initial_guards = state[:guards].length
+          variants = pattern.items[1..].map do |subpattern|
+            alt_state = {
+              bound_names: initial_bound.dup,
+              binding_names: state[:binding_names].dup,
+              guards: state[:guards].dup
+            }
+            compiled = compile_native_pattern(subpattern, env, mode:, allow_pins:, state: alt_state)
+            raise PatternNotTranslatable if alt_state[:binding_names].length > initial_names
+            raise PatternNotTranslatable if alt_state[:guards].length > initial_guards
+
+            compiled
+          end
+          "(#{variants.join(' | ')})"
+        end
+
         def emit_match_pattern(pattern, env, mode:, allow_pins:, state:)
           case pattern
           when Sym
