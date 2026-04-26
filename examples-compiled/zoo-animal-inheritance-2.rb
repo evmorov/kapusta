@@ -1,5 +1,5 @@
 require "kapusta" unless defined?(Kapusta)
-Kapusta.require("./zoo-animal-1", relative_to: "/Users/evgenii.morozov/projects/kapusta/examples/zoo-animal-inheritance-2.kap")
+Kapusta.require("./zoo-animal-1", relative_to: __FILE__)
 (-> do
   module Zoo
     class Dog < Zoo::Animal

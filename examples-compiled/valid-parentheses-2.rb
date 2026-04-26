@@ -1,5 +1,5 @@
 require "kapusta" unless defined?(Kapusta)
-Kapusta.require("./valid-parentheses-1", relative_to: "/Users/evgenii.morozov/projects/kapusta/examples/valid-parentheses-2.kap")
+Kapusta.require("./valid-parentheses-1", relative_to: __FILE__)
 (-> do
   solution = ValidParenthesesSolution.new
   p(solution.valid?("()"))
