@@ -8,6 +8,12 @@ Instead, Kapusta aims to bring some of the simplicity and joy of Lisp to Ruby. W
 
 For more information about Kapusta, see the official Fennel documentation and tutorials.
 
+## Features
+
+1. Compiles to readable Ruby.
+2. Compiled `.rb` files don't depend on Kapusta. Run with plain `ruby`, or load `.kap` files at runtime via `require 'kapusta'`.
+3. Two-way Ruby interop.
+
 ## Usage
 
 ```
