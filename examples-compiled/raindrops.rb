@@ -1,13 +1,13 @@
 def raindrops(n)
-  div_q = ->(*kap_args_1) do
-    0 == (kap_args_1[0] % kap_args_1[1])
+  div_q = proc do
+    0 == (_1 % _2)
   end
-  empty_q = ->(*kap_args_2) do
-    0 == kap_args_2[0].length
+  empty_q = proc do
+    0 == _1.length
   end
   drops = []
-  add_drop = ->(*kap_args_3) do
-    drops.push(kap_args_3[0])
+  add_drop = proc do
+    drops.push(_1)
   end
   if div_q.call(n, 3)
     add_drop.call("Pling")

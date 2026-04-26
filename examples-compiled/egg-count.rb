@@ -1,6 +1,6 @@
 def egg_count(number)
-  odd_q = ->(*kap_args_1) do
-    (kap_args_1[0] % 2) > 0
+  odd_q = proc do
+    (_1 % 2) > 0
   end
   n = number
   eggs = 0

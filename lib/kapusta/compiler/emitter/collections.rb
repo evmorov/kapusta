@@ -83,15 +83,33 @@ module Kapusta
         end
 
         def emit_hashfn(args, env, current_scope)
-          args_var = temp('args')
-          hash_env = env.child
-          hash_env.define('$', "#{args_var}[0]")
-          (1..9).each do |index|
-            hash_env.define("$#{index}", "#{args_var}[#{index - 1}]")
+          if needs_explicit_args?(args[0])
+            args_var = temp('args')
+            hash_env = env.child
+            hash_env.define('$', "#{args_var}[0]")
+            (1..9).each { |i| hash_env.define("$#{i}", "#{args_var}[#{i - 1}]") }
+            hash_env.define('$...', args_var)
+            body_code = emit_expr(args[0], hash_env, current_scope)
+            ["->(*#{args_var}) do", indent(body_code), 'end'].join("\n")
+          else
+            hash_env = env.child
+            hash_env.define('$', '_1')
+            (1..9).each { |i| hash_env.define("$#{i}", "_#{i}") }
+            body_code = emit_expr(args[0], hash_env, current_scope)
+            ['proc do', indent(body_code), 'end'].join("\n")
           end
-          hash_env.define('$...', args_var)
-          body_code = emit_expr(args[0], hash_env, current_scope)
-          ["->(*#{args_var}) do", indent(body_code), 'end'].join("\n")
+        end
+
+        def needs_explicit_args?(form)
+          case form
+          when Sym then form.name == '$...'
+          when List, Vec then form.items.any? { |item| needs_explicit_args?(item) }
+          when HashLit
+            form.entries.any? do |entry|
+              entry.is_a?(Array) ? entry.any? { |item| needs_explicit_args?(item) } : needs_explicit_args?(entry)
+            end
+          else false
+          end
         end
 
         def emit_iteration(bindings_vec, env, current_scope)
