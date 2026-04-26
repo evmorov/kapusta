@@ -1,4 +1,4 @@
-require_relative "./valid-parentheses-1"
+require_relative "valid-parentheses-1"
 (-> do
   solution = ValidParenthesesSolution.new
   p(solution.valid?("()"))

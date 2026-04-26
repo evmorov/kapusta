@@ -1,4 +1,4 @@
-require_relative "./zoo-animal-1"
+require_relative "zoo-animal-1"
 (-> do
   module Zoo
     class Dog < Zoo::Animal

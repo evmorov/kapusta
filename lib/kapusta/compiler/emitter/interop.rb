@@ -56,7 +56,7 @@ module Kapusta
         def emit_require(arg, env, current_scope)
           literal = require_path_literal(arg)
           if literal&.match?(%r{\A\.\.?/})
-            cleaned = literal.delete_suffix('.kap')
+            cleaned = literal.delete_suffix('.kap').sub(%r{\A\./}, '')
             return "require_relative #{cleaned.inspect}"
           end
 
