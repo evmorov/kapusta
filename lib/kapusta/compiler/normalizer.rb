@@ -121,12 +121,12 @@ module Kapusta
       end
 
       def thread_temp
-        gensym('kap_thread')
+        gensym('thread')
       end
 
       def doto(forms)
         value = forms.first
-        temp = gensym('kap_doto')
+        temp = gensym('doto')
         body = forms[1..].map do |form|
           if form.is_a?(List)
             List.new([form.items[0], temp, *form.items[1..]])

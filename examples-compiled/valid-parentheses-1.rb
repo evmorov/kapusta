@@ -13,11 +13,11 @@ class ValidParenthesesSolution
         ch = chars[i]
         if pairs.key?(ch)
           if (-> do
-            kap_thread_1 = stack.pop
-            if kap_thread_1.nil?
+            thread_1 = stack.pop
+            if thread_1.nil?
               nil
             else
-              kap_thread_1 == pairs[ch]
+              thread_1 == pairs[ch]
             end
           end).call
             nil

@@ -3,11 +3,11 @@ def cal_points(ops)
     scores = []
     ops.each do |op|
       if op == "C"
-        kap_thread_1 = scores.pop
-        if kap_thread_1.nil?
+        thread_1 = scores.pop
+        if thread_1.nil?
           nil
         else
-          kap_thread_1.abs
+          thread_1.abs
         end
         nil
       elsif op == "D"
