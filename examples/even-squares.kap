@@ -1,7 +1,22 @@
-(let [
-  even-squares
-  (-> [1 2 3 4 5 6]
-      (: :select (fn [n] (n.even?)))
-      (: :map (fn [n] (* n n))))
-]
-  (print (even-squares.join ", ")))
+(fn even? [n] (= 0 (% n 2)))
+
+(fn select [tbl pred]
+  (icollect [_ x (ipairs tbl)]
+    (when (pred x) x)))
+
+(fn map [tbl f]
+  (icollect [_ x (ipairs tbl)]
+    (f x)))
+
+(fn join [tbl sep]
+  (var s "")
+  (each [_ x (ipairs tbl)]
+    (if (= s "")
+        (set s (.. x))
+        (set s (.. s sep x))))
+  s)
+
+(let [xs [1 2 3 4 5 6]
+      filtered (select xs even?)
+      squared (map filtered #(* $ $))]
+  (print (join squared ", ")))

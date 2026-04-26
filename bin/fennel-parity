@@ -14,6 +14,7 @@ COMPATIBLE = %w[
   climbing-stairs.kap
   describe.kap
   destructure.kap
+  even-squares.kap
   factorial.kap
   fib.kap
   fizzbuzz.kap
