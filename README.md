@@ -49,7 +49,7 @@ See `examples/bank-account.kap` and `examples/use_bank_account.rb`.
 
 ## Examples
 
-See [`examples/`](https://github.com/evmorov/kapusta/tree/main/examples).
+See [`examples/`](https://github.com/evmorov/kapusta/tree/main/examples/) and [`examples-compiled/`](https://github.com/evmorov/kapusta/tree/main/examples-compiled/).
 
 ```fennel
 (fn ack [m n]
