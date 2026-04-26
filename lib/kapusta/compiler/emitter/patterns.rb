@@ -11,19 +11,111 @@ module Kapusta
             return ['', env] if pattern.name == '_'
 
             ruby_name = define_local(env, pattern)
-            ["#{ruby_name} = #{value_code}", env]
-          else
-            bindings_var = temp('bindings')
-            current_env = env
-            lines = [
-              "#{bindings_var} = #{runtime_call(:destructure, emit_pattern(pattern), value_code)}"
-            ]
-            pattern_names(pattern).each do |name|
-              ruby_name = define_local(current_env, name)
-              lines << "#{ruby_name} = #{bindings_var}.fetch(#{name.inspect})"
-            end
-            [lines.join("\n"), current_env]
+            return ["#{ruby_name} = #{value_code}", env]
           end
+
+          native = try_emit_native_pattern_bind(pattern, value_code, env)
+          return native if native
+
+          bindings_var = temp('bindings')
+          current_env = env
+          lines = [
+            "#{bindings_var} = #{runtime_call(:destructure, emit_pattern(pattern), value_code)}"
+          ]
+          pattern_names(pattern).each do |name|
+            ruby_name = define_local(current_env, name)
+            lines << "#{ruby_name} = #{bindings_var}.fetch(#{name.inspect})"
+          end
+          [lines.join("\n"), current_env]
+        end
+
+        def try_emit_native_pattern_bind(pattern, value_code, env)
+          case pattern
+          when Vec
+            try_emit_native_vec_bind(pattern, value_code, env)
+          when HashLit
+            try_emit_native_hash_bind(pattern, value_code, env)
+          end
+        rescue PatternNotTranslatable
+          nil
+        end
+
+        def try_emit_native_vec_bind(pattern, value_code, env)
+          parts = []
+          current_env = env
+          items = pattern.items
+          i = 0
+          while i < items.length
+            if items[i].is_a?(Sym) && items[i].name == '&'
+              sub = items[i + 1]
+              raise PatternNotTranslatable unless sub.is_a?(Sym)
+
+              parts << native_rest_target(sub, current_env)
+              i += 2
+            else
+              code, current_env = native_destructure_target(items[i], current_env)
+              parts << code
+              i += 1
+            end
+          end
+          ["#{parts.join(', ')} = #{value_code}", current_env]
+        end
+
+        def try_emit_native_hash_bind(pattern, value_code, env)
+          pairs = pattern.pairs
+          raise PatternNotTranslatable if pairs.empty?
+
+          temp_var = simple_expression?(value_code) ? value_code : temp('hash')
+          lines = []
+          lines << "#{temp_var} = #{value_code}" unless temp_var == value_code
+          current_env = env
+          pairs.each do |key, sub|
+            raise PatternNotTranslatable unless sub.is_a?(Sym)
+            raise PatternNotTranslatable if sub.name == '_'
+
+            bind_name = sub.name.start_with?('?') ? sub.name.delete_prefix('?') : sub.name
+            ruby_name = define_local(current_env, bind_name)
+            lines << "#{ruby_name} = #{temp_var}[#{key.inspect}]"
+          end
+          [lines.join("\n"), current_env]
+        end
+
+        def native_destructure_target(pattern, env)
+          case pattern
+          when Sym
+            return ['_', env] if pattern.name == '_'
+
+            bind_name = pattern.name.start_with?('?') ? pattern.name.delete_prefix('?') : pattern.name
+            ruby_name = define_local(env, bind_name)
+            [ruby_name, env]
+          when Vec
+            inner = []
+            current = env
+            items = pattern.items
+            i = 0
+            while i < items.length
+              if items[i].is_a?(Sym) && items[i].name == '&'
+                inner << native_rest_target(items[i + 1], current)
+                i += 2
+              else
+                code, current = native_destructure_target(items[i], current)
+                inner << code
+                i += 1
+              end
+            end
+            ["(#{inner.join(', ')})", current]
+          else
+            raise PatternNotTranslatable
+          end
+        end
+
+        def native_rest_target(sym, env)
+          raise PatternNotTranslatable unless sym.is_a?(Sym)
+
+          return '*' if sym.name == '_'
+
+          bind_name = sym.name.start_with?('?') ? sym.name.delete_prefix('?') : sym.name
+          "*#{define_local(env, bind_name)}"
         end
 
         def emit_bindings_from_match(binding_names, bindings_var, env)
