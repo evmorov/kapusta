@@ -496,4 +496,8 @@ RSpec.describe 'examples' do
       [1, 0, 0]
     OUT
   end
+
+  it 'subtract-product-sum.kap' do
+    expect(run_example('subtract-product-sum.kap')).to eq("15\n21\n0\n")
+  end
 end

@@ -1,0 +1,14 @@
+(fn subtract-product-sum [n]
+  (var x n)
+  (var product 1)
+  (var sum 0)
+  (while (> x 0)
+    (let [d (% x 10)]
+      (set product (* product d))
+      (set sum (+ sum d))
+      (set x (: (/ x 10) :floor))))
+  (- product sum))
+
+(print (subtract-product-sum 234))
+(print (subtract-product-sum 4421))
+(print (subtract-product-sum 1))
