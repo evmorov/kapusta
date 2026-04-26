@@ -78,21 +78,31 @@ module Kapusta
                                   else
                                     [pattern, []]
                                   end
-            allow_pins = !where_guards.empty? && mode == :case
-            plan = native_pattern_plan(inner, env, mode:, allow_pins:)
-            return unless plan
+            sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
+            sub_arms = sub_patterns.map do |sub|
+              try_native_arm(sub, body, where_guards, env, current_scope, mode)
+            end
+            return if sub_arms.any?(&:nil?)
 
-            arm_env = env.child
-            plan[:bindings].each { |name| arm_env.define(name, sanitize_local(name)) }
-            guard_codes = plan[:guards] +
-                          where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
-            guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
-            body_code = emit_expr(body, arm_env, current_scope)
-            arms << ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
+            arms.concat(sub_arms)
             i += 2
           end
           arms << ['else', indent('nil')].join("\n")
           ["case #{value_var}", *arms, 'end'].join("\n")
+        end
+
+        def try_native_arm(pattern, body, where_guards, env, current_scope, mode)
+          allow_pins = !where_guards.empty? && mode == :case
+          plan = native_pattern_plan(pattern, env, mode:, allow_pins:)
+          return unless plan
+
+          arm_env = env.child
+          plan[:bindings].each { |name| arm_env.define(name, sanitize_local(name)) }
+          guard_codes = plan[:guards] +
+                        where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
+          guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
+          body_code = emit_expr(body, arm_env, current_scope)
+          ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
         end
 
         def build_case_clauses(value_var, clauses, env, current_scope, mode)

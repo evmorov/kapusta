@@ -42,6 +42,7 @@ module Kapusta
 
         def try_emit_native_vec_bind(pattern, value_code, env)
           parts = []
+          deferred = []
           current_env = env
           items = pattern.items
           i = 0
@@ -53,12 +54,25 @@ module Kapusta
               parts << native_rest_target(sub, current_env)
               i += 2
             else
-              code, current_env = native_destructure_target(items[i], current_env)
+              code, current_env, follow_up = native_destructure_target(items[i], current_env, allow_follow_up: true)
               parts << code
+              deferred << follow_up if follow_up
               i += 1
             end
           end
-          ["#{parts.join(', ')} = #{value_code}", current_env]
+          if deferred.empty?
+            ["#{parts.join(', ')} = #{value_code}", current_env]
+          else
+            arr_var = simple_expression?(value_code) ? value_code : temp('array')
+            lines = []
+            lines << "#{arr_var} = #{value_code}" unless arr_var == value_code
+            lines << "#{parts.join(', ')} = #{arr_var}"
+            deferred.each do |follow_up|
+              sub_code, current_env = follow_up.call(current_env)
+              lines << sub_code
+            end
+            [lines.join("\n"), current_env]
+          end
         end
 
         def try_emit_native_hash_bind(pattern, value_code, env)
@@ -70,27 +84,34 @@ module Kapusta
           lines << "#{temp_var} = #{value_code}" unless temp_var == value_code
           current_env = env
           pairs.each do |key, sub|
-            raise PatternNotTranslatable unless sub.is_a?(Sym)
-            raise PatternNotTranslatable if sub.name == '_'
+            access = "#{temp_var}[#{key.inspect}]"
+            if sub.is_a?(Sym)
+              raise PatternNotTranslatable if sub.name == '_'
 
-            bind_name = sub.name.start_with?('?') ? sub.name.delete_prefix('?') : sub.name
-            ruby_name = define_local(current_env, bind_name)
-            lines << "#{ruby_name} = #{temp_var}[#{key.inspect}]"
+              bind_name = sub.name.start_with?('?') ? sub.name.delete_prefix('?') : sub.name
+              ruby_name = define_local(current_env, bind_name)
+              lines << "#{ruby_name} = #{access}"
+            else
+              sub_code, current_env = try_emit_native_pattern_bind(sub, access, current_env) ||
+                                      raise(PatternNotTranslatable)
+              lines << sub_code
+            end
           end
           [lines.join("\n"), current_env]
         end
 
-        def native_destructure_target(pattern, env)
+        def native_destructure_target(pattern, env, allow_follow_up: false)
           case pattern
           when Sym
-            return ['_', env] if pattern.name == '_'
+            return ['_', env, nil] if pattern.name == '_'
 
             bind_name = pattern.name.start_with?('?') ? pattern.name.delete_prefix('?') : pattern.name
             ruby_name = define_local(env, bind_name)
-            [ruby_name, env]
+            [ruby_name, env, nil]
           when Vec
             inner = []
             current = env
+            deferred = []
             items = pattern.items
             i = 0
             while i < items.length
@@ -98,12 +119,23 @@ module Kapusta
                 inner << native_rest_target(items[i + 1], current)
                 i += 2
               else
-                code, current = native_destructure_target(items[i], current)
+                code, current, follow_up = native_destructure_target(items[i], current)
                 inner << code
+                deferred << follow_up if follow_up
                 i += 1
               end
             end
-            ["(#{inner.join(', ')})", current]
+            raise PatternNotTranslatable unless deferred.empty?
+
+            ["(#{inner.join(', ')})", current, nil]
+          when HashLit
+            raise PatternNotTranslatable unless allow_follow_up
+
+            slot = temp('slot')
+            follow_up = lambda do |outer_env|
+              try_emit_native_hash_bind(pattern, slot, outer_env) || raise(PatternNotTranslatable)
+            end
+            [slot, env, follow_up]
           else
             raise PatternNotTranslatable
           end
