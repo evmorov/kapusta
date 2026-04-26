@@ -7,12 +7,9 @@ module Kapusta
         private
 
         def emit_icollect(args, env, current_scope)
-          result_var = temp('result')
-          iter_code = emit_iteration(args[0], env, current_scope) do |iter_env|
-            body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
-            emit_array_collection_step(result_var, body)
+          emit_iteration(args[0], env, current_scope, method: 'filter_map') do |iter_env|
+            emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
           end
-          emit_collection_result(result_var, '[]', iter_code)
         end
 
         def emit_collect(args, env, current_scope)
@@ -112,7 +109,7 @@ module Kapusta
           end
         end
 
-        def emit_iteration(bindings_vec, env, current_scope)
+        def emit_iteration(bindings_vec, env, current_scope, method: 'each')
           items = bindings_vec.items
           iter_expr = items.last
           binding_pats = items[0...-1]
@@ -126,12 +123,13 @@ module Kapusta
               if ignored_pattern?(binding_pats[0])
                 bind_code = value_bind || ''
                 body_code = yield(body_env)
-                return iteration_block("#{coll_code}.each do |#{value_var}|", bind_code, body_code)
+                return iteration_block("#{coll_code}.#{method} do |#{value_var}|", bind_code, body_code)
               end
               index_var, index_bind = bind_iteration_param(binding_pats[0], 'index', body_env)
               bind_code = [index_bind, value_bind].compact.join("\n")
               body_code = yield(body_env)
-              header = "#{coll_code}.each_with_index do |#{value_var}, #{index_var}|"
+              receiver = method == 'each' ? "#{coll_code}.each_with_index" : "#{coll_code}.each_with_index.#{method}"
+              header = "#{receiver} do |#{value_var}, #{index_var}|"
               return iteration_block(header, bind_code, body_code)
             when 'pairs'
               body_env = env.child
@@ -139,7 +137,7 @@ module Kapusta
               value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
               bind_code = [key_bind, value_bind].compact.join("\n")
               body_code = yield(body_env)
-              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}.each do |#{key_var}, #{value_var}|"
+              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}.#{method} do |#{key_var}, #{value_var}|"
               return iteration_block(header, bind_code, body_code)
             end
           end
@@ -149,14 +147,14 @@ module Kapusta
             body_env = env.child
             value_var, bind_code = bind_iteration_param(binding_pats[0], 'value', body_env)
             body_code = yield(body_env)
-            iteration_block("#{coll_code}.each do |#{value_var}|", bind_code || '', body_code)
+            iteration_block("#{coll_code}.#{method} do |#{value_var}|", bind_code || '', body_code)
           else
             parts_var = temp('parts')
             body_env = env.child
             pairs = binding_pats.each_with_index.map { |pattern, i| [pattern, "#{parts_var}[#{i}]"] }
             bind_code, body_env = emit_iteration_bindings(pairs, body_env)
             body_code = yield(body_env)
-            iteration_block("#{coll_code}.each do |*#{parts_var}|", bind_code, body_code)
+            iteration_block("#{coll_code}.#{method} do |*#{parts_var}|", bind_code, body_code)
           end
         end
 
