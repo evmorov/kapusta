@@ -220,7 +220,7 @@ module Kapusta
         end
 
         def emit_sequence_value_assignment(target_var, body_code)
-          return "#{target_var} = #{body_code}" unless body_code.include?("\n")
+          return emit_assignment(target_var, body_code) unless body_code.include?("\n")
 
           ["#{target_var} = begin", indent(body_code), 'end'].join("\n")
         end

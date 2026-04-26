@@ -3,7 +3,7 @@
   total = (-> do
     s = 0
     xs.each do |x|
-      s = s + x
+      s += x
     end
     s
   end).call

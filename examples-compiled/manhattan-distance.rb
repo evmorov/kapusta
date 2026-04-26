@@ -9,7 +9,7 @@ def total_distance(edges)
   (-> do
     total = 0
     edges.each do |edge|
-      total = total + manhattan(edge)
+      total += manhattan(edge)
     end
     total
   end).call
