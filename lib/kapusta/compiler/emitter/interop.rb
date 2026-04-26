@@ -62,9 +62,7 @@ module Kapusta
             end
           if kapusta_require?(arg)
             return [
-              'unless defined?(Kapusta)',
-              indent('require "kapusta"'),
-              'end',
+              'require "kapusta" unless defined?(Kapusta)',
               "Kapusta.require(#{path_code}, relative_to: #{@path.inspect})"
             ].join("\n")
           end
