@@ -13,6 +13,6 @@ def factorial(n)
     end
   end).call
 end
-[0, 1, 5, 6, 10].each_with_index do |n, _|
+[0, 1, 5, 6, 10].each do |n|
   p(n, factorial(n))
 end

@@ -14,7 +14,7 @@ def parse_date(s)
     end).call
   end).call
 end
-["2026-04-23", "hello", "1999-12-31"].each_with_index do |s, _|
+["2026-04-23", "hello", "1999-12-31"].each do |s|
   parsed = parse_date(s)
   p(s.to_s + " -> " + parsed.to_s)
 end

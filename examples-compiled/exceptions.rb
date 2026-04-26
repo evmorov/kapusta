@@ -14,6 +14,6 @@ def parse_score(s)
     p("seen: " + s.to_s)
   end
 end
-["12", "oops"].each_with_index do |s, _|
+["12", "oops"].each do |s|
   p parse_score(s)
 end

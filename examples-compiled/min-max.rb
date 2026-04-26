@@ -3,7 +3,7 @@ def min_max(xs)
     first, *rest = xs
     lo = first
     hi = first
-    rest.each_with_index do |x, _|
+    rest.each do |x|
       if x < lo
         lo = x
       end

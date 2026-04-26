@@ -122,11 +122,16 @@ module Kapusta
             when 'ipairs'
               body_env = env.child
               value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
+              coll_code = emit_expr(iter_expr.items[1], env, current_scope)
+              if ignored_pattern?(binding_pats[0])
+                bind_code = value_bind || ''
+                body_code = yield(body_env)
+                return iteration_block("#{coll_code}.each do |#{value_var}|", bind_code, body_code)
+              end
               index_var, index_bind = bind_iteration_param(binding_pats[0], 'index', body_env)
               bind_code = [index_bind, value_bind].compact.join("\n")
               body_code = yield(body_env)
-              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}" \
-                       ".each_with_index do |#{value_var}, #{index_var}|"
+              header = "#{coll_code}.each_with_index do |#{value_var}, #{index_var}|"
               return iteration_block(header, bind_code, body_code)
             when 'pairs'
               body_env = env.child
@@ -153,6 +158,10 @@ module Kapusta
             body_code = yield(body_env)
             iteration_block("#{coll_code}.each do |*#{parts_var}|", bind_code, body_code)
           end
+        end
+
+        def ignored_pattern?(pattern)
+          pattern.is_a?(Sym) && !pattern.dotted? && pattern.name == '_'
         end
 
         def bind_iteration_param(pattern, fallback_name, env)

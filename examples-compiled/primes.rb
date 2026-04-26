@@ -21,7 +21,7 @@ end
     end
     kap_result_1
   end).call
-  ps.each_with_index do |p, _|
+  ps.each do |p|
     p p
   end
 end).call

@@ -16,6 +16,6 @@ def describe(x)
   end).call
 end
 define_singleton_method(:describe, Object.instance_method(:describe).bind(self))
-[-3, 0, 1, 2, 99].each_with_index do |n, _|
+[-3, 0, 1, 2, 99].each do |n|
   p(n, describe(n))
 end
