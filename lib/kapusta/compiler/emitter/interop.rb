@@ -17,8 +17,9 @@ module Kapusta
 
         def emit_safe_lookup(args, env, current_scope)
           object_code = emit_expr(args[0], env, current_scope)
-          keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }.join(', ')
-          runtime_call(:qget_path, object_code, "[#{keys}]")
+          keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }
+          receiver = simple_expression?(object_code) ? object_code : parenthesize(object_code)
+          keys.reduce(receiver) { |acc, key| "#{acc}&.[](#{key})" }
         end
 
         BINARY_OPERATOR_METHODS = %w[<=> ** << >> & | ^ === =~].freeze

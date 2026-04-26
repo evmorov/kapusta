@@ -1,14 +1,3 @@
-def kap_qget_path(obj, keys)
-  keys.each do |key|
-    return if obj.nil?
-
-    obj = obj[key]
-  end
-  obj
-end
-
-private :kap_qget_path
-
 def append(suffix, value)
   value.to_s + suffix.to_s
 end
@@ -16,7 +5,7 @@ def wrap(left, right, value)
   left.to_s + value.to_s + right.to_s
 end
 def fetch_name(user)
-  kap_qget_path(user, [:profile, :name])
+  user&.[](:profile)&.[](:name)
 end
 (-> do
   thread_last = append("!", wrap("[", "]", append(" Lovelace", "Ada")))

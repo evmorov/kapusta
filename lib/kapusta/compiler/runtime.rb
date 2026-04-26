@@ -9,16 +9,6 @@ module Kapusta
       }.freeze
 
       HELPER_SOURCES = {
-        qget_path: <<~RUBY.chomp,
-          def kap_qget_path(obj, keys)
-            keys.each do |key|
-              return if obj.nil?
-
-              obj = obj[key]
-            end
-            obj
-          end
-        RUBY
         destructure: <<~RUBY.chomp,
           def kap_destructure(pattern, value)
             bindings = {}
