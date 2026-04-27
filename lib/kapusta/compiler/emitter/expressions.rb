@@ -7,17 +7,19 @@ module Kapusta
         private
 
         def emit_expr(form, env, current_scope)
-          case form
-          when Sym then emit_sym(form, env)
-          when Vec then "[#{form.items.map { |item| emit_expr(item, env, current_scope) }.join(', ')}]"
-          when HashLit
-            "{#{form.pairs.map do |key, value|
-              "#{emit_hash_key(key, env, current_scope)} => #{emit_expr(value, env, current_scope)}"
-            end.join(', ')}}"
-          when List then emit_list(form, env, current_scope)
-          when String, Symbol, Numeric, true, false, nil then form.inspect
-          else
-            emit_error!("cannot emit form: #{form.inspect}")
+          with_current_form(form) do
+            case form
+            when Sym then emit_sym(form, env)
+            when Vec then "[#{form.items.map { |item| emit_expr(item, env, current_scope) }.join(', ')}]"
+            when HashLit
+              "{#{form.pairs.map do |key, value|
+                "#{emit_hash_key(key, env, current_scope)} => #{emit_expr(value, env, current_scope)}"
+              end.join(', ')}}"
+            when List then emit_list(form, env, current_scope)
+            when String, Symbol, Numeric, true, false, nil then form.inspect
+            else
+              emit_error!(:cannot_emit_form, form: form.inspect)
+            end
           end
         end
 
@@ -29,7 +31,7 @@ module Kapusta
         end
 
         def emit_list(list, env, current_scope)
-          emit_error!('expected a function, macro, or special to call') if list.empty?
+          emit_error!(:empty_call) if list.empty?
 
           head = list.head
           args = list.rest
@@ -43,6 +45,11 @@ module Kapusta
             return emit_self_call(head.name, args, env, current_scope)
           end
 
+          case head
+          when Numeric, String, Symbol, true, false, nil
+            emit_error!(:cannot_call_literal, value: head.inspect)
+          end
+
           emit_callable_call(emit_expr(head, env, current_scope), args, env, current_scope)
         end
 
@@ -51,6 +58,7 @@ module Kapusta
           when 'fn', 'lambda', 'λ' then emit_fn(args, env, current_scope)
           when 'let' then emit_let(args, env, current_scope)
           when 'local', 'var' then emit_local_expr(args, env, current_scope)
+          when 'global' then emit_global_expr(args, env, current_scope)
           when 'set' then emit_set_expr(args, env, current_scope)
           when 'if' then emit_if(args, env, current_scope)
           when 'case' then emit_case(args, env, current_scope, :case)
@@ -104,9 +112,9 @@ module Kapusta
           when 'quasi-hash' then emit_quasi_hash(args, env, current_scope)
           when 'quasi-gensym' then emit_quasi_gensym(args[0], env, current_scope)
           when 'macro', 'macros', 'import-macros'
-            emit_error!("#{name} must appear at the top level and is consumed by the macro expander")
+            emit_error!(:special_must_be_toplevel, name:)
           else
-            emit_error!("unknown special form: #{name}")
+            emit_error!(:unknown_special_form, name:)
           end
         end
 
@@ -138,6 +146,9 @@ module Kapusta
         def emit_concat(args, env, current_scope)
           return '""' if args.empty?
 
+          args.each do |arg|
+            emit_error!(:vararg_with_operator) if arg.is_a?(Sym) && arg.name == '...'
+          end
           args.map { |arg| emit_string_part(arg, env, current_scope) }.join(' + ')
         end
 

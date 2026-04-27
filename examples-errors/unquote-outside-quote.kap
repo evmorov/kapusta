@@ -1,1 +1,5 @@
-(print ,x)
+(fn id [x]
+  x)
+
+(let [x (id 1)]
+  (print ,x))

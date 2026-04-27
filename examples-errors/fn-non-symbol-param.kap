@@ -1,2 +1,7 @@
+(fn id [x]
+  x)
+
 (fn add [1 2]
   3)
+
+(print (id 7))

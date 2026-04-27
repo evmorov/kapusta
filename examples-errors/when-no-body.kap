@@ -1,1 +1,7 @@
-(when true)
+(fn announce [n]
+  (when (> n 0)
+    (print n))
+  (when (= n 0))
+  (print "done"))
+
+(announce 1)

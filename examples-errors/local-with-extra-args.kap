@@ -1,1 +1,10 @@
-(local x 1 2)
+(fn make []
+  (local pi 3.14)
+  pi)
+
+(fn buggy []
+  (local x 1 2)
+  x)
+
+(print (make))
+(print (buggy))

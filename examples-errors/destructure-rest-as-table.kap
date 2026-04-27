@@ -1,2 +1,10 @@
-(let [[a b ...] [1 2 3]]
-  a)
+(fn head-and-tail [xs]
+  (let [[head & rest] xs]
+    (print head rest)))
+
+(fn buggy [xs]
+  (let [[a b ...] xs]
+    a))
+
+(head-and-tail [1 2 3])
+(buggy [1 2 3])

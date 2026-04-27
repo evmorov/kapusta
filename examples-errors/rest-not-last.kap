@@ -1,2 +1,10 @@
-(let [[a & b c] [1 2 3 4]]
-  a)
+(fn ok-split [xs]
+  (let [[head & tail] xs]
+    (print head tail)))
+
+(fn buggy [xs]
+  (let [[a & b c] xs]
+    a))
+
+(ok-split [1 2 3])
+(buggy [1 2 3 4])

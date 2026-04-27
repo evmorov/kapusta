@@ -13,6 +13,7 @@ module Kapusta
 
   class Sym
     attr_reader :name
+    attr_accessor :line, :column
 
     def initialize(name)
       @name = name.to_s
@@ -23,7 +24,7 @@ module Kapusta
     end
 
     def inspect
-      "#<Sym #{@name}>"
+      @name.to_s
     end
 
     def ==(other)
@@ -76,7 +77,7 @@ module Kapusta
 
   class Vec
     attr_reader :items
-    attr_accessor :multiline_source
+    attr_accessor :multiline_source, :line, :column
 
     def initialize(items)
       @items = items
@@ -86,15 +87,23 @@ module Kapusta
     def to_ary
       @items
     end
+
+    def inspect
+      "[#{@items.map(&:inspect).join(' ')}]"
+    end
   end
 
   class HashLit
     attr_reader :entries
-    attr_accessor :multiline_source
+    attr_accessor :multiline_source, :line, :column
 
     def initialize(entries)
       @entries = entries
       @multiline_source = false
+    end
+
+    def inspect
+      pairs.map { |k, v| "#{k.inspect} #{v.inspect}" }.then { |p| "{#{p.join(' ')}}" }
     end
 
     def pairs
@@ -108,7 +117,7 @@ module Kapusta
 
   class List
     attr_reader :items
-    attr_accessor :multiline_source
+    attr_accessor :multiline_source, :line, :column
 
     def initialize(items)
       @items = items
@@ -126,6 +135,10 @@ module Kapusta
     def empty?
       @items.empty?
     end
+
+    def inspect
+      "(#{@items.map(&:inspect).join(' ')})"
+    end
   end
 
   class AutoGensym < Sym
@@ -142,25 +155,40 @@ module Kapusta
 
   class Quasiquote
     attr_reader :form
+    attr_accessor :line, :column
 
     def initialize(form)
       @form = form
+    end
+
+    def inspect
+      "`#{@form.inspect}"
     end
   end
 
   class Unquote
     attr_reader :form
+    attr_accessor :line, :column
 
     def initialize(form)
       @form = form
+    end
+
+    def inspect
+      ",#{@form.inspect}"
     end
   end
 
   class UnquoteSplice
     attr_reader :form
+    attr_accessor :line, :column
 
     def initialize(form)
       @form = form
+    end
+
+    def inspect
+      ",@#{@form.inspect}"
     end
   end
 end

@@ -13,6 +13,8 @@ module Kapusta
             name_sym = args[0]
             pattern = args[1]
             body = args[2..]
+            emit_error!(:fn_no_params) unless name_sym.is_a?(Sym) && pattern.is_a?(Vec)
+
             fn_env = env.child
             ruby_name = define_local(fn_env, name_sym.name)
             <<~RUBY.chomp
@@ -59,7 +61,9 @@ module Kapusta
         end
 
         def simple_parameter_pattern?(pattern)
-          pattern.is_a?(Vec) && pattern.items.all? { |item| item.is_a?(Sym) && !item.dotted? && item.name != '&' }
+          pattern.is_a?(Vec) && pattern.items.all? do |item|
+            item.is_a?(Sym) && (!item.dotted? || item.name == '...') && item.name != '&'
+          end
         end
 
         def emit_definition_form(form, env, current_scope)
@@ -227,7 +231,8 @@ module Kapusta
 
         def emit_let_parts(args, env, current_scope, result:)
           bindings = args[0]
-          emit_error!('expected even number of name/value bindings') if bindings.items.length.odd?
+          emit_error!(:let_odd_bindings) if bindings.items.length.odd?
+          emit_error!(:let_no_body) if args.length < 2
 
           body = args[1..]
           child_env = env.child
@@ -254,7 +259,7 @@ module Kapusta
         end
 
         def emit_local_form(form, env, current_scope)
-          emit_error!("#{form.head.name}: expected name and value") unless form.items.length == 3
+          emit_error!(:local_arity, form: form.head.name) unless form.items.length == 3
 
           target = form.items[1]
           value_code = emit_expr(form.items[2], env, current_scope)
@@ -275,7 +280,7 @@ module Kapusta
 
           case value_form
           when String, Numeric, Symbol, true, false
-            emit_error!('could not destructure literal')
+            emit_error!(:could_not_destructure_literal)
           end
         end
 
@@ -297,6 +302,16 @@ module Kapusta
           "(-> do\n#{indent(code)}\nend).call"
         end
 
+        def emit_global_expr(args, _env, _current_scope)
+          emit_error!(:global_arity) unless args.length == 2
+          unless args[0].is_a?(Sym)
+            emit_error!(:global_non_symbol_name, type: args[0].class.name.downcase, value: args[0].inspect)
+          end
+
+          name = args[0].name
+          "$#{global_name(name)} = #{emit_expr(args[1], Env.new, :toplevel)}\nnil"
+        end
+
         def emit_set_form(form, env, current_scope)
           target = form.items[1]
           value_code = emit_expr(form.items[2], env, current_scope)
@@ -305,7 +320,7 @@ module Kapusta
             binding = env.lookup_if_defined(target.name)
             ruby_name =
               if binding
-                emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
+                emit_error!(:cannot_set_method_binding, name: target.name) if method_binding?(binding)
 
                 binding
               else
@@ -349,8 +364,8 @@ module Kapusta
               end
             else
               binding = env.lookup(target.name)
-              emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
-              emit_error!("expected var #{target.name}") unless mutable_binding?(env, target.name)
+              emit_error!(:cannot_set_method_binding, name: target.name) if method_binding?(binding)
+              emit_error!(:expected_var, name: target.name) unless mutable_binding?(env, target.name)
 
               emit_assignment(binding, value_code)
             end
@@ -369,10 +384,10 @@ module Kapusta
             elsif head.is_a?(Sym) && head.name == 'gvar'
               emit_assignment("$#{global_name(target.items[1].name)}", value_code)
             else
-              emit_error!("bad set target: #{target.inspect}")
+              emit_error!(:bad_set_target, target: target.inspect)
             end
           else
-            emit_error!("bad set target: #{target.inspect}")
+            emit_error!(:bad_set_target, target: target.inspect)
           end
         end
       end

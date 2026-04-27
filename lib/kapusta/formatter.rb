@@ -27,7 +27,8 @@ module Kapusta
 
       formatted = @files.map do |path|
         original = read_source(path)
-        [path, original, format_source(original)]
+        validate_kapusta_source(original, path)
+        [path, original, format_source(original, path)]
       end
 
       case @mode
@@ -48,12 +49,16 @@ module Kapusta
       end
 
       0
-    rescue Error => e
-      warn e.message
+    rescue Kapusta::Error => e
+      warn e.formatted
       1
     end
 
     private
+
+    def validate_kapusta_source(source, path)
+      Kapusta::Compiler.compile(source, path:)
+    end
 
     def parse_args(argv)
       argv.each do |arg|
@@ -99,7 +104,7 @@ module Kapusta
       $stdin.read
     end
 
-    def format_source(source)
+    def format_source(source, path = nil)
       forms = Reader.read_all(source, preserve_comments: true)
       entries = top_level_entries(forms)
       return '' if entries.empty?
@@ -110,8 +115,10 @@ module Kapusta
         output << render_top_level_entry(entry)
       end
       output << "\n"
+    rescue Kapusta::Error => e
+      raise e.with_defaults(path:)
     rescue StandardError => e
-      raise Error, e.message
+      raise Error.new(e.message, path:)
     end
 
     def separator_for(_previous, _current)

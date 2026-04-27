@@ -1,1 +1,5 @@
-(fn (+ 1 2))
+(fn id [x]
+  x)
+
+(let [bad (fn (+ 1 2))]
+  (bad))

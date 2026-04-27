@@ -7,6 +7,8 @@ module Kapusta
         private
 
         def emit_icollect(args, env, current_scope)
+          emit_error!(:icollect_no_iterator) unless args[0].is_a?(Vec) && args[0].items.length >= 2
+
           emit_iteration(args[0], env, current_scope, method: 'filter_map') do |iter_env|
             emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
           end
@@ -32,6 +34,8 @@ module Kapusta
 
         def emit_accumulate(args, env, current_scope)
           bindings = args[0].items
+          emit_error!(:accumulate_no_iterator) if bindings.length < 4
+
           acc_name = bindings[0]
           init_code = emit_expr(bindings[1], env, current_scope)
           iter_items = bindings[2..]
@@ -91,6 +95,8 @@ module Kapusta
 
         def emit_faccumulate(args, env, current_scope)
           bindings = args[0].items
+          emit_error!(:accumulate_no_iterator) if bindings.length < 5
+
           acc_name = bindings[0]
           loop_name = bindings[2]
           loop_env = env.child
@@ -148,6 +154,8 @@ module Kapusta
         end
 
         def emit_iteration(bindings_vec, env, current_scope, method: 'each')
+          emit_error!(:each_no_binding) unless bindings_vec.is_a?(Vec)
+
           items = bindings_vec.items
           iter_expr = items.last
           binding_pats = items[0...-1]

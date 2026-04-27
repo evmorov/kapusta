@@ -1,1 +1,9 @@
-(local x)
+(fn good []
+  (local n 42)
+  n)
+
+(fn buggy []
+  (local x)
+  x)
+
+(print (good))

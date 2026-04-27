@@ -26,6 +26,9 @@ module Kapusta
       else
         run_file(args)
       end
+    rescue Kapusta::Error => e
+      warn e.formatted
+      exit 1
     end
 
     def self.parse_options(args)

@@ -1,2 +1,6 @@
-(let [if 1]
-  if)
+(fn classify [x]
+  (if (> x 0) :positive :nonpositive))
+
+(let [result (classify 1)
+      if 1]
+  (print result if))

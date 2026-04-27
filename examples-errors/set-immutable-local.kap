@@ -1,2 +1,12 @@
-(local counter 0)
-(set counter (+ counter 1))
+(fn ok []
+  (var n 0)
+  (set n (+ n 1))
+  n)
+
+(fn buggy []
+  (local counter 0)
+  (set counter (+ counter 1))
+  counter)
+
+(print (ok))
+(print (buggy))

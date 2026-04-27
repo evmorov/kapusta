@@ -1,1 +1,7 @@
-()
+(fn greet [name]
+  (print "hello" name))
+
+(greet "Ada")
+
+(let [x 1]
+  (+ x ()))

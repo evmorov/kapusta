@@ -1,1 +1,5 @@
-(match 1)
+(fn classify [n]
+  (let [parity (% n 2)]
+    (match parity)))
+
+(print (classify 4))

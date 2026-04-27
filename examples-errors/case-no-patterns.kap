@@ -1,1 +1,5 @@
-(case 1)
+(fn classify [n]
+  (let [parity (% n 2)]
+    (case parity)))
+
+(print (classify 4))

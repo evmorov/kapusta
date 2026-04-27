@@ -1,1 +1,10 @@
-(if true)
+(fn classify [n]
+  (if (= n 0) :zero
+      (> n 0) :positive
+      :negative))
+
+(fn buggy [n]
+  (let [x n]
+    (if true)))
+
+(print (classify -3))

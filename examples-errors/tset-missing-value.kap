@@ -1,2 +1,8 @@
-(let [t {}]
-  (tset t :key))
+(fn populate []
+  (let [t {}]
+    (tset t :a 1)
+    (tset t :b 2)
+    (tset t :c)
+    t))
+
+(print (populate))

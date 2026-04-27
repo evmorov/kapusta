@@ -1,2 +1,10 @@
-(fcollect [i 1]
-  i)
+(fn squares [n]
+  (fcollect [i 1 n]
+    (* i i)))
+
+(fn buggy [n]
+  (fcollect [i n]
+    (* i i)))
+
+(print (squares 4))
+(print (buggy 4))

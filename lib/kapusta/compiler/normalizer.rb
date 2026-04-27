@@ -10,9 +10,12 @@ module Kapusta
       def normalize(form)
         case form
         when List then normalize_list(form)
-        when Vec then Vec.new(form.items.map { |item| normalize(item) })
+        when Vec then inherit_position(Vec.new(form.items.map { |item| normalize(item) }), form)
         when HashLit
-          HashLit.new(form.pairs.map { |key, value| [normalize_hash_key(key), normalize(value)] })
+          inherit_position(
+            HashLit.new(form.pairs.map { |key, value| [normalize_hash_key(key), normalize(value)] }),
+            form
+          )
         else
           form
         end
@@ -32,25 +35,28 @@ module Kapusta
 
         head = list.head
         items = list.items.map { |item| normalize(item) }
-        return List.new(items) unless head.is_a?(Sym)
+        return inherit_position(List.new(items), list) unless head.is_a?(Sym)
 
         case head.name
         when 'when'
-          raise Compiler::Error, "#{head.name}: expected body" if items[2..].empty?
+          raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
 
           cond = items[1]
           body = wrap_do(items[2..])
-          List.new([Sym.new('if'), cond, body])
+          inherit_position(List.new([Sym.new('if'), cond, body]), list)
         when 'unless'
-          raise Compiler::Error, "#{head.name}: expected body" if items[2..].empty?
+          raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
 
           cond = items[1]
           body = wrap_do(items[2..])
-          List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body])
+          inherit_position(List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body]), list)
         when 'tset'
-          raise Compiler::Error, 'tset: expected table, key, and value arguments' if items.length < 4
+          raise compiler_error(:tset_no_value, list) if items.length < 4
 
-          List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]])
+          inherit_position(
+            List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]]),
+            list
+          )
         when 'pcall'
           fn = items[1]
           args = items[2..]
@@ -71,12 +77,26 @@ module Kapusta
                                List.new([Sym.new('values'), false, List.new([handler, Sym.new('e')])])])
                    ])
         when '->', '->>', '-?>', '-?>>'
-          normalize(thread(items[1..], head.name))
+          inherit_position(normalize(thread(items[1..], head.name)), list)
         when 'doto'
-          normalize(doto(items[1..]))
+          inherit_position(normalize(doto(items[1..])), list)
         else
-          List.new(items)
+          inherit_position(List.new(items), list)
         end
+      end
+
+      def inherit_position(target, source)
+        return target unless target.respond_to?(:line=) && source.respond_to?(:line)
+
+        target.line ||= source.line
+        target.column ||= source.column
+        target
+      end
+
+      def compiler_error(code, form, **args)
+        line = form.respond_to?(:line) ? form.line : nil
+        column = form.respond_to?(:column) ? form.column : nil
+        Compiler::Error.new(Kapusta::Errors.format(code, **args), line:, column:)
       end
 
       def wrap_do(forms)

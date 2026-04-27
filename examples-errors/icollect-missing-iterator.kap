@@ -1,2 +1,10 @@
-(icollect [v]
-  v)
+(fn doubled [xs]
+  (icollect [_ x (ipairs xs)]
+    (* x 2)))
+
+(fn buggy []
+  (icollect [v]
+    v))
+
+(print (doubled [1 2 3]))
+(buggy)

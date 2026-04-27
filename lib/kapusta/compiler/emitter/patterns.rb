@@ -18,27 +18,25 @@ module Kapusta
           native = try_emit_native_pattern_bind(pattern, value_code, env)
           return native if native
 
-          emit_error!("destructure pattern this compiler cannot translate: #{pattern.inspect}")
+          emit_error!(:destructure_unsupported, pattern: pattern.inspect)
         end
 
         def validate_binding_symbol!(sym)
           name = sym.name
-          if Compiler::SPECIAL_FORMS.include?(name)
-            emit_error!("local #{name} was overshadowed by a special form or macro")
-          end
+          emit_error!(:shadowed_special, name:) if Compiler::SPECIAL_FORMS.include?(name)
           return unless sym.is_a?(MacroSym)
 
-          emit_error!("macro tried to bind #{name} without gensym")
+          emit_error!(:macro_unsafe_bind, name:)
         end
 
         def validate_destructure_pattern!(pattern)
           items = pattern.items
           items.each_with_index do |item, idx|
-            emit_error!('unable to bind table ...') if item.is_a?(Sym) && item.name == '...'
+            emit_error!(:bind_table_dots) if item.is_a?(Sym) && item.name == '...'
             next unless item.is_a?(Sym) && item.name == '&'
 
-            emit_error!('expected rest argument before last parameter') if idx + 2 < items.length
-            emit_error!('expected rest argument before last parameter') if idx + 1 >= items.length
+            emit_error!(:rest_not_last) if idx + 2 < items.length
+            emit_error!(:rest_not_last) if idx + 1 >= items.length
           end
         end
 

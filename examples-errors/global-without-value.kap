@@ -1,1 +1,6 @@
+(fn show [x]
+  (print x))
+
+(show :hello)
+
 (global PI)

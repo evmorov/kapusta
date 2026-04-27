@@ -1,1 +1,9 @@
-(.)
+(fn key-of [t k]
+  (. t k))
+
+(fn nothing []
+  (let [empty (.)]
+    empty))
+
+(print (key-of {:a 1} :a))
+(print (nothing))

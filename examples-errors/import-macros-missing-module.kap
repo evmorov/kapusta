@@ -1,1 +1,6 @@
+(fn id [x]
+  x)
+
 (import-macros m :nonexistent-module)
+
+(print (id 1))

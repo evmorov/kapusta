@@ -1,2 +1,10 @@
-(let [[a b] 5]
-  a)
+(fn make-pair []
+  42)
+
+(fn first-of-pair []
+  (let [pair (make-pair)
+        [a b] pair
+        [c d] 5]
+    (+ a c)))
+
+(print (first-of-pair))

@@ -1,2 +1,7 @@
+(fn sum [a b]
+  (+ a b))
+
 (fn nope [&]
   nil)
+
+(print (sum 1 2))

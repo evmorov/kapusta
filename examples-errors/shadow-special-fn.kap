@@ -1,1 +1,6 @@
-(local fn 1)
+(fn make-id []
+  (fn [x] x))
+
+(let [identity (make-id)]
+  (print (identity 1))
+  (local fn 1))

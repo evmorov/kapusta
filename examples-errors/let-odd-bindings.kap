@@ -1,3 +1,7 @@
-(let [x 1
-      y]
-  x)
+(fn summarize [xs]
+  (let [count (length xs)
+        first (. xs 0)
+        last]
+    (print count first last)))
+
+(summarize [10 20 30])

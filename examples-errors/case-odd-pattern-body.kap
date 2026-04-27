@@ -1,2 +1,7 @@
-(case 1
-  1)
+(fn label [n]
+  (case n
+    0 :zero
+    1 :one
+    :many))
+
+(print (label 3))

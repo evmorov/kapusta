@@ -1,4 +1,7 @@
+(fn id [x]
+  x)
+
 (macro joined [...]
   (.. ...))
 
-(joined :a :b)
+(print (joined :a :b))

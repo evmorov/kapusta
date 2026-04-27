@@ -1,2 +1,9 @@
-(accumulate [sum 0 x]
-  (+ sum x))
+(fn double [x]
+  (* x 2))
+
+(fn sum-doubled [xs]
+  (accumulate [sum 0
+               x]
+    (+ sum (double x))))
+
+(print (sum-doubled [1 2 3]))

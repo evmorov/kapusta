@@ -1,1 +1,7 @@
-(1 2 3)
+(fn dispatch [op]
+  (let [handlers {:add (fn [a b] (+ a b))
+                  :mul (fn [a b] (* a b))}]
+    (. handlers op)))
+
+(let [result (1 2 3)]
+  (print result))

@@ -1,2 +1,12 @@
-(faccumulate [s 0]
-  (+ s 1))
+(fn ones [n]
+  (faccumulate [s 0
+                i 1 n]
+    (+ s 1)))
+
+(fn buggy [n]
+  (faccumulate [s 0
+                i n]
+    (+ s 1)))
+
+(print (ones 5))
+(print (buggy 5))

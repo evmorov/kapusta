@@ -72,7 +72,7 @@ module Kapusta
 
     def read_next_item
       skip_ws
-      raise Error, 'unexpected eof' if eof?
+      raise reader_error(:unexpected_eof, source_position) if eof?
 
       return read_comment if @preserve_comments && peek == ';'
 
@@ -81,10 +81,11 @@ module Kapusta
 
     def read_form
       skip_ws
-      raise Error, 'unexpected eof' if eof?
+      raise reader_error(:unexpected_eof, source_position) if eof?
 
       return read_comment if @preserve_comments && peek == ';'
 
+      position = source_position
       form =
         case peek
         when '(' then read_list
@@ -99,7 +100,16 @@ module Kapusta
           read_atom
         end
 
+      attach_position(form, position)
       read_postfix(form)
+    end
+
+    def attach_position(form, position)
+      return form unless form.respond_to?(:line=)
+
+      form.line ||= position[0]
+      form.column ||= position[1]
+      form
     end
 
     def read_quasiquote
@@ -133,6 +143,8 @@ module Kapusta
       advance
       list = List.new(items)
       list.multiline_source = closing_position[0] != opening_position[0]
+      list.line = opening_position[0]
+      list.column = opening_position[1]
       list
     end
 
@@ -152,6 +164,8 @@ module Kapusta
       advance
       vec = Vec.new(items)
       vec.multiline_source = closing_position[0] != opening_position[0]
+      vec.line = opening_position[0]
+      vec.column = opening_position[1]
       vec
     end
 
@@ -180,14 +194,17 @@ module Kapusta
       closing_position = source_position
       advance
 
-      raise Error, 'odd number of forms in hash' unless pending.empty?
+      raise reader_error(:odd_forms_in_hash, opening_position) unless pending.empty?
 
       hash = HashLit.new(entries)
       hash.multiline_source = closing_position[0] != opening_position[0]
+      hash.line = opening_position[0]
+      hash.column = opening_position[1]
       hash
     end
 
     def read_string
+      opening_position = source_position
       advance
       buffer = +''
       until eof? || peek == '"'
@@ -211,7 +228,7 @@ module Kapusta
           buffer << advance
         end
       end
-      raise Error, 'unterminated string' if eof?
+      raise reader_error(:unterminated_string, opening_position) if eof?
 
       advance
       buffer
@@ -249,22 +266,25 @@ module Kapusta
     end
 
     def read_atom
+      position = source_position
       start = @pos
       advance until delim?(peek)
       token = @src[start...@pos]
-      raise Error, 'empty token' if token.empty?
+      raise reader_error(:empty_token, position) if token.empty?
 
-      parse_atom(token)
+      parse_atom(token, position)
     end
 
     def unexpected_closing_delim(char)
-      line, column = source_position
-      Error.new("unexpected closing delimiter '#{char}' at line #{line}, column #{column}")
+      reader_error(:unexpected_closing_delimiter, source_position, char:)
     end
 
     def unclosed_opening_delim(char, position)
-      line, column = position
-      Error.new("unclosed opening delimiter '#{char}' at line #{line}, column #{column}")
+      reader_error(:unclosed_delimiter, position, char:)
+    end
+
+    def reader_error(code, position, **args)
+      Error.new(Kapusta::Errors.format(code, **args), line: position[0], column: position[1])
     end
 
     def source_position
@@ -276,14 +296,14 @@ module Kapusta
       [line, column]
     end
 
-    def parse_atom(token)
+    def parse_atom(token, position)
       return true if token == 'true'
       return false if token == 'false'
       return if token == 'nil'
       return Integer(token, 10) if token.match?(/\A-?\d+\z/)
       return Float(token) if token.match?(/\A-?\d+\.\d+\z/)
 
-      raise Error, "could not read number \"#{token}\"" if token.match?(/\A-?\d/)
+      raise reader_error(:could_not_read_number, position, token:) if token.match?(/\A-?\d/)
 
       if token.start_with?(':') && token.length > 1
         Kapusta.kebab_to_snake(token[1..]).to_sym
@@ -296,7 +316,7 @@ module Kapusta
 
     def normalize_hash_pair(item, value)
       if item.is_a?(Sym) && item.name == ':'
-        raise Error, 'bad shorthand' unless value.is_a?(Sym)
+        raise reader_error(:bad_shorthand, source_position) unless value.is_a?(Sym)
 
         key = Kapusta.kebab_to_snake(value.name).to_sym
         [key, value]

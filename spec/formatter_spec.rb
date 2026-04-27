@@ -43,7 +43,7 @@ RSpec.describe Kapusta::Formatter do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')
       File.write(path, <<~KAP)
-        (let [uri (URI.join (ivar base-uri) (.. "/posts/" id)) body (Net.HTTP.get uri) post (JSON.parse body {:symbolize-names true}) {: title : author} post] (values title author))
+        (fn fetch-post [id] (let [uri (URI.join (ivar base-uri) (.. "/posts/" id)) body (Net.HTTP.get uri) post (JSON.parse body {:symbolize-names true}) {: title : author} post] (values title author)))
       KAP
 
       previous_path = ENV.fetch('PATH', nil)
@@ -54,11 +54,12 @@ RSpec.describe Kapusta::Formatter do
       end
 
       expect(output).to eq(<<~KAP)
-        (let [uri (URI.join (ivar base-uri) (.. "/posts/" id))
-              body (Net.HTTP.get uri)
-              post (JSON.parse body {:symbolize-names true})
-              {: title : author} post]
-          (values title author))
+        (fn fetch-post [id]
+          (let [uri (URI.join (ivar base-uri) (.. "/posts/" id))
+                body (Net.HTTP.get uri)
+                post (JSON.parse body {:symbolize-names true})
+                {: title : author} post]
+            (values title author)))
       KAP
     ensure
       ENV['PATH'] = previous_path

@@ -19,8 +19,9 @@ module Kapusta
         end
       end
 
-      def initialize
+      def initialize(path: nil)
         @macros = {}
+        @path = path
       end
 
       def expand_all(forms)
@@ -39,23 +40,40 @@ module Kapusta
             register_macros_form(form.rest)
             return []
           when 'import-macros'
-            raise Error, 'import-macros is not yet supported'
+            raise macro_error(:import_macros_unsupported, form)
           end
         end
         [expand(form)]
       end
 
+      def macro_error(code, form, **args)
+        line = form.respond_to?(:line) ? form.line : nil
+        column = form.respond_to?(:column) ? form.column : nil
+        Error.new(Kapusta::Errors.format(code, **args), path: @path, line:, column:)
+      end
+
       def expand(form)
         case form
         when List then expand_list(form)
-        when Vec then Vec.new(form.items.map { |item| expand(item) })
+        when Vec then copy_position(Vec.new(form.items.map { |item| expand(item) }), form)
         when HashLit
-          HashLit.new(form.entries.map do |entry|
-            entry.is_a?(Array) ? [expand(entry[0]), expand(entry[1])] : entry
-          end)
+          copy_position(
+            HashLit.new(form.entries.map do |entry|
+              entry.is_a?(Array) ? [expand(entry[0]), expand(entry[1])] : entry
+            end),
+            form
+          )
         else
           form
         end
+      end
+
+      def copy_position(target, source)
+        return target unless target.respond_to?(:line=) && source.respond_to?(:line)
+
+        target.line ||= source.line
+        target.column ||= source.column
+        target
       end
 
       def expand_list(list)
@@ -77,11 +95,11 @@ module Kapusta
           if @macros.key?(key)
             args = list.rest
             result = invoke_macro(key, args)
-            return expand(result)
+            return copy_position(expand(result), list)
           end
         end
 
-        List.new(list.items.map { |item| expand(item) })
+        copy_position(List.new(list.items.map { |item| expand(item) }), list)
       end
 
       def lookup_key(name)
@@ -90,23 +108,23 @@ module Kapusta
 
       def register_macro_form(args)
         name_sym, params, *body = args
-        raise Error, 'macro name must be a symbol' unless name_sym.is_a?(Sym)
-        raise Error, 'macro params must be a vector' unless params.is_a?(Vec)
+        raise macro_error(:macro_name_must_be_symbol, name_sym) unless name_sym.is_a?(Sym)
+        raise macro_error(:macro_params_must_be_vector, params) unless params.is_a?(Vec)
 
         register(name_sym.name, params, body)
       end
 
       def register_macros_form(args)
         hash_lit = args[0]
-        raise Error, 'macros expects a hash literal' unless hash_lit.is_a?(HashLit)
+        raise macro_error(:macros_expects_hash, hash_lit) unless hash_lit.is_a?(HashLit)
 
         hash_lit.pairs.each do |key, value|
-          raise Error, "macros entry value must be a fn form, got #{value.inspect}" unless fn_form?(value)
+          raise macro_error(:macros_entry_must_be_fn, value, form: value.inspect) unless fn_form?(value)
 
           name = key.to_s
           params = value.items[1]
           body = value.items[2..]
-          raise Error, 'macros entry params must be a vector' unless params.is_a?(Vec)
+          raise macro_error(:macros_entry_params_must_be_vector, params) unless params.is_a?(Vec)
 
           register(name, params, body)
         end
@@ -137,8 +155,9 @@ module Kapusta
             List.new([Sym.new('fn'), params, List.new([Sym.new('let'), Vec.new(let_bindings), inner])])
           end
 
-        ruby = Compiler.compile_forms([wrapped], path: "(macro #{name})")
-        TOPLEVEL_BINDING.eval(ruby, "(macro #{name})", 1)
+        macro_path = @path || "(macro #{name})"
+        ruby = Compiler.compile_forms([wrapped], path: macro_path)
+        TOPLEVEL_BINDING.eval(ruby, macro_path, 1)
       end
 
       def invoke_macro(key, args)
@@ -157,20 +176,31 @@ module Kapusta
 
         def lower(form)
           case form
-          when Quasiquote then lower_quasi(form.form)
+          when Quasiquote then copy_position(lower_quasi(form.form), form)
           when Unquote, UnquoteSplice
-            raise Error, 'unquote outside quasiquote'
+            raise Error, Kapusta::Errors.format(:unquote_outside_quasiquote)
           when AutoGensym
-            raise Error, "auto-gensym #{form.name}# outside quasiquote"
-          when List then List.new(form.items.map { |item| lower(item) })
-          when Vec then Vec.new(form.items.map { |item| lower(item) })
+            raise Error, Kapusta::Errors.format(:auto_gensym_outside_quasiquote, name: form.name)
+          when List then copy_position(List.new(form.items.map { |item| lower(item) }), form)
+          when Vec then copy_position(Vec.new(form.items.map { |item| lower(item) }), form)
           when HashLit
-            HashLit.new(form.entries.map do |entry|
-              entry.is_a?(Array) ? [lower(entry[0]), lower(entry[1])] : entry
-            end)
+            copy_position(
+              HashLit.new(form.entries.map do |entry|
+                entry.is_a?(Array) ? [lower(entry[0]), lower(entry[1])] : entry
+              end),
+              form
+            )
           else
             form
           end
+        end
+
+        def copy_position(target, source)
+          return target unless target.respond_to?(:line=) && source.respond_to?(:line)
+
+          target.line ||= source.line
+          target.column ||= source.column
+          target
         end
 
         def lower_quasi(form)
@@ -182,9 +212,9 @@ module Kapusta
           when HashLit then lower_quasi_hash(form)
           when Unquote then lower(form.form)
           when UnquoteSplice
-            raise Error, 'unquote-splice must appear inside a quoted list/vec'
+            raise Error, Kapusta::Errors.format(:unquote_splice_outside_list)
           when Quasiquote
-            raise Error, 'nested quasiquote is not supported'
+            raise Error, Kapusta::Errors.format(:nested_quasiquote)
           else
             form
           end

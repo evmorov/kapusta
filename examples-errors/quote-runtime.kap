@@ -1,1 +1,6 @@
+(fn id [x]
+  x)
+
+(print (id 1))
+
 `hello

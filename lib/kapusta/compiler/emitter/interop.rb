@@ -7,6 +7,8 @@ module Kapusta
         private
 
         def emit_lookup(args, env, current_scope)
+          emit_error!(:dot_no_args) if args.empty?
+
           object_code = emit_expr(args[0], env, current_scope)
           keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }
           return object_code if keys.empty?
@@ -91,7 +93,7 @@ module Kapusta
 
         def emit_module_wrapper(name_sym, body)
           segments = constant_segments(name_sym)
-          emit_error!("invalid module name: #{name_sym.name}") unless segments
+          emit_error!(:invalid_module_name, name: name_sym.name) unless segments
           inner = build_nested_module(segments, body)
           ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
         end
@@ -105,7 +107,7 @@ module Kapusta
 
         def emit_class_wrapper(name_sym, supers, env, body)
           segments = constant_segments(name_sym)
-          emit_error!("invalid class name: #{name_sym.name}") unless segments
+          emit_error!(:invalid_class_name, name: name_sym.name) unless segments
           super_code = class_super_code(supers, env)
           inner = build_nested_class(segments, super_code, body)
           ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
@@ -434,7 +436,7 @@ module Kapusta
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
 
-          emit_error!("undefined symbol: #{name}")
+          emit_error!(:undefined_symbol, name:)
         end
 
         def emit_gvar(sym)
@@ -458,7 +460,7 @@ module Kapusta
               const_path << segments[idx]
               idx += 1
             end
-            emit_error!("bad multisym: #{segments.join('.')}") if const_path.empty?
+            emit_error!(:bad_multisym, path: segments.join('.')) if const_path.empty?
 
             [const_path.join('::'), segments[idx..]]
           end

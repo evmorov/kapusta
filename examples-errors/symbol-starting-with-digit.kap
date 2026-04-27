@@ -1,1 +1,9 @@
-(local 5var 10)
+(fn ok []
+  (local n 10)
+  n)
+
+(fn buggy []
+  (local 5var 10)
+  5var)
+
+(print (ok))

@@ -1,1 +1,5 @@
-(local cfg {:a 1 :b 2)
+(fn ok []
+  {:a 1 :b 2})
+
+(let [cfg {:a 1 :b 2]
+  (print cfg))

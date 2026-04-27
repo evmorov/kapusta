@@ -6,8 +6,27 @@ module Kapusta
       module Support
         private
 
-        def emit_error!(message)
-          raise Error, "#{@path}: #{message}"
+        def emit_error!(code, **args)
+          form = current_form
+          line = form.respond_to?(:line) ? form.line : nil
+          column = form.respond_to?(:column) ? form.column : nil
+          raise Error.new(Kapusta::Errors.format(code, **args), path: @path, line:, column:)
+        end
+
+        def with_current_form(form)
+          @form_stack ||= []
+          @form_stack.push(form) if positionable?(form)
+          yield
+        ensure
+          @form_stack.pop if positionable?(form)
+        end
+
+        def current_form
+          (@form_stack ||= []).last
+        end
+
+        def positionable?(form)
+          form.respond_to?(:line) && form.respond_to?(:column)
         end
 
         def emit_forms_with_headers(forms, env, current_scope, result: true)
@@ -67,27 +86,29 @@ module Kapusta
         end
 
         def emit_form_in_sequence(form, env, current_scope, allow_method_definitions:, result_needed: true)
-          if allow_method_definitions &&
-             method_definition_form?(form) &&
-             %i[toplevel module class].include?(current_scope)
-            code, env = emit_definition_form(form, env, current_scope)
-            return [code, env] if code
-          end
+          with_current_form(form) do
+            if allow_method_definitions &&
+               method_definition_form?(form) &&
+               %i[toplevel module class].include?(current_scope)
+              code, env = emit_definition_form(form, env, current_scope)
+              return [code, env] if code
+            end
 
-          if named_function_form?(form)
-            emit_named_fn_assignment(form, env, current_scope)
-          elsif local_form?(form)
-            code, env = emit_local_form(form, env, current_scope)
-            code = code.delete_suffix("\nnil") unless result_needed
-            [code, env]
-          elsif do_form?(form)
-            emit_do_form(form.rest, env, current_scope, result_needed:)
-          elsif sequence_statement_form?(form)
-            emit_sequence_statement_form(form, env, current_scope, result_needed:)
-          elsif set_new_local_form?(form, env)
-            emit_set_form(form, env, current_scope)
-          else
-            [emit_expr(form, env, current_scope), env]
+            if named_function_form?(form)
+              emit_named_fn_assignment(form, env, current_scope)
+            elsif local_form?(form)
+              code, env = emit_local_form(form, env, current_scope)
+              code = code.delete_suffix("\nnil") unless result_needed
+              [code, env]
+            elsif do_form?(form)
+              emit_do_form(form.rest, env, current_scope, result_needed:)
+            elsif sequence_statement_form?(form)
+              emit_sequence_statement_form(form, env, current_scope, result_needed:)
+            elsif set_new_local_form?(form, env)
+              emit_set_form(form, env, current_scope)
+            else
+              [emit_expr(form, env, current_scope), env]
+            end
           end
         end
 
@@ -228,7 +249,7 @@ module Kapusta
         end
 
         def parse_counted_for_bindings(bindings, env, current_scope)
-          emit_error!('expected range to include start and stop') if bindings.length < 3
+          emit_error!(:counted_no_range) if bindings.length < 3
           name_sym = bindings[0]
           loop_env = env.child
           ruby_name = define_local(loop_env, name_sym.name)

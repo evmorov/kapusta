@@ -1,2 +1,10 @@
-(for [i 1]
-  (print i))
+(fn print-range [from to]
+  (for [i from to]
+    (print i)))
+
+(fn buggy []
+  (for [i 1]
+    (print i)))
+
+(print-range 1 3)
+(buggy)

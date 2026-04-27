@@ -1,2 +1,10 @@
-(each x
-  (print x))
+(fn print-twice [items]
+  (each [_ x (ipairs items)]
+    (print x x)))
+
+(fn buggy [items]
+  (each items
+    (print items)))
+
+(print-twice [1 2 3])
+(buggy [1 2 3])

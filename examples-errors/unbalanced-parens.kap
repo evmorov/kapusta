@@ -1,2 +1,5 @@
+(fn ok [x]
+  (* x x))
+
 (fn greet [name]
   (print "hello" name)

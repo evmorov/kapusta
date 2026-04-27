@@ -1,1 +1,9 @@
-(var counter)
+(fn ok []
+  (var n 0)
+  n)
+
+(fn buggy []
+  (var counter)
+  counter)
+
+(print (ok))

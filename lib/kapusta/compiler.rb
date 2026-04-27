@@ -9,7 +9,7 @@ module Kapusta
   module Compiler
     class Error < Kapusta::Error; end
     SPECIAL_FORMS = %w[
-      fn lambda λ let local var set if when unless case match
+      fn lambda λ let local var global set if when unless case match
       while for each do values
       -> ->> -?> -?>> doto
       icollect collect fcollect accumulate faccumulate
@@ -34,13 +34,17 @@ module Kapusta
 
     def self.compile(source, path: '(kapusta)')
       forms = Reader.read_all(source)
-      expanded = MacroExpander.new.expand_all(forms)
+      expanded = MacroExpander.new(path:).expand_all(forms)
       compile_forms(expanded, path:)
+    rescue Kapusta::Error => e
+      raise e.with_defaults(path:)
     end
 
     def self.compile_forms(forms, path: '(kapusta)')
       normalized = Normalizer.new.normalize_all(forms)
       Emitter.new(path:).emit_file(normalized)
+    rescue Kapusta::Error => e
+      raise e.with_defaults(path:)
     end
 
     def self.run(source, path: '(kapusta)')

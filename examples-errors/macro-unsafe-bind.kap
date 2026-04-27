@@ -1,5 +1,13 @@
+(fn id [x]
+  x)
+
+(macro safe [x]
+  `(let [safe# ,x]
+     safe#))
+
 (macro bad [x]
   `(let [unsafe ,x]
      unsafe))
 
-(bad 5)
+(print (safe 1))
+(print (bad 5))

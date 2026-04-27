@@ -1,2 +1,7 @@
-(let [{:name n} :evgeny]
-  n)
+(fn person [name age]
+  {:name name :age age})
+
+(let [alice (person "Alice" 30)
+      {:name n :age a} alice
+      {:name nn} :evgeny]
+  (print n a nn))
