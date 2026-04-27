@@ -51,10 +51,12 @@ module Kapusta
       undefined_symbol: 'undefined symbol: %{name}',
       unexpected_closing_delimiter: "unexpected closing delimiter '%{char}'",
       unexpected_eof: 'unexpected eof',
+      unexpected_vararg: 'unexpected vararg',
       unknown_special_form: 'unknown special form: %{name}',
       unquote_outside_quasiquote: 'unquote outside quasiquote',
       unquote_splice_outside_list: 'unquote-splice must appear inside a quoted list/vec',
       unterminated_string: 'unterminated string',
+      vararg_not_last: 'expected vararg as last parameter',
       vararg_with_operator: 'tried to use vararg with operator',
       when_no_body: '%{form}: expected body'
     }.freeze

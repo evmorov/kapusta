@@ -431,6 +431,8 @@ module Kapusta
           if (binding = env.lookup_if_defined(sym))
             return binding_value_code(binding)
           end
+
+          emit_error!(:unexpected_vararg) if name == '...'
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)

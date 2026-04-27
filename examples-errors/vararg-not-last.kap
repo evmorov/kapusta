@@ -1,0 +1,4 @@
+(fn first-with-rest [a ... b]
+  (print a b))
+
+(first-with-rest 1 2 3 4)

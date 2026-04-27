@@ -307,6 +307,11 @@ RSpec.describe 'examples-errors' do
       .to eq("unexpected-eof.kap:1:2: unexpected eof\n")
   end
 
+  it 'unexpected-vararg.kap' do
+    expect(run_error_example('unexpected-vararg.kap'))
+      .to eq("unexpected-vararg.kap:2:10: unexpected vararg\n")
+  end
+
   it 'unknown-special-form.kap' do
     expect(run_error_example('unknown-special-form.kap'))
       .to eq("unknown-special-form.kap:1:1: unknown special form: catch\n")
@@ -325,6 +330,11 @@ RSpec.describe 'examples-errors' do
   it 'unterminated-string.kap' do
     expect(run_error_example('unterminated-string.kap'))
       .to eq("unterminated-string.kap:1:8: unterminated string\n")
+  end
+
+  it 'vararg-not-last.kap' do
+    expect(run_error_example('vararg-not-last.kap'))
+      .to eq("vararg-not-last.kap:1:1: expected vararg as last parameter\n")
   end
 
   it 'var-without-value.kap' do

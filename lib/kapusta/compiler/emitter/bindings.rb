@@ -28,6 +28,7 @@ module Kapusta
         end
 
         def emit_lambda(pattern, body, env, current_scope)
+          validate_fn_params!(pattern)
           return emit_simple_lambda(pattern, body, env, current_scope) if simple_parameter_pattern?(pattern)
 
           args_var = temp('args')
@@ -63,6 +64,17 @@ module Kapusta
         def simple_parameter_pattern?(pattern)
           pattern.is_a?(Vec) && pattern.items.all? do |item|
             item.is_a?(Sym) && (!item.dotted? || item.name == '...') && item.name != '&'
+          end
+        end
+
+        def validate_fn_params!(pattern)
+          return unless pattern.is_a?(Vec)
+
+          pattern.items.each_with_index do |item, idx|
+            next unless item.is_a?(Sym) && item.name == '...'
+            next if idx == pattern.items.length - 1
+
+            emit_error!(:vararg_not_last)
           end
         end
 
@@ -127,6 +139,7 @@ module Kapusta
         end
 
         def emit_direct_method_definition(name_sym, pattern, body, env)
+          validate_fn_params!(pattern)
           return unless simple_parameter_pattern?(pattern)
 
           ruby_name = direct_method_definition_name(name_sym)
@@ -169,6 +182,7 @@ module Kapusta
         end
 
         def emit_method_body(pattern, body, env)
+          validate_fn_params!(pattern)
           return emit_simple_method_body(pattern, body, env) if simple_parameter_pattern?(pattern)
 
           args_var = temp('args')
