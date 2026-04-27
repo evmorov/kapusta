@@ -36,14 +36,20 @@ module Kapusta
 
         case head.name
         when 'when'
+          raise Compiler::Error, "#{head.name}: expected body" if items[2..].empty?
+
           cond = items[1]
           body = wrap_do(items[2..])
           List.new([Sym.new('if'), cond, body])
         when 'unless'
+          raise Compiler::Error, "#{head.name}: expected body" if items[2..].empty?
+
           cond = items[1]
           body = wrap_do(items[2..])
           List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body])
         when 'tset'
+          raise Compiler::Error, 'tset: expected table, key, and value arguments' if items.length < 4
+
           List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]])
         when 'pcall'
           fn = items[1]

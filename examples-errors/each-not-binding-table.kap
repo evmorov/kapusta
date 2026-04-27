@@ -1,0 +1,2 @@
+(each x
+  (print x))

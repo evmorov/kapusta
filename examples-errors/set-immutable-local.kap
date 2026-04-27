@@ -1,0 +1,2 @@
+(local counter 0)
+(set counter (+ counter 1))

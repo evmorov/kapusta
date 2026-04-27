@@ -283,6 +283,8 @@ module Kapusta
       return Integer(token, 10) if token.match?(/\A-?\d+\z/)
       return Float(token) if token.match?(/\A-?\d+\.\d+\z/)
 
+      raise Error, "could not read number \"#{token}\"" if token.match?(/\A-?\d/)
+
       if token.start_with?(':') && token.length > 1
         Kapusta.kebab_to_snake(token[1..]).to_sym
       elsif token.length > 1 && token.end_with?('#') && !token[0..-2].include?('#')

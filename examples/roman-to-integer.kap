@@ -1,12 +1,12 @@
 (fn roman-to-integer [s]
-  (let [values {"I" 1 "V" 5 "X" 10 "L" 50 "C" 100 "D" 500 "M" 1000}
+  (let [value-map {"I" 1 "V" 5 "X" 10 "L" 50 "C" 100 "D" 500 "M" 1000}
         chars (s.chars)
         n (length chars)]
     (var total 0)
     (var i 0)
     (while (< i n)
-      (let [curr (. values (. chars i))
-            ahead (if (< (+ i 1) n) (. values (. chars (+ i 1))) 0)
+      (let [curr (. value-map (. chars i))
+            ahead (if (< (+ i 1) n) (. value-map (. chars (+ i 1))) 0)
             subtract? (< curr ahead)]
         (set total (+ total (if subtract? (- ahead curr) curr)))
         (set i (+ i (if subtract? 2 1)))))

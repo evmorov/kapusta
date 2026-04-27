@@ -1,0 +1,5 @@
+(macro bad [x]
+  `(let [unsafe ,x]
+     unsafe))
+
+(bad 5)

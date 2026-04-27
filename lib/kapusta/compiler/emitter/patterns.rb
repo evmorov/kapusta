@@ -10,6 +10,7 @@ module Kapusta
           if pattern.is_a?(Sym)
             return ['', env] if pattern.name == '_'
 
+            validate_binding_symbol!(pattern)
             ruby_name = define_local(env, pattern)
             return ["#{ruby_name} = #{value_code}", env]
           end
@@ -18,6 +19,27 @@ module Kapusta
           return native if native
 
           emit_error!("destructure pattern this compiler cannot translate: #{pattern.inspect}")
+        end
+
+        def validate_binding_symbol!(sym)
+          name = sym.name
+          if Compiler::SPECIAL_FORMS.include?(name)
+            emit_error!("local #{name} was overshadowed by a special form or macro")
+          end
+          return unless sym.is_a?(MacroSym)
+
+          emit_error!("macro tried to bind #{name} without gensym")
+        end
+
+        def validate_destructure_pattern!(pattern)
+          items = pattern.items
+          items.each_with_index do |item, idx|
+            emit_error!('unable to bind table ...') if item.is_a?(Sym) && item.name == '...'
+            next unless item.is_a?(Sym) && item.name == '&'
+
+            emit_error!('expected rest argument before last parameter') if idx + 2 < items.length
+            emit_error!('expected rest argument before last parameter') if idx + 1 >= items.length
+          end
         end
 
         def try_emit_native_pattern_bind(pattern, value_code, env)
@@ -32,6 +54,7 @@ module Kapusta
         end
 
         def try_emit_native_vec_bind(pattern, value_code, env)
+          validate_destructure_pattern!(pattern)
           parts = []
           deferred = []
           current_env = env

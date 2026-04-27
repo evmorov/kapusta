@@ -134,6 +134,12 @@ module Kapusta
     end
   end
 
+  class MacroSym < Sym
+    def inspect
+      "#<MacroSym #{@name}>"
+    end
+  end
+
   class Quasiquote
     attr_reader :form
 

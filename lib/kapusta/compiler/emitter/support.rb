@@ -228,6 +228,7 @@ module Kapusta
         end
 
         def parse_counted_for_bindings(bindings, env, current_scope)
+          emit_error!('expected range to include start and stop') if bindings.length < 3
           name_sym = bindings[0]
           loop_env = env.child
           ruby_name = define_local(loop_env, name_sym.name)

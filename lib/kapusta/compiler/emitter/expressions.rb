@@ -29,7 +29,7 @@ module Kapusta
         end
 
         def emit_list(list, env, current_scope)
-          return 'nil' if list.empty?
+          emit_error!('expected a function, macro, or special to call') if list.empty?
 
           head = list.head
           args = list.rest
@@ -96,7 +96,7 @@ module Kapusta
           when '/' then emit_div(args, env, current_scope)
           when '%' then args.map { |arg| parenthesize(emit_expr(arg, env, current_scope)) }.join(' % ')
           when 'print' then emit_print(args, env, current_scope)
-          when 'quasi-sym' then "Kapusta::Sym.new(#{emit_expr(args[0], env, current_scope)})"
+          when 'quasi-sym' then "Kapusta::MacroSym.new(#{emit_expr(args[0], env, current_scope)})"
           when 'quasi-list' then "Kapusta::List.new([#{args.map { |a| emit_expr(a, env, current_scope) }.join(', ')}])"
           when 'quasi-list-tail' then emit_quasi_list_tail(args, env, current_scope)
           when 'quasi-vec' then "Kapusta::Vec.new([#{args.map { |a| emit_expr(a, env, current_scope) }.join(', ')}])"

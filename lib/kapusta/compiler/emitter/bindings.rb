@@ -227,6 +227,8 @@ module Kapusta
 
         def emit_let_parts(args, env, current_scope, result:)
           bindings = args[0]
+          emit_error!('expected even number of name/value bindings') if bindings.items.length.odd?
+
           body = args[1..]
           child_env = env.child
           binding_codes = []
@@ -234,7 +236,9 @@ module Kapusta
           i = 0
           while i < items.length
             pattern = items[i]
-            value_code = emit_expr(items[i + 1], child_env, current_scope)
+            value_form = items[i + 1]
+            check_destructure_value!(pattern, value_form)
+            value_code = emit_expr(value_form, child_env, current_scope)
             bind_code, child_env = emit_pattern_bind(pattern, value_code, child_env)
             binding_codes << bind_code
             i += 2
@@ -250,16 +254,42 @@ module Kapusta
         end
 
         def emit_local_form(form, env, current_scope)
+          emit_error!("#{form.head.name}: expected name and value") unless form.items.length == 3
+
           target = form.items[1]
           value_code = emit_expr(form.items[2], env, current_scope)
 
           if target.is_a?(Sym)
+            validate_binding_symbol!(target)
             ruby_name = define_local(env, target.name)
+            mark_mutability(env, target.name, mutable: form.head.name == 'var')
             ["#{ruby_name} = #{value_code}\nnil", env]
           else
             bind_code, env = emit_pattern_bind(target, value_code, env)
             [join_code(bind_code, 'nil'), env]
           end
+        end
+
+        def check_destructure_value!(pattern, value_form)
+          return unless pattern.is_a?(Vec) || pattern.is_a?(HashLit)
+
+          case value_form
+          when String, Numeric, Symbol, true, false
+            emit_error!('could not destructure literal')
+          end
+        end
+
+        def mark_mutability(env, name, mutable:)
+          @binding_mutability ||= {}
+          ruby_name = env.lookup(name)
+          @binding_mutability[ruby_name] = mutable
+        end
+
+        def mutable_binding?(env, name)
+          ruby_name = env.lookup_if_defined(name)
+          return false unless ruby_name
+
+          (@binding_mutability ||= {}).fetch(ruby_name, true)
         end
 
         def emit_local_expr(args, env, current_scope)
@@ -320,6 +350,7 @@ module Kapusta
             else
               binding = env.lookup(target.name)
               emit_error!("cannot set method binding: #{target.name}") if method_binding?(binding)
+              emit_error!("expected var #{target.name}") unless mutable_binding?(env, target.name)
 
               emit_assignment(binding, value_code)
             end

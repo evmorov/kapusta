@@ -1,0 +1,4 @@
+(macro joined [...]
+  (.. ...))
+
+(joined :a :b)

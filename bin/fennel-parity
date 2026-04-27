@@ -5,6 +5,7 @@ require 'open3'
 
 ROOT = File.expand_path('..', __dir__)
 EXAMPLES = File.join(ROOT, 'examples')
+EXAMPLES_ERRORS = File.join(ROOT, 'examples-errors')
 KAPUSTA = File.join(ROOT, 'exe', 'kapusta')
 KAPFMT = File.join(ROOT, 'exe', 'kapfmt')
 
@@ -41,8 +42,8 @@ COMPATIBLE = %w[
   underscore-patterns.kap
 ].freeze
 
-def run(cmd, file)
-  out, err, status = Open3.capture3(cmd, file, chdir: EXAMPLES)
+def run(cmd, file, chdir: EXAMPLES)
+  out, err, status = Open3.capture3(cmd, file, chdir:)
   [out, err, status]
 rescue StandardError => e
   ['', e.message, nil]
@@ -126,6 +127,17 @@ def check(name)
   [:ok, nil]
 end
 
+def check_error(name)
+  path = File.join(EXAMPLES_ERRORS, name)
+  _, _, k_status = run(KAPUSTA, path, chdir: EXAMPLES_ERRORS)
+  _, _, f_status = run('fennel', path, chdir: EXAMPLES_ERRORS)
+
+  return [:fail, 'fennel unexpectedly succeeded'] if f_status&.success?
+  return [:fail, "kapusta unexpectedly succeeded (exit #{k_status&.exitstatus})"] if k_status&.success?
+
+  [:ok, nil]
+end
+
 puts "Checking #{COMPATIBLE.size} compatible examples (kapfmt vs fnlfmt, kapusta vs fennel)...\n\n"
 
 failures = []
@@ -143,13 +155,30 @@ COMPATIBLE.each do |name|
   end
 end
 
+error_files = Dir.children(EXAMPLES_ERRORS).select { |n| n.end_with?('.kap') }.sort
+puts "\nChecking #{error_files.size} error examples (both kapusta and fennel must fail)...\n\n"
+
+error_failures = []
+error_files.each do |name|
+  status, reason = check_error(name)
+  case status
+  when :ok
+    puts "OK    #{name}"
+  when :fail
+    error_failures << [name, reason]
+    puts "FAIL  #{name}"
+  end
+end
+
 puts
-if failures.empty?
-  puts "All #{COMPATIBLE.size} compatible examples produce matching output."
+total_failures = failures + error_failures
+total = COMPATIBLE.size + error_files.size
+if total_failures.empty?
+  puts "All #{total} examples (#{COMPATIBLE.size} compatible + #{error_files.size} error) match expectations."
   exit 0
 else
-  puts "#{failures.size} of #{COMPATIBLE.size} examples failed:\n\n"
-  failures.each do |name, reason|
+  puts "#{total_failures.size} of #{total} examples failed:\n\n"
+  total_failures.each do |name, reason|
     puts "  * #{name}"
     reason.each_line { |l| puts "    #{l.rstrip}" }
     puts

@@ -11,8 +11,7 @@ module Kapusta
         end
 
         def build_if(args, env, current_scope)
-          return 'nil' if args.empty?
-          return emit_expr(args[0], env, current_scope) if args.length == 1
+          emit_error!('expected condition and body') if args.length < 2
 
           cond = emit_expr(args[0], env, current_scope)
           truthy = emit_if_branch(args[1], env, current_scope)
@@ -58,8 +57,11 @@ module Kapusta
         end
 
         def emit_case(args, env, current_scope, mode)
+          clauses = args[1..]
+          emit_error!('expected even number of pattern/body pairs') if clauses.length.odd?
+
           value_var = temp('case_value')
-          body = try_emit_native_case(value_var, args[1..], env, current_scope, mode)
+          body = try_emit_native_case(value_var, clauses, env, current_scope, mode)
           emit_error!('case/match clauses use patterns this compiler cannot translate') unless body
           [
             '(-> do',
