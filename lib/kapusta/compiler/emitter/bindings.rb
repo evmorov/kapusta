@@ -259,6 +259,7 @@ module Kapusta
             check_destructure_value!(pattern, value_form)
             value_code = emit_expr(value_form, child_env, current_scope)
             bind_code, child_env = emit_pattern_bind(pattern, value_code, child_env)
+            walk_pattern_syms(pattern) { |sym| mark_mutability(child_env, sym, mutable: false) }
             binding_codes << bind_code
             i += 2
           end
@@ -302,6 +303,21 @@ module Kapusta
           @binding_mutability ||= {}
           ruby_name = env.lookup(name)
           @binding_mutability[ruby_name] = mutable
+        end
+
+        def walk_pattern_syms(pattern, &block)
+          case pattern
+          when Sym
+            yield pattern unless pattern.name == '_'
+          when Vec
+            pattern.items.each do |item|
+              next if item.is_a?(Sym) && ['&', '...'].include?(item.name)
+
+              walk_pattern_syms(item, &block)
+            end
+          when HashLit
+            pattern.pairs.each { |pair| walk_pattern_syms(pair[1], &block) }
+          end
         end
 
         def mutable_binding?(env, name)

@@ -262,6 +262,11 @@ RSpec.describe 'examples-errors' do
       .to eq("rest-not-last.kap:6:3: expected rest argument before last parameter\n")
   end
 
+  it 'set-immutable-let.kap' do
+    expect(run_error_example('set-immutable-let.kap'))
+      .to eq("set-immutable-let.kap:2:3: expected var counter\n")
+  end
+
   it 'set-immutable-local.kap' do
     expect(run_error_example('set-immutable-local.kap'))
       .to eq("set-immutable-local.kap:8:3: expected var counter\n")
