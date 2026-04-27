@@ -27,6 +27,26 @@ RSpec.describe 'examples-errors' do
       .to eq("accumulate-missing-iterator.kap:5:3: expected initial value and iterator binding table\n")
   end
 
+  it 'auto-gensym-outside-quasiquote.kap' do
+    expect(run_error_example('auto-gensym-outside-quasiquote.kap'))
+      .to eq("auto-gensym-outside-quasiquote.kap: auto-gensym x# outside quasiquote\n")
+  end
+
+  it 'bad-multisym.kap' do
+    expect(run_error_example('bad-multisym.kap'))
+      .to eq("bad-multisym.kap:1:8: bad multisym: unbound.foo\n")
+  end
+
+  it 'bad-set-target.kap' do
+    expect(run_error_example('bad-set-target.kap'))
+      .to eq("bad-set-target.kap:2:1: bad set target: 1\n")
+  end
+
+  it 'bad-shorthand.kap' do
+    expect(run_error_example('bad-shorthand.kap'))
+      .to eq("bad-shorthand.kap:2:14: bad shorthand\n")
+  end
+
   it 'call-empty-form.kap' do
     expect(run_error_example('call-empty-form.kap'))
       .to eq("call-empty-form.kap:7:8: expected a function, macro, or special to call\n")
@@ -37,6 +57,11 @@ RSpec.describe 'examples-errors' do
       .to eq("call-literal-number.kap:6:14: cannot call literal value 1\n")
   end
 
+  it 'cannot-set-method-binding.kap' do
+    expect(run_error_example('cannot-set-method-binding.kap'))
+      .to eq("cannot-set-method-binding.kap:2:1: cannot set method binding: foo\n")
+  end
+
   it 'case-no-patterns.kap' do
     expect(run_error_example('case-no-patterns.kap'))
       .to eq("case-no-patterns.kap:3:5: expected at least one pattern/body pair\n")
@@ -45,6 +70,11 @@ RSpec.describe 'examples-errors' do
   it 'case-odd-pattern-body.kap' do
     expect(run_error_example('case-odd-pattern-body.kap'))
       .to eq("case-odd-pattern-body.kap:2:3: expected even number of pattern/body pairs\n")
+  end
+
+  it 'case-unsupported.kap' do
+    expect(run_error_example('case-unsupported.kap'))
+      .to eq("case-unsupported.kap:1:1: case/match clauses use patterns this compiler cannot translate\n")
   end
 
   it 'destructure-literal-number.kap' do
@@ -122,6 +152,16 @@ RSpec.describe 'examples-errors' do
       .to eq("import-macros-missing-module.kap:4:1: import-macros is not yet supported\n")
   end
 
+  it 'invalid-class-name.kap' do
+    expect(run_error_example('invalid-class-name.kap'))
+      .to eq("invalid-class-name.kap: invalid class name: lowercase\n")
+  end
+
+  it 'invalid-module-name.kap' do
+    expect(run_error_example('invalid-module-name.kap'))
+      .to eq("invalid-module-name.kap: invalid module name: lowercase\n")
+  end
+
   it 'let-odd-bindings.kap' do
     expect(run_error_example('let-odd-bindings.kap'))
       .to eq("let-odd-bindings.kap:2:3: expected even number of name/value bindings\n")
@@ -142,6 +182,16 @@ RSpec.describe 'examples-errors' do
       .to eq("local-without-value.kap:6:3: local: expected name and value\n")
   end
 
+  it 'macro-name-must-be-symbol.kap' do
+    expect(run_error_example('macro-name-must-be-symbol.kap'))
+      .to eq("macro-name-must-be-symbol.kap: macro name must be a symbol\n")
+  end
+
+  it 'macro-params-must-be-vector.kap' do
+    expect(run_error_example('macro-params-must-be-vector.kap'))
+      .to eq("macro-params-must-be-vector.kap:1:12: macro params must be a vector\n")
+  end
+
   it 'macro-unsafe-bind.kap' do
     expect(run_error_example('macro-unsafe-bind.kap'))
       .to eq("macro-unsafe-bind.kap:13:8: macro tried to bind unsafe without gensym\n")
@@ -152,6 +202,21 @@ RSpec.describe 'examples-errors' do
       .to eq("macro-vararg-with-operator.kap:5:3: tried to use vararg with operator\n")
   end
 
+  it 'macros-entry-must-be-fn.kap' do
+    expect(run_error_example('macros-entry-must-be-fn.kap'))
+      .to eq("macros-entry-must-be-fn.kap: macros entry value must be a fn form, got 1\n")
+  end
+
+  it 'macros-entry-params-must-be-vector.kap' do
+    expect(run_error_example('macros-entry-params-must-be-vector.kap'))
+      .to eq("macros-entry-params-must-be-vector.kap:1:19: macros entry params must be a vector\n")
+  end
+
+  it 'macros-expects-hash.kap' do
+    expect(run_error_example('macros-expects-hash.kap'))
+      .to eq("macros-expects-hash.kap: macros expects a hash literal\n")
+  end
+
   it 'match-no-patterns.kap' do
     expect(run_error_example('match-no-patterns.kap'))
       .to eq("match-no-patterns.kap:3:5: expected at least one pattern/body pair\n")
@@ -160,6 +225,16 @@ RSpec.describe 'examples-errors' do
   it 'mismatched-brackets.kap' do
     expect(run_error_example('mismatched-brackets.kap'))
       .to eq("mismatched-brackets.kap:4:19: unexpected closing delimiter ')'\n")
+  end
+
+  it 'nested-quasiquote.kap' do
+    expect(run_error_example('nested-quasiquote.kap'))
+      .to eq("nested-quasiquote.kap: nested quasiquote is not supported\n")
+  end
+
+  it 'odd-forms-in-hash.kap' do
+    expect(run_error_example('odd-forms-in-hash.kap'))
+      .to eq("odd-forms-in-hash.kap:1:9: odd number of forms in hash\n")
   end
 
   it 'only-rest-param.kap' do
@@ -212,9 +287,34 @@ RSpec.describe 'examples-errors' do
       .to eq("unclosed-table.kap:4:21: unexpected closing delimiter ']'\n")
   end
 
+  it 'undefined-symbol.kap' do
+    expect(run_error_example('undefined-symbol.kap'))
+      .to eq("undefined-symbol.kap:1:8: undefined symbol: missing-symbol\n")
+  end
+
+  it 'unexpected-eof.kap' do
+    expect(run_error_example('unexpected-eof.kap'))
+      .to eq("unexpected-eof.kap:1:2: unexpected eof\n")
+  end
+
+  it 'unknown-special-form.kap' do
+    expect(run_error_example('unknown-special-form.kap'))
+      .to eq("unknown-special-form.kap:1:1: unknown special form: catch\n")
+  end
+
   it 'unquote-outside-quote.kap' do
     expect(run_error_example('unquote-outside-quote.kap'))
       .to eq("unquote-outside-quote.kap:5:10: cannot emit form: ,x\n")
+  end
+
+  it 'unquote-splice-outside-list.kap' do
+    expect(run_error_example('unquote-splice-outside-list.kap'))
+      .to eq("unquote-splice-outside-list.kap: unquote-splice must appear inside a quoted list/vec\n")
+  end
+
+  it 'unterminated-string.kap' do
+    expect(run_error_example('unterminated-string.kap'))
+      .to eq("unterminated-string.kap:1:8: unterminated string\n")
   end
 
   it 'var-without-value.kap' do

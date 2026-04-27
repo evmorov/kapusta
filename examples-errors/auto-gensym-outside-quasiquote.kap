@@ -1,0 +1,4 @@
+(macro auto-bad []
+  x#)
+
+(auto-bad)

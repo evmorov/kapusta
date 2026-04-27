@@ -89,6 +89,8 @@ module Kapusta
           when 'macros'
             register_macros_form(list.rest)
             return List.new([Sym.new('do')])
+          when 'import-macros'
+            raise macro_error(:import_macros_unsupported, list)
           end
 
           key = lookup_key(name)

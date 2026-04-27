@@ -1,0 +1,2 @@
+(fn foo [] 1)
+(set foo 5)

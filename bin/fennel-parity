@@ -12,6 +12,7 @@ KAPFMT = File.join(ROOT, 'exe', 'kapfmt')
 COMPATIBLE = %w[
   ackermann.kap
   anonymous-greeter.kap
+  classify-wallet.kap
   climbing-stairs.kap
   describe.kap
   destructure.kap
@@ -31,6 +32,7 @@ COMPATIBLE = %w[
   match.kap
   min-max.kap
   or-patterns.kap
+  power-of-three.kap
   packet-router.kap
   points.kap
   primes.kap

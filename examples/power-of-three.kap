@@ -1,0 +1,12 @@
+(fn power-of-three? [n]
+  (macro divisible? [v k]
+    `(= 0 (% ,v ,k)))
+  (var x n)
+  (while (and (> x 1) (divisible? x 3))
+    (set x (/ x 3)))
+  (= x 1))
+
+(print (power-of-three? 27))
+(print (power-of-three? 9))
+(print (power-of-three? 45))
+(print (power-of-three? 1))

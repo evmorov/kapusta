@@ -1,0 +1,3 @@
+(macro splice-loose [] `,@x)
+
+(splice-loose)

@@ -1,0 +1,3 @@
+(macro nested [] `` x)
+
+(nested)

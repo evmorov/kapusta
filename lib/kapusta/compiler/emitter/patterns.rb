@@ -246,12 +246,60 @@ module Kapusta
         end
 
         def compile_native_hash(pattern, env, mode:, allow_pins:, state:)
-          pairs = pattern.pairs.map do |key, value|
-            raise PatternNotTranslatable unless key.is_a?(Symbol)
-
+          sym_pairs, other_pairs = pattern.pairs.partition { |key, _| key.is_a?(Symbol) }
+          sym_parts = sym_pairs.map do |key, value|
             "#{key}: #{compile_native_pattern(value, env, mode:, allow_pins:, state:)}"
           end
-          "{#{pairs.join(', ')}}"
+          return "{#{sym_parts.join(', ')}}" if other_pairs.empty?
+
+          capture = temp('hash')
+          sym_pattern = sym_parts.empty? ? 'Hash' : "{#{sym_parts.join(', ')}}"
+          other_pairs.each do |key, value|
+            compile_native_hash_value(value, capture, compile_native_hash_key(key), env, mode:, state:)
+          end
+          "#{sym_pattern} => #{capture}"
+        end
+
+        def compile_native_hash_key(key)
+          case key
+          when Symbol, String, Numeric, true, false then key.inspect
+          when nil then 'nil'
+          else raise PatternNotTranslatable
+          end
+        end
+
+        def compile_native_hash_value(value, capture, key_code, env, mode:, state:)
+          lookup = "#{capture}[#{key_code}]"
+          case value
+          when Sym
+            name = value.name
+            return if name == '_'
+
+            if nil_allowing_pattern_name?(name)
+              raise PatternNotTranslatable if state[:bound_names].key?(name)
+
+              state[:bound_names][name] = true
+              state[:binding_names] << name
+              state[:guards] << "(#{sanitize_local(name)} = #{lookup}; true)"
+            else
+              binding = mode == :match ? env.lookup_if_defined(name) : nil
+              if state[:bound_names].key?(name)
+                raise PatternNotTranslatable
+              elsif binding
+                state[:guards] << "#{lookup} == #{binding_value_code(binding)}"
+              else
+                state[:bound_names][name] = true
+                state[:binding_names] << name
+                state[:guards] << "!(#{sanitize_local(name)} = #{lookup}).nil?"
+              end
+            end
+          when nil
+            state[:guards] << "#{lookup}.nil?"
+          when Symbol, String, Numeric, true, false
+            state[:guards] << "#{lookup} == #{value.inspect}"
+          else
+            raise PatternNotTranslatable
+          end
         end
 
         def compile_native_pin(pattern, env, mode:, allow_pins:)

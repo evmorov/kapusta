@@ -111,8 +111,6 @@ module Kapusta
           when 'quasi-vec-tail' then emit_quasi_vec_tail(args, env, current_scope)
           when 'quasi-hash' then emit_quasi_hash(args, env, current_scope)
           when 'quasi-gensym' then emit_quasi_gensym(args[0], env, current_scope)
-          when 'macro', 'macros', 'import-macros'
-            emit_error!(:special_must_be_toplevel, name:)
           else
             emit_error!(:unknown_special_form, name:)
           end

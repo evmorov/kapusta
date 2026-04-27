@@ -61,15 +61,30 @@ module Kapusta
           emit_error!(:case_no_patterns) if clauses.empty?
           emit_error!(:case_odd_patterns) if clauses.length.odd?
 
+          value_code = emit_expr(args[0], env, current_scope)
+          if simple_case_subject?(args[0]) && simple_expression?(value_code)
+            body = try_emit_native_case(value_code, clauses, env, current_scope, mode)
+            emit_error!(:case_unsupported) unless body
+            return body
+          end
+
           value_var = temp('case_value')
           body = try_emit_native_case(value_var, clauses, env, current_scope, mode)
           emit_error!(:case_unsupported) unless body
           [
             '(-> do',
-            indent("#{value_var} = #{emit_expr(args[0], env, current_scope)}"),
+            indent("#{value_var} = #{value_code}"),
             indent(body),
             'end).call'
           ].join("\n")
+        end
+
+        def simple_case_subject?(form)
+          case form
+          when Sym then !form.dotted?
+          when Numeric, String, Symbol, true, false, nil then true
+          else false
+          end
         end
 
         def try_emit_native_case(value_var, clauses, env, current_scope, mode)
@@ -92,8 +107,13 @@ module Kapusta
             arms.concat(sub_arms)
             i += 2
           end
-          arms << ['else', indent('nil')].join("\n")
+          arms << ['else', indent('nil')].join("\n") unless wildcard_last?(clauses)
           ["case #{value_var}", *arms, 'end'].join("\n")
+        end
+
+        def wildcard_last?(clauses)
+          last_pattern = clauses[-2]
+          last_pattern.is_a?(Sym) && last_pattern.name == '_'
         end
 
         def try_native_arm(pattern, body, where_guards, env, current_scope, mode)

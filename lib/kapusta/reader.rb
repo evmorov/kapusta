@@ -270,8 +270,6 @@ module Kapusta
       start = @pos
       advance until delim?(peek)
       token = @src[start...@pos]
-      raise reader_error(:empty_token, position) if token.empty?
-
       parse_atom(token, position)
     end
 

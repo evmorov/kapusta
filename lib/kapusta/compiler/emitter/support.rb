@@ -128,7 +128,7 @@ module Kapusta
             code, current_env = emit_form_in_sequence(form, current_env, current_scope,
                                                       allow_method_definitions:,
                                                       result_needed: result && index == forms.length - 1)
-            codes << code
+            codes << code unless code.empty?
           end
           [codes.join("\n"), current_env]
         end

@@ -1,0 +1,11 @@
+(fn classify-wallet [wallet]
+  (case wallet
+    {1 a 25 b} (.. "pennies-" a "-quarters-" b)
+    {25 q} (.. "quarters-only-" q)
+    {1 p} (.. "pennies-only-" p)
+    _ "mixed"))
+
+(print (classify-wallet {1 5 25 2}))
+(print (classify-wallet {25 4}))
+(print (classify-wallet {1 10}))
+(print (classify-wallet {5 3 10 2}))
