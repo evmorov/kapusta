@@ -3,34 +3,32 @@ class ValidParenthesesSolution
     @pairs = {")" => "(", "]" => "[", "}" => "{"}
   end
   def valid?(s)
-    (-> do
-      pairs = @pairs
-      stack = []
-      chars = s.chars
-      i = 0
-      ok = true
-      while ok && (i < chars.length)
-        ch = chars[i]
-        if pairs.key?(ch)
-          if (-> do
-            thread_1 = stack.pop
-            if thread_1.nil?
-              nil
-            else
-              thread_1 == pairs[ch]
-            end
-          end).call
+    pairs = @pairs
+    stack = []
+    chars = s.chars
+    i = 0
+    ok = true
+    while ok && (i < chars.length)
+      ch = chars[i]
+      if pairs.key?(ch)
+        if (-> do
+          thread_1 = stack.pop
+          if thread_1.nil?
             nil
           else
-            ok = false
+            thread_1 == pairs[ch]
           end
+        end).call
+          nil
         else
-          stack.push(ch)
+          ok = false
         end
-        i += 1
+      else
+        stack.push(ch)
       end
-      ok && stack.empty?
-    end).call
+      i += 1
+    end
+    ok && stack.empty?
   end
 end
 ValidParenthesesSolution

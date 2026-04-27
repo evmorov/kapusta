@@ -1,31 +1,29 @@
 def roman_to_integer(s)
-  (-> do
-    value_map = {"I" => 1, "V" => 5, "X" => 10, "L" => 50, "C" => 100, "D" => 500, "M" => 1000}
-    chars = s.chars
-    n = chars.length
-    total = 0
-    i = 0
-    while i < n
-      curr = value_map[chars[i]]
-      ahead = if (i + 1) < n
-        value_map[chars[i + 1]]
-      else
-        0
-      end
-      subtract_q = curr < ahead
-      total += (if subtract_q
-        ahead - curr
-      else
-        curr
-      end)
-      i += (if subtract_q
-        2
-      else
-        1
-      end)
+  value_map = {"I" => 1, "V" => 5, "X" => 10, "L" => 50, "C" => 100, "D" => 500, "M" => 1000}
+  chars = s.chars
+  n = chars.length
+  total = 0
+  i = 0
+  while i < n
+    curr = value_map[chars[i]]
+    ahead = if (i + 1) < n
+      value_map[chars[i + 1]]
+    else
+      0
     end
-    total
-  end).call
+    subtract_q = curr < ahead
+    total += (if subtract_q
+      ahead - curr
+    else
+      curr
+    end)
+    i += (if subtract_q
+      2
+    else
+      1
+    end)
+  end
+  total
 end
 p roman_to_integer("III")
 p roman_to_integer("LVIII")

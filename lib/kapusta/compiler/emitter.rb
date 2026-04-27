@@ -31,7 +31,7 @@ module Kapusta
 
       def emit_file(forms)
         env = Env.new
-        body = emit_forms_with_headers(forms, env, :toplevel)
+        body = emit_forms_with_headers(forms, env, :toplevel, result: false)
         "#{body}\n"
       end
     end

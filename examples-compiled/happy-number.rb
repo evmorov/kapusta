@@ -9,15 +9,13 @@ def sum_of_squares(n)
   total
 end
 def happy?(n)
-  (-> do
-    seen = {}
-    x = n
-    while (x != 1) && !seen.key?(x)
-      seen[x] = true
-      x = sum_of_squares(x)
-    end
-    x == 1
-  end).call
+  seen = {}
+  x = n
+  while (x != 1) && !seen.key?(x)
+    seen[x] = true
+    x = sum_of_squares(x)
+  end
+  x == 1
 end
 p happy?(19)
 p happy?(2)

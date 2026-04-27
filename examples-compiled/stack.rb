@@ -20,10 +20,8 @@ class MinStack
   def pop
     mins = @mins
     mins.pop
-    (-> do
-      xs = @xs
-      xs.pop
-    end).call
+    xs = @xs
+    xs.pop
   end
   def top
     @xs[-1]

@@ -22,11 +22,9 @@ def join(tbl, sep)
   end
   s
 end
-(-> do
-  xs = [1, 2, 3, 4, 5, 6]
-  filtered = select(xs, method(:even?))
-  squared = map(filtered, proc do
-    _1 * _1
-  end)
-  p join(squared, ", ")
-end).call
+xs = [1, 2, 3, 4, 5, 6]
+filtered = select(xs, method(:even?))
+squared = map(filtered, proc do
+  _1 * _1
+end)
+p join(squared, ", ")

@@ -1,9 +1,7 @@
 def manhattan(edge)
-  (-> do
-    x1, y1 = edge[:from]
-    x2, y2 = edge[:to]
-    ((x1 - x2).abs) + ((y1 - y2).abs)
-  end).call
+  x1, y1 = edge[:from]
+  x2, y2 = edge[:to]
+  ((x1 - x2).abs) + ((y1 - y2).abs)
 end
 def total_distance(edges)
   edges.inject(0) do |total, edge|

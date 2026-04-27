@@ -34,7 +34,8 @@ module Kapusta
           args_var = temp('args')
           body_env = env.child
           bindings_code, body_env = emit_pattern_bind(pattern, args_var, body_env)
-          body_code, = emit_sequence(body, body_env, current_scope, allow_method_definitions: false)
+          body_code, = emit_sequence(body, body_env, current_scope,
+                                     allow_method_definitions: false, result: false)
           block_locals = pattern_names(pattern).map { |name| body_env.lookup(name) }.uniq
           block_locals_clause = block_locals.empty? ? '' : "; #{block_locals.join(', ')}"
           [
@@ -57,7 +58,8 @@ module Kapusta
         def build_simple_block_parts(pattern, body, env, current_scope)
           body_env = env.child
           params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
-          body_code, = emit_sequence(body, body_env, current_scope, allow_method_definitions: false)
+          body_code, = emit_sequence(body, body_env, current_scope,
+                                     allow_method_definitions: false, result: false)
           [params, body_code]
         end
 
@@ -148,7 +150,8 @@ module Kapusta
 
           body_env = env.child
           params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
-          body_code, = emit_sequence(body, body_env, :toplevel, allow_method_definitions: false)
+          body_code, = emit_sequence(body, body_env, :toplevel,
+                                     allow_method_definitions: false, result: false)
           header = params.empty? ? "def #{ruby_name}" : "def #{ruby_name}(#{params.join(', ')})"
           [
             header,
@@ -188,7 +191,8 @@ module Kapusta
           args_var = temp('args')
           method_env = env.child
           bindings_code, body_env = emit_pattern_bind(pattern, args_var, method_env)
-          body_code, = emit_sequence(body, body_env, :toplevel, allow_method_definitions: false)
+          body_code, = emit_sequence(body, body_env, :toplevel,
+                                     allow_method_definitions: false, result: false)
           block_locals = pattern_names(pattern).map { |name| body_env.lookup(name) }.uniq
           block_locals_clause = block_locals.empty? ? '' : "; #{block_locals.join(', ')}"
           ["do |*#{args_var}#{block_locals_clause}|", join_code(bindings_code, body_code)]

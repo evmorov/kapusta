@@ -1,12 +1,10 @@
-(-> do
-  name = nil
-  greet = proc do |value|
-    if value
-      "Hello, " + value.to_s + "!"
-    else
-      "Hello, anonymous!"
-    end
+name = nil
+greet = proc do |value|
+  if value
+    "Hello, " + value.to_s + "!"
+  else
+    "Hello, anonymous!"
   end
-  p greet.call(name)
-  p greet.call("Ada")
-end).call
+end
+p greet.call(name)
+p greet.call("Ada")
