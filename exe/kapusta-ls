@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative '../lib/kapusta/lsp'
+
+case ARGV.first
+when '--version', '-v'
+  puts "kapusta-ls #{Kapusta::VERSION}"
+when '--help', '-h'
+  puts 'usage: kapusta-ls           # speak LSP over stdio'
+  puts '       kapusta-ls --version'
+else
+  Kapusta::LSP.start
+end

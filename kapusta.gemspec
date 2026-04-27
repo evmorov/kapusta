@@ -20,10 +20,10 @@ Gem::Specification.new do |spec|
   spec.files = Dir.chdir(__dir__) do
     `git ls-files -z`.split("\x0").select do |path|
       path.start_with?('bin/', 'docs/', 'examples/', 'exe/', 'lib/', 'spec/') ||
-        %w[.rspec Gemfile README.md Rakefile kapfmt kapusta.gemspec].include?(path)
+        %w[.rspec Gemfile README.md Rakefile kapfmt kapusta-ls kapusta.gemspec].include?(path)
     end
   end
   spec.bindir = 'exe'
-  spec.executables = %w[kapfmt kapusta]
+  spec.executables = %w[kapfmt kapusta kapusta-ls]
   spec.require_paths = ['lib']
 end

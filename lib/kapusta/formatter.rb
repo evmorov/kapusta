@@ -10,6 +10,10 @@ module Kapusta
 
     PIPELINE_FORMS = %w[-> ->> -?> -?>> doto].freeze
 
+    def self.format(source, path: nil)
+      new([]).send(:format_source, source, path)
+    end
+
     def initialize(argv)
       @mode = :stdout
       @files = []

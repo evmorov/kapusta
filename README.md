@@ -14,11 +14,21 @@ For more information about Kapusta, see the official Fennel documentation and tu
 2. Compiled `.rb` files don't depend on Kapusta. Run with plain `ruby`, or load `.kap` files at runtime via `require 'kapusta'`.
 3. Two-way Ruby interop.
 
-## Usage
+## Install
 
 ```
 gem install kapusta
-kapfmt --fix examples/fizzbuzz.kap
+```
+
+It installs three executables:
+
+1. `kapusta`
+2. `kapfmt`
+3. `kapusta-ls`
+
+## Use
+
+```
 kapusta examples/fizzbuzz.kap
 ```
 
@@ -35,7 +45,7 @@ exe/kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
 ruby examples/fizzbuzz.rb
 ```
 
-## Using from Ruby
+## Use from Ruby
 
 Ruby can require a `.kap` file and use it directly.
 
@@ -100,12 +110,20 @@ Kapusta-specific additions:
 - a trailing symbol-keyed hash is emitted as Ruby keyword arguments
 - a final function literal argument is emitted as a Ruby block
 
-## Formatting
+## Format
 
 ```
-exe/kapfmt
+kapfmt --fix examples/fizzbuzz.kap
 ```
+
+## LSP
+
+Use `kapusta-ls` in the editor of your choice.
 
 ## Syntax highlight
 
-For Vim you can use https://git.sr.ht/~m15a/vim-fennel-syntax
+For Vim, you can use https://git.sr.ht/~m15a/vim-fennel-syntax
+
+## License
+
+[MIT](LICENSE)
