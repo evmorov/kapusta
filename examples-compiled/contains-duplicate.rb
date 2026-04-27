@@ -1,15 +1,8 @@
 def contains_duplicate?(nums)
   (-> do
-    seen = (-> do
-      kap_result_1 = {}
-      nums.each do |n|
-        kap_pair_2 = [n, true]
-        if kap_pair_2.is_a?(Array) && kap_pair_2.length == 2 && !kap_pair_2[0].nil? && !kap_pair_2[1].nil?
-          kap_result_1[kap_pair_2[0]] = kap_pair_2[1]
-        end
-      end
-      kap_result_1
-    end).call
+    seen = nums.each_with_object({}) do |n, kap_result_1|
+      kap_result_1[n] = true unless n.nil?
+    end
     seen.length < nums.length
   end).call
 end

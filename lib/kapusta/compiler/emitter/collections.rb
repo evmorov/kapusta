@@ -18,11 +18,44 @@ module Kapusta
 
         def emit_collect(args, env, current_scope)
           result_var = temp('result')
-          iter_code = emit_iteration(args[0], env, current_scope) do |iter_env|
-            body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
-            emit_hash_collection_step(result_var, body)
+          values_form = simple_values_call(args[1]) if args.length == 2
+          emit_iteration(args[0], env, current_scope,
+                         method: 'each_with_object({})', extra_block_param: result_var) do |iter_env|
+            if values_form
+              emit_collect_values_step(result_var, values_form, iter_env, current_scope)
+            else
+              body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
+              emit_hash_collection_step(result_var, body)
+            end
           end
-          emit_collection_result(result_var, '{}', iter_code)
+        end
+
+        def simple_values_call(form)
+          return unless form.is_a?(List) && form.items.length == 3
+
+          head = form.head
+          form if head.is_a?(Sym) && head.name == 'values'
+        end
+
+        def emit_collect_values_step(result_var, values_form, iter_env, current_scope)
+          key_form = values_form.items[1]
+          val_form = values_form.items[2]
+          key_code = emit_expr(key_form, iter_env, current_scope)
+          val_code = emit_expr(val_form, iter_env, current_scope)
+          assignment = "#{result_var}[#{key_code}] = #{val_code}"
+          guards = []
+          guards << "#{key_code}.nil?" unless definitely_non_nil?(key_form)
+          guards << "#{val_code}.nil?" unless definitely_non_nil?(val_form)
+          return assignment if guards.empty?
+
+          "#{assignment} unless #{guards.join(' || ')}"
+        end
+
+        def definitely_non_nil?(form)
+          case form
+          when Numeric, String, ::Symbol, TrueClass, FalseClass then true
+          else false
+          end
         end
 
         def emit_fcollect(args, env, current_scope)
@@ -134,14 +167,15 @@ module Kapusta
           end
         end
 
-        def emit_iteration(bindings_vec, env, current_scope, method: 'each', &block)
+        def emit_iteration(bindings_vec, env, current_scope, method: 'each', extra_block_param: nil, &block)
           emit_error!(:each_no_binding) unless bindings_vec.is_a?(Vec)
 
           items = bindings_vec.items
           iter_expr = items.last
           binding_pats = items[0...-1]
 
-          lua_iteration = emit_lua_compat_iteration(iter_expr, binding_pats, env, current_scope, method:, &block)
+          lua_iteration = emit_lua_compat_iteration(iter_expr, binding_pats, env, current_scope,
+                                                    method:, extra_block_param:, &block)
           return lua_iteration if lua_iteration
 
           coll_code = emit_expr(iter_expr, env, current_scope)
@@ -149,14 +183,16 @@ module Kapusta
             body_env = env.child
             value_var, bind_code = bind_iteration_param(binding_pats[0], 'value', body_env)
             body_code = block.call(body_env)
-            iteration_block("#{coll_code}.#{method} do |#{value_var}|", bind_code || '', body_code)
+            params = extra_block_param ? "#{value_var}, #{extra_block_param}" : value_var
+            iteration_block("#{coll_code}.#{method} do |#{params}|", bind_code || '', body_code)
           else
             parts_var = temp('parts')
             body_env = env.child
             pairs = binding_pats.each_with_index.map { |pattern, i| [pattern, "#{parts_var}[#{i}]"] }
             bind_code, body_env = emit_iteration_bindings(pairs, body_env)
             body_code = block.call(body_env)
-            iteration_block("#{coll_code}.#{method} do |*#{parts_var}|", bind_code, body_code)
+            params = extra_block_param ? "#{parts_var}, #{extra_block_param}" : "*#{parts_var}"
+            iteration_block("#{coll_code}.#{method} do |#{params}|", bind_code, body_code)
           end
         end
 
