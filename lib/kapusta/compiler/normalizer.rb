@@ -3,6 +3,8 @@
 module Kapusta
   module Compiler
     class Normalizer
+      include LuaCompat::Normalization
+
       def normalize_all(forms)
         forms.map { |form| normalize(form) }
       end
@@ -57,25 +59,8 @@ module Kapusta
             List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]]),
             list
           )
-        when 'pcall'
-          fn = items[1]
-          args = items[2..]
-          List.new([
-                     Sym.new('try'),
-                     List.new([Sym.new('values'), true, List.new([fn, *args])]),
-                     List.new([Sym.new('catch'), Sym.new('StandardError'), Sym.new('e'),
-                               List.new([Sym.new('values'), false, Sym.new('e')])])
-                   ])
-        when 'xpcall'
-          fn = items[1]
-          handler = items[2]
-          args = items[3..]
-          List.new([
-                     Sym.new('try'),
-                     List.new([Sym.new('values'), true, List.new([fn, *args])]),
-                     List.new([Sym.new('catch'), Sym.new('StandardError'), Sym.new('e'),
-                               List.new([Sym.new('values'), false, List.new([handler, Sym.new('e')])])])
-                   ])
+        when *LuaCompat::SPECIAL_FORMS
+          normalize_lua_compat_form(head.name, items)
         when '->', '->>', '-?>', '-?>>'
           inherit_position(normalize(thread(items[1..], head.name)), list)
         when 'doto'

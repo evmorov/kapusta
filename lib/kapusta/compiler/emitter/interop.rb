@@ -427,7 +427,6 @@ module Kapusta
         def emit_sym(sym, env)
           name = sym.name
           return 'self' if name == 'self'
-          return 'Float::INFINITY' if name == 'math.huge'
 
           if (binding = env.lookup_if_defined(sym))
             return binding_value_code(binding)

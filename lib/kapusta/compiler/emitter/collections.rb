@@ -4,6 +4,8 @@ module Kapusta
   module Compiler
     module EmitterModules
       module Collections
+        include LuaCompat::Emission
+
         private
 
         def emit_icollect(args, env, current_scope)
@@ -63,29 +65,8 @@ module Kapusta
         end
 
         def try_emit_inject(iter_expr, binding_pats, body_env, env, current_scope, acc_var, init_code, body_forms)
-          return unless iter_expr.is_a?(List) && iter_expr.head.is_a?(Sym)
-
-          coll_code = emit_expr(iter_expr.items[1], env, current_scope)
-          case iter_expr.head.name
-          when 'ipairs'
-            value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
-            if ignored_pattern?(binding_pats[0])
-              body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
-              return inject_block(coll_code, "#{acc_var}, #{value_var}", init_code, value_bind || '', body_code)
-            end
-            index_var, index_bind = bind_iteration_param(binding_pats[0], 'index', body_env)
-            bind_code = [index_bind, value_bind].compact.join("\n")
-            body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
-            inject_block("#{coll_code}.each_with_index", "#{acc_var}, (#{value_var}, #{index_var})",
-                         init_code, bind_code, body_code)
-          when 'pairs'
-            key_var, key_bind = bind_iteration_param(binding_pats[0], 'key', body_env)
-            value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
-            bind_code = [key_bind, value_bind].compact.join("\n")
-            body_code, = emit_sequence(body_forms, body_env, current_scope, allow_method_definitions: false)
-            inject_block(coll_code, "#{acc_var}, (#{key_var}, #{value_var})",
-                         init_code, bind_code, body_code)
-          end
+          emit_lua_compat_inject(iter_expr, binding_pats, body_env, env, current_scope, acc_var,
+                                 init_code, body_forms)
         end
 
         def inject_block(receiver, params, init_code, bind_code, body_code)
@@ -153,53 +134,28 @@ module Kapusta
           end
         end
 
-        def emit_iteration(bindings_vec, env, current_scope, method: 'each')
+        def emit_iteration(bindings_vec, env, current_scope, method: 'each', &block)
           emit_error!(:each_no_binding) unless bindings_vec.is_a?(Vec)
 
           items = bindings_vec.items
           iter_expr = items.last
           binding_pats = items[0...-1]
 
-          if iter_expr.is_a?(List) && iter_expr.head.is_a?(Sym)
-            case iter_expr.head.name
-            when 'ipairs'
-              body_env = env.child
-              value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
-              coll_code = emit_expr(iter_expr.items[1], env, current_scope)
-              if ignored_pattern?(binding_pats[0])
-                bind_code = value_bind || ''
-                body_code = yield(body_env)
-                return iteration_block("#{coll_code}.#{method} do |#{value_var}|", bind_code, body_code)
-              end
-              index_var, index_bind = bind_iteration_param(binding_pats[0], 'index', body_env)
-              bind_code = [index_bind, value_bind].compact.join("\n")
-              body_code = yield(body_env)
-              receiver = method == 'each' ? "#{coll_code}.each_with_index" : "#{coll_code}.each_with_index.#{method}"
-              header = "#{receiver} do |#{value_var}, #{index_var}|"
-              return iteration_block(header, bind_code, body_code)
-            when 'pairs'
-              body_env = env.child
-              key_var, key_bind = bind_iteration_param(binding_pats[0], 'key', body_env)
-              value_var, value_bind = bind_iteration_param(binding_pats[1], 'value', body_env)
-              bind_code = [key_bind, value_bind].compact.join("\n")
-              body_code = yield(body_env)
-              header = "#{emit_expr(iter_expr.items[1], env, current_scope)}.#{method} do |#{key_var}, #{value_var}|"
-              return iteration_block(header, bind_code, body_code)
-            end
-          end
+          lua_iteration = emit_lua_compat_iteration(iter_expr, binding_pats, env, current_scope, method:, &block)
+          return lua_iteration if lua_iteration
 
           coll_code = emit_expr(iter_expr, env, current_scope)
           if binding_pats.length == 1
             body_env = env.child
             value_var, bind_code = bind_iteration_param(binding_pats[0], 'value', body_env)
-            body_code = yield(body_env)
+            body_code = block.call(body_env)
             iteration_block("#{coll_code}.#{method} do |#{value_var}|", bind_code || '', body_code)
           else
             parts_var = temp('parts')
             body_env = env.child
             pairs = binding_pats.each_with_index.map { |pattern, i| [pattern, "#{parts_var}[#{i}]"] }
             bind_code, body_env = emit_iteration_bindings(pairs, body_env)
-            body_code = yield(body_env)
+            body_code = block.call(body_env)
             iteration_block("#{coll_code}.#{method} do |*#{parts_var}|", bind_code, body_code)
           end
         end
