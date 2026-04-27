@@ -67,6 +67,11 @@ RSpec.describe 'examples-errors' do
       .to eq("case-no-patterns.kap:3:5: expected at least one pattern/body pair\n")
   end
 
+  it 'case-no-subject.kap' do
+    expect(run_error_example('case-no-subject.kap'))
+      .to eq("case-no-subject.kap:1:1: missing subject\n")
+  end
+
   it 'case-odd-pattern-body.kap' do
     expect(run_error_example('case-odd-pattern-body.kap'))
       .to eq("case-odd-pattern-body.kap:2:3: expected even number of pattern/body pairs\n")
@@ -220,6 +225,11 @@ RSpec.describe 'examples-errors' do
   it 'match-no-patterns.kap' do
     expect(run_error_example('match-no-patterns.kap'))
       .to eq("match-no-patterns.kap:3:5: expected at least one pattern/body pair\n")
+  end
+
+  it 'match-no-subject.kap' do
+    expect(run_error_example('match-no-subject.kap'))
+      .to eq("match-no-subject.kap:1:1: missing subject\n")
   end
 
   it 'mismatched-brackets.kap' do

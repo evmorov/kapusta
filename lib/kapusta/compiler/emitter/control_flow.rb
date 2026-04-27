@@ -57,6 +57,8 @@ module Kapusta
         end
 
         def emit_case(args, env, current_scope, mode)
+          emit_error!(:case_no_subject) if args.empty?
+
           clauses = args[1..]
           emit_error!(:case_no_patterns) if clauses.empty?
           emit_error!(:case_odd_patterns) if clauses.length.odd?

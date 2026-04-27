@@ -14,6 +14,7 @@ module Kapusta
       cannot_emit_form: 'cannot emit form: %{form}',
       cannot_set_method_binding: 'cannot set method binding: %{name}',
       case_no_patterns: 'expected at least one pattern/body pair',
+      case_no_subject: 'missing subject',
       case_odd_patterns: 'expected even number of pattern/body pairs',
       case_unsupported: 'case/match clauses use patterns this compiler cannot translate',
       could_not_destructure_literal: 'could not destructure literal',
