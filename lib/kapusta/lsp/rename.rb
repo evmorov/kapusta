@@ -40,6 +40,10 @@ module Kapusta
           return error('cross-file rename requires a workspace') unless workspace_index
 
           rename_constant(target, new_name, workspace_index)
+        when :macro
+          return error('cross-file rename requires a workspace') unless workspace_index
+
+          rename_macro(uri, target, new_name, workspace_index)
         else
           error("rename not supported for #{target.kind}")
         end
@@ -157,7 +161,11 @@ module Kapusta
       end
 
       def local_target(walker, binding, seg, sym: nil)
-        kind = binding.kind == :toplevel_fn ? :toplevel_fn : :local
+        kind = case binding.kind
+               when :toplevel_fn then :toplevel_fn
+               when :macro, :macro_import then :macro
+               else :local
+               end
         Target.new(
           kind:,
           sym: sym || binding.sym,
@@ -262,6 +270,77 @@ module Kapusta
           occs.map { |o| text_edit_first_segment(o, new_name) }
         end
         { changes: }
+      end
+
+      def rename_macro(uri, target, new_name, workspace_index)
+        return error("invalid identifier: #{new_name}") unless Identifier.valid_local?(new_name)
+        return error('cannot resolve binding') unless target.binding
+
+        def_uri, def_binding = locate_macro_definition(uri, target.binding, workspace_index)
+        return error('macro definition not found') unless def_uri && def_binding
+
+        if workspace_index.macro_definition_anywhere?(new_name, except_uri: def_uri) ||
+           macro_defined_in_file?(workspace_index.entry(def_uri), new_name, except: def_binding)
+          return error("rename conflict: macro '#{new_name}' is already defined in the workspace")
+        end
+
+        changes = collect_macro_changes(def_uri, def_binding, new_name, workspace_index)
+        return error('no occurrences found') if changes.empty?
+
+        { changes: }
+      end
+
+      def locate_macro_definition(uri, binding, workspace_index)
+        case binding.kind
+        when :macro
+          entry = workspace_index.entry(uri)
+          return unless entry
+
+          indexed = entry.walker.bindings.find { |b| b.kind == :macro && b.name == binding.name }
+          indexed ? [uri, indexed] : nil
+        when :macro_import
+          workspace_index.find_macro_definition(uri, binding.import_module, binding.import_key)
+        end
+      end
+
+      def macro_defined_in_file?(entry, name, except:)
+        return false unless entry
+
+        entry.walker.bindings.any? do |b|
+          b.kind == :macro && b.name == name && !b.equal?(except)
+        end
+      end
+
+      def collect_macro_changes(def_uri, def_binding, new_name, workspace_index)
+        changes = {}
+
+        def_entry = workspace_index.entry(def_uri)
+        if def_entry
+          targets = def_entry.walker.bindings.select { |b| b.equal?(def_binding) }
+          targets += def_entry.walker.references.select do |r|
+            r.target.equal?(def_binding) || (r.target.nil? && r.name == def_binding.name)
+          end
+          changes[def_uri] = targets.map { |t| text_edit_first_segment(t, new_name) } unless targets.empty?
+        end
+
+        workspace_index.each_entry do |uri, entry|
+          next if uri == def_uri
+
+          imports = entry.walker.bindings.select do |b|
+            next false unless b.kind == :macro_import
+            next false unless b.import_key.to_s.tr('_', '-') == def_binding.name
+
+            workspace_index.import_resolves_to?(uri, b.import_module, def_uri)
+          end
+          next if imports.empty?
+
+          refs = entry.walker.references.select do |r|
+            imports.any? { |imp| imp.equal?(r.target) }
+          end
+          changes[uri] = (imports + refs).map { |t| text_edit_first_segment(t, new_name) }
+        end
+
+        changes
       end
 
       def rename_constant(target, new_name, workspace_index)

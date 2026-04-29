@@ -7,7 +7,7 @@ module Kapusta
   class LSP
     class ScopeWalker
       Binding = Struct.new(:kind, :name, :line, :column, :end_column, :scope, :segments,
-                           :sym, :in_module_or_class, keyword_init: true)
+                           :sym, :in_module_or_class, :import_module, :import_key, keyword_init: true)
       Reference = Struct.new(:name, :line, :column, :end_column, :scope, :sym,
                              :target, keyword_init: true)
       Scope = Struct.new(:id, :parent, :bindings, :kind) do
@@ -16,7 +16,7 @@ module Kapusta
         end
       end
 
-      SKIPPED_HEADS = %w[macro macros import-macros ivar cvar gvar quasi-sym quasi-list
+      SKIPPED_HEADS = %w[macros ivar cvar gvar quasi-sym quasi-list
                          quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym].freeze
 
       DISPATCHERS = {
@@ -40,7 +40,9 @@ module Kapusta
         'try' => :walk_try,
         'module' => :walk_module_class,
         'class' => :walk_module_class,
-        'hashfn' => :walk_hashfn
+        'hashfn' => :walk_hashfn,
+        'macro' => :walk_macro_def,
+        'import-macros' => :walk_import_macros
       }.freeze
 
       attr_reader :bindings, :references, :root_scope
@@ -239,6 +241,52 @@ module Kapusta
         list.items[1..]&.each { |form| walk_form(form, scope) }
       end
 
+      def walk_macro_def(list, scope)
+        items = list.items
+        name_sym = items[1]
+        params = items[2]
+        body = items[3..] || []
+        return unless name_sym.is_a?(Sym) && params.is_a?(Vec)
+
+        add_binding(name_sym, @root_scope, :macro)
+        fn_scope = make_scope(scope, :fn)
+        bind_param_vec(params, fn_scope)
+        body.each { |form| walk_form(form, fn_scope) }
+      end
+
+      def walk_import_macros(list, scope)
+        destructure = list.items[1]
+        module_arg = list.items[2]
+        return unless destructure.is_a?(HashLit)
+        return unless module_arg.is_a?(Symbol) || module_arg.is_a?(String)
+
+        module_label = module_arg.to_s.tr('_', '-')
+        destructure.pairs.each do |key, target|
+          next unless target.is_a?(Sym) && key.is_a?(Symbol)
+
+          add_import_macro_binding(target, scope, module_label, key)
+        end
+      end
+
+      def add_import_macro_binding(sym, _scope, module_label, import_key)
+        b = Binding.new(
+          kind: :macro_import,
+          name: sym.name,
+          line: sym.line,
+          column: sym.column,
+          end_column: sym.column + sym.name.length,
+          scope: @root_scope,
+          segments: sym.dotted? ? sym.segments : nil,
+          sym:,
+          in_module_or_class: false,
+          import_module: module_label,
+          import_key:
+        )
+        @bindings << b
+        @root_scope.bindings[sym.name] = b
+        b
+      end
+
       def walk_set(list, scope)
         target = list.items[1]
         value = list.items[2]
@@ -432,12 +480,13 @@ module Kapusta
       def walk_reference(sym, scope)
         return if hashfn_synthetic?(sym.name)
         return if sym.is_a?(MacroSym) || sym.is_a?(AutoGensym)
-        return if Compiler::SPECIAL_FORMS.include?(sym.name)
 
         target_name = sym.dotted? ? sym.segments.first : sym.name
         return if target_name.nil? || target_name.empty?
 
         target = scope.lookup(target_name)
+        return if target.nil? && Compiler::SPECIAL_FORMS.include?(sym.name)
+
         add_reference(sym, scope, target)
       end
 

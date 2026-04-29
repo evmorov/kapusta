@@ -14,10 +14,26 @@ module Kapusta
         case target.kind
         when :local, :toplevel_fn, :constant
           location_for_binding(uri, target.binding) if target.binding
+        when :macro
+          locations_for_macro(uri, target.binding, workspace_index)
         when :free_toplevel
           locations_for_toplevel(target.name, workspace_index)
         when :free_constant
           locations_for_constant(target.segment_prefix, workspace_index)
+        end
+      end
+
+      def locations_for_macro(uri, binding, workspace_index)
+        return unless binding
+
+        case binding.kind
+        when :macro
+          location_for_binding(uri, binding)
+        when :macro_import
+          def_uri, def_binding = workspace_index.find_macro_definition(
+            uri, binding.import_module, binding.import_key
+          )
+          location_for_binding(def_uri, def_binding) if def_uri && def_binding
         end
       end
 

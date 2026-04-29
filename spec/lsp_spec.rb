@@ -338,6 +338,42 @@ RSpec.describe Kapusta::LSP do
     end
   end
 
+  it 'jumps to a macro definition from a call site in the same file' do
+    text = "(macro unless [c & body] `(if (not ,c) (do ,(unpack body))))\n(unless false (print 1))\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_definition(uri: uri['a.kap'], line: 1, character: 1)
+      )
+      result = result_for(responses)['result']
+
+      expect(result).to eq(
+        'uri' => uri['a.kap'],
+        'range' => {
+          'start' => { 'line' => 0, 'character' => 7 },
+          'end' => { 'line' => 0, 'character' => 13 }
+        }
+      )
+    end
+  end
+
+  it 'jumps from a call site through (import-macros) to the macro definition file' do
+    text_a = "(macro swap! [a b] `(let [tmp# ,a] (set ,a ,b) (set ,b tmp#)))\n"
+    text_b = "(import-macros {: swap!} :a)\n(var x 1)\n(var y 2)\n(swap! x y)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['b.kap'], text_b),
+        frame_definition(uri: uri['b.kap'], line: 3, character: 1)
+      )
+      result = result_for(responses)['result']
+
+      expect(result['uri']).to eq(uri['a.kap'])
+      expect(result['range']['start']).to eq('line' => 0, 'character' => 7)
+    end
+  end
+
   it 'returns null definition when the symbol has no known binding' do
     text = "(foo)\n"
     responses = run(
@@ -347,6 +383,207 @@ RSpec.describe Kapusta::LSP do
     )
 
     expect(result_for(responses)['result']).to be_nil
+  end
+
+  it 'renames a macro definition and its call sites within a file' do
+    text = "(macro swap! [a b]\n  `(let [tmp# ,a]\n     (set ,a ,b)\n     (set ,b tmp#)))\n(swap! x y)\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text, 'swap!'), new_name: 'flip!')
+      )
+      changes = result_for(responses)['result']['documentChanges']
+
+      expect(changes.length).to eq(1)
+      edits = changes.first['edits']
+      expect(edits.map { |e| e['newText'] }).to eq(%w[flip! flip!])
+    end
+  end
+
+  it 'renames a macro across files when imported via shorthand destructure' do
+    text_a = "(macro swap! [a b]\n  `(let [tmp# ,a] (set ,a ,b) (set ,b tmp#)))\n"
+    text_b = "(import-macros {: swap!} :a)\n(var x 1)\n(var y 2)\n(swap! x y)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text_a),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'swap!'), new_name: 'flip!')
+      )
+      changes = result_for(responses)['result']['documentChanges']
+
+      uris = changes.map { |c| c['textDocument']['uri'] }
+      expect(uris).to include(uri['a.kap'], uri['b.kap'])
+
+      b_edits = changes.find { |c| c['textDocument']['uri'] == uri['b.kap'] }['edits']
+      expect(b_edits.map { |e| e['newText'] }).to all(eq('flip!'))
+      expect(b_edits.length).to eq(2)
+    end
+  end
+
+  it 'renames a macro across files when starting from an imported call site' do
+    text_a = "(macro swap! [a b]\n  `(let [tmp# ,a] (set ,a ,b) (set ,b tmp#)))\n"
+    text_b = "(import-macros {: swap!} :a)\n(var x 1)\n(var y 2)\n(swap! x y)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['b.kap'], text_b),
+        frame_rename(uri: uri['b.kap'],
+                     line: 3, character: cursor_at(text_b.lines[3], 'swap!')[:character],
+                     new_name: 'flip!')
+      )
+      changes = result_for(responses)['result']['documentChanges']
+
+      uris = changes.map { |c| c['textDocument']['uri'] }
+      expect(uris).to include(uri['a.kap'], uri['b.kap'])
+    end
+  end
+
+  it 'renames a user macro that shadows a core special form name' do
+    text = "(macro unless [c & body] `(if (not ,c) (do ,(unpack body))))\n(unless false (print \"x\"))\n(unless true (print \"y\"))\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text, 'unless'), new_name: 'except')
+      )
+      edits = result_for(responses)['result']['documentChanges'].first['edits']
+
+      expect(edits.map { |e| e['newText'] }).to eq(%w[except except except])
+    end
+  end
+
+  it 'offers prepareRename on a macro call site shadowing a special form' do
+    text = "(macro unless [c & body] `(if (not ,c) (do ,(unpack body))))\n(unless false 1)\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_prepare_rename(uri: uri['a.kap'], line: 1, character: 1)
+      )
+      result = result_for(responses)['result']
+
+      expect(result).to include('range', 'placeholder')
+      expect(result['placeholder']).to eq('unless')
+      expect(result['range']['start']).to eq('line' => 1, 'character' => 1)
+      expect(result['range']['end']).to eq('line' => 1, 'character' => 7)
+    end
+  end
+
+  it 'returns null prepareRename for an unshadowed special form call' do
+    text = "(unless false 1)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_prepare_rename(uri: 'file:///x.kap', line: 0, character: 1)
+    )
+
+    expect(result_for(responses)['result']).to be_nil
+  end
+
+  it 'renames only the targeted import when multiple macros are destructured together' do
+    text_a = "(macro foo [x] `,x)\n(macro bar [x] `,x)\n"
+    text_b = "(import-macros {: foo : bar} :a)\n(foo 1)\n(bar 2)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text_a),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'foo'), new_name: 'qux')
+      )
+      changes = result_for(responses)['result']['documentChanges']
+      b_edits = changes.find { |c| c['textDocument']['uri'] == uri['b.kap'] }['edits']
+
+      expect(b_edits.map { |e| e['newText'] }).to all(eq('qux'))
+      expect(b_edits.length).to eq(2)
+      expect(b_edits.flat_map { |e| [e['range']['start']['line'], e['range']['end']['line']] })
+        .to all(satisfy { |n| [0, 1].include?(n) })
+    end
+  end
+
+  it 'propagates a macro rename to multiple importing files' do
+    text_a = "(macro tap [x] `(do (print ,x) ,x))\n"
+    text_b = "(import-macros {: tap} :a)\n(tap 1)\n"
+    text_c = "(import-macros {: tap} :a)\n(tap 2)\n(tap 3)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b, 'c.kap' => text_c) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text_a),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'tap'), new_name: 'spy')
+      )
+      changes = result_for(responses)['result']['documentChanges']
+
+      expect(changes.map { |c| c['textDocument']['uri'] })
+        .to contain_exactly(uri['a.kap'], uri['b.kap'], uri['c.kap'])
+
+      changes.each do |c|
+        expect(c['edits'].map { |e| e['newText'] }).to all(eq('spy'))
+      end
+
+      c_edits = changes.find { |c| c['textDocument']['uri'] == uri['c.kap'] }['edits']
+      expect(c_edits.length).to eq(3)
+    end
+  end
+
+  it 'jumps to itself when invoked on a macro definition name' do
+    text = "(macro tap [x] `(do (print ,x) ,x))\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_definition(uri: uri['a.kap'], **cursor_at(text, 'tap'))
+      )
+      result = result_for(responses)['result']
+
+      expect(result).to eq(
+        'uri' => uri['a.kap'],
+        'range' => {
+          'start' => { 'line' => 0, 'character' => 7 },
+          'end' => { 'line' => 0, 'character' => 10 }
+        }
+      )
+    end
+  end
+
+  it 'jumps through (import-macros) to a fn-defined macro template in a .kapm module' do
+    text_helper = "(fn scaled [x] `(* ,x 10))\n{: scaled}\n"
+    text_user = "(import-macros {: scaled} :import-helpers)\n(print (scaled 3))\n"
+    with_workspace('import-helpers.kapm' => text_helper,
+                   'macros-import-helpers.kap' => text_user) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['macros-import-helpers.kap'], text_user),
+        frame_definition(uri: uri['macros-import-helpers.kap'],
+                         **cursor_at(text_user.lines[1], 'scaled').merge(line: 1))
+      )
+      result = result_for(responses)['result']
+
+      expect(result['uri']).to eq(uri['import-helpers.kapm'])
+      expect(result['range']['start']).to eq('line' => 0, 'character' => 4)
+    end
+  end
+
+  it 'returns null definition for a special-form call with no shadowing macro' do
+    text = "(unless false 1)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', line: 0, character: 1)
+    )
+
+    expect(result_for(responses)['result']).to be_nil
+  end
+
+  it 'rejects macro rename when the new name conflicts with an existing macro definition' do
+    text_a = "(macro swap! [a b] `(do ,a ,b))\n(macro flip! [a b] `(do ,b ,a))\n"
+    with_workspace('a.kap' => text_a) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text_a),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'swap!'), new_name: 'flip!')
+      )
+
+      expect(result_for(responses).dig('error', 'message')).to include('already defined')
+    end
   end
 
   it 'escapes file URIs built during workspace scans' do

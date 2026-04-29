@@ -9,6 +9,9 @@ module Kapusta
     class WorkspaceIndex
       Entry = Struct.new(:uri, :text, :forms, :walker, keyword_init: true)
 
+      MACRO_MODULE_EXTENSIONS = %w[kapm kap].freeze
+      SCAN_EXTENSIONS = %w[kap kapm].freeze
+
       def initialize(roots: [])
         @roots = Array(roots)
         @entries = {}
@@ -16,10 +19,12 @@ module Kapusta
 
       def scan!
         @roots.each do |root|
-          Dir.glob(File.join(root, '**', '*.kap')).each do |path|
-            uri = path_to_uri(path)
-            text = File.read(path)
-            store(uri, text)
+          SCAN_EXTENSIONS.each do |ext|
+            Dir.glob(File.join(root, '**', "*.#{ext}")).each do |path|
+              uri = path_to_uri(path)
+              text = File.read(path)
+              store(uri, text)
+            end
           end
         end
         self
@@ -107,6 +112,36 @@ module Kapusta
         end
       end
 
+      def each_entry(&)
+        @entries.each(&)
+      end
+
+      def find_macro_definition(importing_uri, module_label, import_key)
+        target_name = import_key.to_s.tr('_', '-')
+        resolve_module_uris(importing_uri, module_label).each do |uri|
+          entry = @entries[uri]
+          next unless entry
+
+          binding = entry.walker.bindings.find do |b|
+            %i[macro toplevel_fn].include?(b.kind) && b.name == target_name
+          end
+          return [uri, binding] if binding
+        end
+        nil
+      end
+
+      def import_resolves_to?(importing_uri, module_label, target_uri)
+        resolve_module_uris(importing_uri, module_label).include?(target_uri)
+      end
+
+      def macro_definition_anywhere?(name, except_uri: nil)
+        @entries.any? do |uri, entry|
+          next false if except_uri && uri == except_uri
+
+          entry.walker.bindings.any? { |b| b.kind == :macro && b.name == name }
+        end
+      end
+
       def constant_occurrences(prefix)
         result = {}
         @entries.each do |uri, entry|
@@ -140,6 +175,22 @@ module Kapusta
         return false if segs.length < prefix.length
 
         segs[0...prefix.length] == prefix
+      end
+
+      def resolve_module_uris(importing_uri, module_label)
+        importing_path = uri_to_path(importing_uri)
+        return [] unless importing_path
+
+        base_dir = File.dirname(importing_path)
+        snake_stem = module_label.to_s.tr('-', '_')
+        kebab_stem = module_label.to_s.tr('_', '-')
+        uris = []
+        [kebab_stem, snake_stem].uniq.each do |stem|
+          MACRO_MODULE_EXTENSIONS.each do |ext|
+            uris << path_to_uri(File.expand_path("#{stem}.#{ext}", base_dir))
+          end
+        end
+        uris
       end
 
       def first_segment_capitalized?(sym)
