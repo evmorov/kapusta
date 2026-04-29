@@ -290,9 +290,22 @@ module Kapusta
         return unless bindings_vec.is_a?(Vec)
 
         for_scope = make_scope(scope, :for)
-        counter = bindings_vec.items[0]
-        bindings_vec.items[1..]&.each { |form| walk_form(form, scope) }
+        items = bindings_vec.items
+        counter = items[0]
+        i = 1
+        until_forms = []
+        while i < items.length
+          item = items[i]
+          if item.is_a?(Sym) && item.name == '&until'
+            until_forms << items[i + 1] if items[i + 1]
+            i += 2
+          else
+            walk_form(item, scope)
+            i += 1
+          end
+        end
         bind_pattern(counter, for_scope, :for_counter) if counter
+        until_forms.each { |form| walk_form(form, for_scope) }
         body&.each { |form| walk_form(form, for_scope) }
       end
 
@@ -325,12 +338,13 @@ module Kapusta
         acc_scope = make_scope(scope, :accumulate)
         acc_name = items[0]
         acc_init = items[1]
-        iter_var = items[2]
-        iter_expr = items[3]
+        iter_items = items[2..]
+        iter_expr = iter_items.last
+        binders = iter_items[0...-1]
         walk_form(acc_init, scope)
         bind_pattern(acc_name, acc_scope, :accumulator)
         walk_form(iter_expr, scope)
-        bind_pattern(iter_var, acc_scope, :each_var)
+        binders.each { |b| bind_pattern(b, acc_scope, :each_var) }
         body&.each { |form| walk_form(form, acc_scope) }
       end
 

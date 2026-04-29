@@ -145,6 +145,35 @@ RSpec.describe Kapusta::LSP do
     expect(changes.first['edits'].map { |e| e['newText'] }).to eq(%w[y y y])
   end
 
+  it 'renames a let binding referenced inside an accumulate iterator with multiple binders' do
+    text = "(let [xs [1 2 3]\n      total (accumulate [s 0 _ x (ipairs xs)] (+ s x))]\n  (print total))\n"
+    idx = text.index('(ipairs xs)') + 'ipairs '.length + 1
+    prefix = text[0...idx]
+    last_nl = prefix.rindex("\n")
+    position = { line: prefix.count("\n"), character: last_nl ? idx - last_nl - 1 : idx }
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **position, new_name: 'ys')
+    )
+    changes = result_for(responses)['result']['documentChanges']
+
+    expect(changes.length).to eq(1)
+    expect(changes.first['edits'].map { |e| e['newText'] }).to eq(%w[ys ys])
+  end
+
+  it 'renames a for-loop counter referenced inside &until' do
+    text = "(for [d 2 10 &until (>= d 5)] (print d))\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'd'), new_name: 'k')
+    )
+    edits = result_for(responses)['result']['documentChanges'].first['edits']
+
+    expect(edits.map { |e| e['newText'] }).to eq(%w[k k k])
+  end
+
   it 'renames a top-level fn across files' do
     text_a = "(fn greet [n] (print n))\n(greet \"x\")\n"
     text_b = "(greet 42)\n"
