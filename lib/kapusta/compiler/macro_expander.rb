@@ -1,21 +1,21 @@
 # frozen_string_literal: true
 
+require_relative 'macro_gensym'
+require_relative 'macro_lowerer'
+require_relative 'macro_importer'
+
 module Kapusta
   module Compiler
     class MacroExpander
       class Error < Kapusta::Error; end
 
-      @gensym_counter = 0
-
       class << self
         def fresh_gensym(prefix)
-          @gensym_counter += 1
-          GeneratedSym.new("#{prefix}_g#{@gensym_counter}", @gensym_counter)
+          MacroGensym.fresh_gensym(prefix)
         end
 
         def fresh_local_gensym(prefix)
-          @gensym_counter += 1
-          GeneratedSym.new("#{prefix}_local_#{@gensym_counter}", @gensym_counter)
+          MacroGensym.fresh_local_gensym(prefix)
         end
       end
 
@@ -150,13 +150,8 @@ module Kapusta
           raise macro_error(:import_macros_module_invalid, form)
         end
 
-        module_label = module_arg.is_a?(Symbol) ? module_arg.to_s.tr('_', '-') : module_arg.to_s
-        absolute_path = resolve_macro_module(module_arg) ||
-                        raise(macro_error(:import_macros_module_not_found, form, module: module_label))
-
-        raise macro_error(:import_macros_cycle, form, module: module_label) if @loading.include?(absolute_path)
-
-        exports = load_macro_module(absolute_path, module_label, form)
+        module_label = MacroImporter.module_label(module_arg)
+        exports = macro_importer.load(module_arg, form)
         if destructure.is_a?(HashLit)
           register_imported_macros(destructure, exports, module_label, form)
         else
@@ -164,79 +159,8 @@ module Kapusta
         end
       end
 
-      def resolve_macro_module(module_arg)
-        snake_stem = module_arg.to_s
-        kebab_stem = snake_stem.tr('_', '-')
-        base = @path && !@path.start_with?('(') ? File.dirname(File.expand_path(@path)) : Dir.pwd
-        [kebab_stem, snake_stem].uniq.each do |stem|
-          %w[kapm kap fnlm fnl].each do |ext|
-            candidate = File.expand_path("#{stem}.#{ext}", base)
-            return candidate if File.file?(candidate)
-          end
-        end
-        nil
-      end
-
-      def load_macro_module(absolute_path, module_label, form)
-        @loading.push(absolute_path)
-        begin
-          source = File.read(absolute_path)
-          forms = Reader.read_all(source)
-        rescue Kapusta::Error => e
-          raise e.with_defaults(path: absolute_path)
-        end
-        raise macro_error(:import_macros_module_no_exports, form, module: module_label) unless forms.last.is_a?(HashLit)
-
-        processed = forms.map { |f| process_module_form(f) }
-        wrapper = List.new([List.new([Sym.new('fn'), Vec.new([]), *processed])])
-        ruby = Compiler.compile_forms([wrapper], path: absolute_path)
-        result = TOPLEVEL_BINDING.eval(ruby, absolute_path, 1)
-
-        raise macro_error(:import_macros_module_no_exports, form, module: module_label) unless result.is_a?(Hash)
-
-        result
-      ensure
-        @loading.pop
-      end
-
-      def process_module_form(form)
-        return lower_fn_form(form) if fn_form_with_body?(form)
-
-        Lowering.new.lower(form)
-      end
-
-      def fn_form_with_body?(form)
-        form.is_a?(List) && form.head.is_a?(Sym) && %w[fn lambda λ].include?(form.head.name)
-      end
-
-      def lower_fn_form(form)
-        items = form.items
-        if items[1].is_a?(Sym) && items[2].is_a?(Vec)
-          name_sym = items[1]
-          params = items[2]
-          body = items[3..] || []
-        elsif items[1].is_a?(Vec)
-          name_sym = nil
-          params = items[1]
-          body = items[2..] || []
-        else
-          return form
-        end
-
-        lowering = Lowering.new
-        lowered_body = body.map { |f| lowering.lower(f) }
-        gensyms = lowering.collected_gensyms
-        inner = wrap_gensyms(gensyms, lowered_body)
-        head_items = name_sym ? [form.head, name_sym, params] : [form.head, params]
-        List.new(head_items + inner)
-      end
-
-      def wrap_gensyms(gensyms, body)
-        return body if gensyms.empty?
-
-        bindings = gensyms.flat_map { |sym, prefix| [sym, List.new([Sym.new('quasi-gensym'), prefix])] }
-        wrapped = body.length == 1 ? body[0] : List.new([Sym.new('do'), *body])
-        [List.new([Sym.new('let'), Vec.new(bindings), wrapped])]
+      def macro_importer
+        @macro_importer ||= MacroImporter.new(path: @path, loading: @loading, error_class: Error)
       end
 
       def register_imported_macros(destructure, exports, module_label, form)
@@ -263,146 +187,13 @@ module Kapusta
       end
 
       def compile_macro(name, params, body)
-        lowering = Lowering.new
-        lowered_body = body.map { |form| lowering.lower(form) }
-        gensym_locals = lowering.collected_gensyms
-
-        wrapped =
-          if gensym_locals.empty?
-            List.new([Sym.new('fn'), params, *lowered_body])
-          else
-            let_bindings = gensym_locals.flat_map do |gensym_sym, prefix|
-              [gensym_sym, List.new([Sym.new('quasi-gensym'), prefix])]
-            end
-            inner = lowered_body.length == 1 ? lowered_body.first : List.new([Sym.new('do'), *lowered_body])
-            List.new([Sym.new('fn'), params, List.new([Sym.new('let'), Vec.new(let_bindings), inner])])
-          end
-
         macro_path = @path || "(macro #{name})"
-        ruby = Compiler.compile_forms([wrapped], path: macro_path)
-        TOPLEVEL_BINDING.eval(ruby, macro_path, 1)
+        MacroLowerer.compile(params:, body:, path: macro_path, error_class: Error)
       end
 
       def invoke_macro(key, args)
         proc_obj = @macros[key]
         proc_obj.call(*args)
-      end
-
-      class Lowering
-        def initialize
-          @gensyms = {}
-        end
-
-        def collected_gensyms
-          @gensyms.map { |prefix, sym| [sym, prefix] }
-        end
-
-        def lower(form)
-          case form
-          when Quasiquote then copy_position(lower_quasi(form.form), form)
-          when Unquote, UnquoteSplice
-            raise Error, Kapusta::Errors.format(:unquote_outside_quasiquote)
-          when AutoGensym
-            raise Error, Kapusta::Errors.format(:auto_gensym_outside_quasiquote, name: form.name)
-          when List then copy_position(List.new(form.items.map { |item| lower(item) }), form)
-          when Vec then copy_position(Vec.new(form.items.map { |item| lower(item) }), form)
-          when HashLit
-            copy_position(
-              HashLit.new(form.entries.map do |entry|
-                entry.is_a?(Array) ? [lower(entry[0]), lower(entry[1])] : entry
-              end),
-              form
-            )
-          else
-            form
-          end
-        end
-
-        def copy_position(target, source)
-          return target unless target.respond_to?(:line=) && source.respond_to?(:line)
-
-          target.line ||= source.line
-          target.column ||= source.column
-          target
-        end
-
-        def lower_quasi(form)
-          case form
-          when AutoGensym then gensym_local_for(form.name)
-          when Sym then List.new([Sym.new('quasi-sym'), form.name])
-          when List then lower_quasi_list(form)
-          when Vec then lower_quasi_vec(form)
-          when HashLit then lower_quasi_hash(form)
-          when Unquote then lower(form.form)
-          when UnquoteSplice
-            raise Error, Kapusta::Errors.format(:unquote_splice_outside_list)
-          when Quasiquote
-            raise Error, Kapusta::Errors.format(:nested_quasiquote)
-          else
-            form
-          end
-        end
-
-        def lower_quasi_list(list)
-          items = list.items
-          return List.new([Sym.new('quasi-list')]) if items.empty?
-
-          if (tail_expr = splice_tail(items))
-            head_items = items[0...-1].map { |item| lower_quasi(item) }
-            return List.new([Sym.new('quasi-list-tail'), Vec.new(head_items), tail_expr])
-          end
-
-          lowered_items = items.map { |item| lower_quasi_item(item) }
-          List.new([Sym.new('quasi-list'), *lowered_items])
-        end
-
-        def lower_quasi_vec(vec)
-          items = vec.items
-          if (tail_expr = splice_tail(items))
-            head_items = items[0...-1].map { |item| lower_quasi(item) }
-            return List.new([Sym.new('quasi-vec-tail'), Vec.new(head_items), tail_expr])
-          end
-
-          lowered_items = items.map { |item| lower_quasi_item(item) }
-          List.new([Sym.new('quasi-vec'), *lowered_items])
-        end
-
-        def lower_quasi_hash(hash)
-          parts = []
-          hash.entries.each do |entry|
-            next unless entry.is_a?(Array)
-
-            key, value = entry
-            parts << lower_quasi(key) << lower_quasi(value)
-          end
-          List.new([Sym.new('quasi-hash'), *parts])
-        end
-
-        def lower_quasi_item(item)
-          if item.is_a?(Unquote) && unpack_call?(item.form)
-            inner = lower(item.form.items[1])
-            List.new([Sym.new('.'), inner, 0])
-          else
-            lower_quasi(item)
-          end
-        end
-
-        def splice_tail(items)
-          last = items.last
-          return unless last
-          return lower(last.form) if last.is_a?(UnquoteSplice)
-          return lower(last.form.items[1]) if last.is_a?(Unquote) && unpack_call?(last.form)
-
-          nil
-        end
-
-        def unpack_call?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'unpack'
-        end
-
-        def gensym_local_for(prefix)
-          @gensyms[prefix] ||= MacroExpander.fresh_local_gensym(prefix)
-        end
       end
     end
   end
