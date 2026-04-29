@@ -440,7 +440,8 @@ RSpec.describe Kapusta::LSP do
   end
 
   it 'renames a user macro that shadows a core special form name' do
-    text = "(macro unless [c & body] `(if (not ,c) (do ,(unpack body))))\n(unless false (print \"x\"))\n(unless true (print \"y\"))\n"
+    text = "(macro unless [c & body] `(if (not ,c) (do ,(unpack body))))\n" \
+           "(unless false (print \"x\"))\n(unless true (print \"y\"))\n"
     with_workspace('a.kap' => text) do |root_uri, uri|
       responses = run(
         frame_initialize([root_uri]),
