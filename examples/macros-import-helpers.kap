@@ -1,0 +1,3 @@
+(import-macros {: scaled} :import-helpers)
+
+(print (scaled 3))

@@ -24,6 +24,9 @@ COMPATIBLE = %w[
   hashfn.kap
   leap-year.kap
   macros-dbg.kap
+  macros-import-helpers.kap
+  macros-import-whole.kap
+  macros-import.kap
   macros-multi.kap
   macros-swap.kap
   macros-thrice-if.kap
@@ -44,12 +47,14 @@ COMPATIBLE = %w[
   underscore-patterns.kap
 ].freeze
 
-def run(cmd, file, chdir: EXAMPLES)
-  out, err, status = Open3.capture3(cmd, file, chdir:)
+def run(cmd, file, chdir: EXAMPLES, env: {})
+  out, err, status = Open3.capture3(env, cmd, file, chdir:)
   [out, err, status]
 rescue StandardError => e
   ['', e.message, nil]
 end
+
+FENNEL_ENV = { 'FENNEL_MACRO_PATH' => './?.kapm;./?.kap' }.freeze
 
 def strip_outer_quotes(line)
   if line.length >= 2 && line.start_with?('"') && line.end_with?('"')
@@ -100,7 +105,7 @@ end
 
 def check_run(path)
   k_out, k_err, k_status = run(KAPUSTA, path)
-  f_out, f_err, f_status = run('fennel', path)
+  f_out, f_err, f_status = run('fennel', path, env: FENNEL_ENV)
 
   return "kapusta exited #{k_status&.exitstatus}: #{k_err.strip}" if k_status.nil? || !k_status.success?
   return "fennel exited #{f_status&.exitstatus}: #{f_err.strip}" if f_status.nil? || !f_status.success?
@@ -132,7 +137,7 @@ end
 def check_error(name)
   path = File.join(EXAMPLES_ERRORS, name)
   _, _, k_status = run(KAPUSTA, path, chdir: EXAMPLES_ERRORS)
-  _, _, f_status = run('fennel', path, chdir: EXAMPLES_ERRORS)
+  _, _, f_status = run('fennel', path, chdir: EXAMPLES_ERRORS, env: FENNEL_ENV)
 
   return [:fail, 'fennel unexpectedly succeeded'] if f_status&.success?
   return [:fail, "kapusta unexpectedly succeeded (exit #{k_status&.exitstatus})"] if k_status&.success?

@@ -1,0 +1,3 @@
+(import-macros {: missing} :missing-macro-helper)
+
+(missing 1)

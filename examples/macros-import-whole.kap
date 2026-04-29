@@ -1,0 +1,5 @@
+(import-macros mine :shared-macros)
+
+(var n 5)
+(mine.inc-by n 2)
+(print n)

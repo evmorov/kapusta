@@ -154,7 +154,23 @@ RSpec.describe 'examples-errors' do
 
   it 'import-macros-missing-module.kap' do
     expect(run_error_example('import-macros-missing-module.kap'))
-      .to eq("import-macros-missing-module.kap:4:1: import-macros is not yet supported\n")
+      .to eq("import-macros-missing-module.kap:4:1: import-macros: module nonexistent-module not found\n")
+  end
+
+  it 'import-macros-macro-not-found.kap' do
+    message = 'import-macros: macro missing not exported by module missing-macro-helper'
+    expect(run_error_example('import-macros-macro-not-found.kap'))
+      .to eq("import-macros-macro-not-found.kap:1:1: #{message}\n")
+  end
+
+  it 'import-macros-no-exports.kap' do
+    expect(run_error_example('import-macros-no-exports.kap'))
+      .to eq("import-macros-no-exports.kap:1:1: import-macros: module no-exports-helper has no export table\n")
+  end
+
+  it 'import-macros-module-invalid.kap' do
+    expect(run_error_example('import-macros-module-invalid.kap'))
+      .to eq("import-macros-module-invalid.kap:1:1: import-macros expects a symbol or string module name\n")
   end
 
   it 'invalid-class-name.kap' do

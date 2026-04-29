@@ -1,0 +1,4 @@
+(fn inc-by [target n]
+  `(set ,target (+ ,target ,n)))
+
+{: inc-by}

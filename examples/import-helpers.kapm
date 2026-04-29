@@ -1,0 +1,9 @@
+(local FACTOR 10)
+
+(fn double [x]
+  (* x 2))
+
+(fn scaled [x]
+  `(* ,x ,(double FACTOR)))
+
+{: scaled}

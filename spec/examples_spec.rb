@@ -551,4 +551,16 @@ RSpec.describe 'examples' do
       50
     OUT
   end
+
+  it 'macros-import.kap' do
+    expect(run_example('macros-import.kap')).to eq("8\n")
+  end
+
+  it 'macros-import-helpers.kap' do
+    expect(run_example('macros-import-helpers.kap')).to eq("60\n")
+  end
+
+  it 'macros-import-whole.kap' do
+    expect(run_example('macros-import-whole.kap')).to eq("7\n")
+  end
 end

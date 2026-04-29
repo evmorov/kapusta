@@ -1,0 +1,6 @@
+(import-macros {: inc-by} :shared-macros)
+
+(var counter 0)
+(inc-by counter 5)
+(inc-by counter 3)
+(print counter)

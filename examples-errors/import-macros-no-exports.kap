@@ -1,0 +1,3 @@
+(import-macros {: foo} :no-exports-helper)
+
+(foo 1)
