@@ -1,0 +1,41 @@
+(fn positive? [n] (> n 0))
+(fn square [n] (* n n))
+(fn add [x y] (+ x y))
+(fn mul [x y] (* x y))
+(fn nonzero [n] (if (= n 0) nil n))
+(fn non-empty [s] (if (= s "") nil s))
+(fn wrap [s] (.. ">>" s "<<"))
+(fn shout [s] (.. s "!"))
+
+(fn keep [pred xs]
+  (icollect [_ x (ipairs xs)]
+    (when (pred x) x)))
+
+(fn map [f xs]
+  (icollect [_ x (ipairs xs)]
+    (f x)))
+
+(fn join [sep xs]
+  (var s "")
+  (each [_ x (ipairs xs)]
+    (if (= s "")
+        (set s (.. x))
+        (set s (.. s sep x))))
+  s)
+
+(let [scores [-2 3 -1 4 0 5]
+      report (->> scores
+                  (keep positive?)
+                  (map square)
+                  (join ", "))
+      adjusted (-> 7 (add 3) (mul 2) (square))
+      ok (-?> "hello" (non-empty) (wrap) (shout))
+      bad (-?> "" (non-empty) (wrap) (shout))
+      live (-?>> 5 (nonzero) (mul 3) (add 1))
+      dead (-?>> 0 (nonzero) (mul 3) (add 1))]
+  (print report)
+  (print adjusted)
+  (print ok)
+  (print bad)
+  (print live)
+  (print dead))

@@ -43,6 +43,7 @@ COMPATIBLE = %w[
   shapes.kap
   squares.kap
   sum.kap
+  thread-styles.kap
   tic-tac-toe.kap
   underscore-patterns.kap
 ].freeze

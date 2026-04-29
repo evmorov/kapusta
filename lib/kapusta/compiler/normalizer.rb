@@ -104,19 +104,29 @@ module Kapusta
       end
 
       def thread_short(forms, position)
-        forms[1..].reduce(forms.first) do |memo, form|
-          temp = thread_temp
-          List.new([
-                     Sym.new('let'),
-                     Vec.new([temp, memo]),
-                     List.new([
-                                Sym.new('if'),
-                                List.new([Sym.new('='), temp, nil]),
-                                nil,
-                                thread_step(temp, form, position)
-                              ])
-                   ])
+        steps = forms[1..]
+        return forms.first if steps.empty?
+
+        prev_temp = thread_temp
+        binding_items = [prev_temp, forms.first]
+        body = nil
+        last_index = steps.length - 1
+        steps.each_with_index do |form, i|
+          guarded = List.new([
+                               Sym.new('if'),
+                               List.new([Sym.new('='), prev_temp, nil]),
+                               nil,
+                               thread_step(prev_temp, form, position)
+                             ])
+          if i == last_index
+            body = guarded
+          else
+            temp = thread_temp
+            binding_items.push(temp, guarded)
+            prev_temp = temp
+          end
         end
+        List.new([Sym.new('let'), Vec.new(binding_items), body])
       end
 
       def thread_step(memo, form, position)
