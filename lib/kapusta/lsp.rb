@@ -3,6 +3,7 @@
 require 'json'
 require 'uri'
 require_relative '../kapusta'
+require_relative 'lsp/definition'
 require_relative 'lsp/diagnostics'
 require_relative 'lsp/formatting'
 require_relative 'lsp/rename'
@@ -111,6 +112,7 @@ module Kapusta
       when 'textDocument/didSave' then on_did_save(params)
       when 'textDocument/didClose' then on_did_close(params)
       when 'textDocument/formatting' then reply(id, formatting(params))
+      when 'textDocument/definition' then reply(id, definition(params))
       when 'textDocument/prepareRename' then reply(id, prepare_rename(params))
       when 'textDocument/rename' then handle_rename(id, params)
       else
@@ -139,6 +141,7 @@ module Kapusta
         capabilities: {
           textDocumentSync: { openClose: true, change: FULL_SYNC, save: { includeText: false } },
           documentFormattingProvider: true,
+          definitionProvider: true,
           renameProvider: { prepareProvider: true }
         },
         serverInfo: { name: 'kapusta-ls', version: Kapusta::VERSION }
@@ -211,6 +214,18 @@ module Kapusta
       return [] unless entry
 
       Formatting.text_edits(entry[:text], uri_to_path(uri))
+    end
+
+    def definition(params)
+      uri = params.dig('textDocument', 'uri')
+      pos = params['position'] || {}
+      entry = @sources[uri]
+      return unless entry
+
+      result = Definition.find(uri, entry[:text], pos['line'] || 0, pos['character'] || 0,
+                               workspace_index: @workspace_index)
+      debug("definition: uri=#{uri} pos=#{pos.inspect} result=#{result.inspect}")
+      result
     end
 
     def prepare_rename(params)

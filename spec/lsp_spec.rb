@@ -52,6 +52,11 @@ RSpec.describe Kapusta::LSP do
           params: { textDocument: { uri: }, position: { line:, character: } })
   end
 
+  def frame_definition(uri:, line:, character:, id: 2)
+    frame(jsonrpc: '2.0', id:, method: 'textDocument/definition',
+          params: { textDocument: { uri: }, position: { line:, character: } })
+  end
+
   def frame_formatting(uri:, id: 2)
     frame(jsonrpc: '2.0', id:, method: 'textDocument/formatting',
           params: { textDocument: { uri: } })
@@ -85,6 +90,7 @@ RSpec.describe Kapusta::LSP do
     capabilities = responses.first.dig('result', 'capabilities')
 
     expect(capabilities).to include('textDocumentSync', 'documentFormattingProvider')
+    expect(capabilities['definitionProvider']).to be(true)
   end
 
   it 'publishes diagnostics for invalid source' do
@@ -249,6 +255,69 @@ RSpec.describe Kapusta::LSP do
 
       expect(result_for(responses).dig('error', 'message')).to include('already defined')
     end
+  end
+
+  it 'jumps to a let binder from a usage in the same file' do
+    text = '(let [x 1] (+ x x))'
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', line: 0, character: 14)
+    )
+    result = result_for(responses)['result']
+
+    expect(result).to eq(
+      'uri' => 'file:///x.kap',
+      'range' => {
+        'start' => { 'line' => 0, 'character' => 6 },
+        'end' => { 'line' => 0, 'character' => 7 }
+      }
+    )
+  end
+
+  it 'jumps to a top-level fn definition across files' do
+    text_a = "(fn greet [n] (print n))\n"
+    text_b = "(greet 42)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['b.kap'], text_b),
+        frame_definition(uri: uri['b.kap'], **cursor_at(text_b, 'greet'))
+      )
+      result = result_for(responses)['result']
+
+      expect(result).to be_an(Array).and(be_one)
+      expect(result.first['uri']).to eq(uri['a.kap'])
+      expect(result.first['range']['start']).to eq('line' => 0, 'character' => 4)
+    end
+  end
+
+  it 'jumps to a module definition from a dotted reference across files' do
+    text_a = "(module Foo (fn bar [] 1))\n"
+    text_b = "(Foo.bar)\n"
+    with_workspace('a.kap' => text_a, 'b.kap' => text_b) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['b.kap'], text_b),
+        frame_definition(uri: uri['b.kap'], **cursor_at(text_b, 'Foo'))
+      )
+      result = result_for(responses)['result']
+
+      expect(result).to be_an(Array).and(be_one)
+      expect(result.first['uri']).to eq(uri['a.kap'])
+      expect(result.first['range']['start']).to eq('line' => 0, 'character' => 8)
+    end
+  end
+
+  it 'returns null definition when the symbol has no known binding' do
+    text = "(foo)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', **cursor_at(text, 'foo'))
+    )
+
+    expect(result_for(responses)['result']).to be_nil
   end
 
   it 'escapes file URIs built during workspace scans' do

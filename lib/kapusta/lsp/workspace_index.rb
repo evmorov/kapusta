@@ -46,6 +46,29 @@ module Kapusta
         @entries.length
       end
 
+      def toplevel_fn_definitions(name)
+        result = []
+        @entries.each do |uri, entry|
+          entry.walker.bindings.each do |b|
+            result << [uri, b] if b.kind == :toplevel_fn && b.name == name
+          end
+        end
+        result
+      end
+
+      def constant_definitions_with_prefix(prefix)
+        result = []
+        @entries.each do |uri, entry|
+          entry.walker.bindings.each do |b|
+            next unless %i[module class].include?(b.kind)
+
+            segs = b.sym.dotted? ? b.sym.segments : [b.sym.name]
+            result << [uri, b] if segs == prefix
+          end
+        end
+        result
+      end
+
       def toplevel_fn_occurrences(name)
         result = {}
         @entries.each do |uri, entry|
