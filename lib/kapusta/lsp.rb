@@ -3,13 +3,15 @@
 require 'json'
 require 'uri'
 require_relative '../kapusta'
-require_relative 'formatter'
+require_relative 'lsp/diagnostics'
+require_relative 'lsp/formatting'
+require_relative 'lsp/rename'
+require_relative 'lsp/workspace_index'
 
 module Kapusta
   class LSP
     NOT_INITIALIZED = -32_002
     METHOD_NOT_FOUND = -32_601
-    SEVERITY_ERROR = 1
     FULL_SYNC = 1
 
     def self.start(input: $stdin, output: $stdout, log: $stderr)
@@ -20,7 +22,9 @@ module Kapusta
       @input = input.binmode
       @output = output.binmode
       @log = log
+      @debug = %w[1 true yes on].include?(ENV['KAPUSTA_LS_DEBUG'].to_s.downcase)
       @sources = {}
+      @workspace_index = WorkspaceIndex.new
       @initialized = false
       @shutdown = false
     end
@@ -94,6 +98,7 @@ module Kapusta
     def dispatch(method, id, params)
       case method
       when 'initialize'
+        on_initialize(params)
         @initialized = true
         reply(id, initialize_result)
       when 'initialized' then nil
@@ -106,6 +111,8 @@ module Kapusta
       when 'textDocument/didSave' then on_did_save(params)
       when 'textDocument/didClose' then on_did_close(params)
       when 'textDocument/formatting' then reply(id, formatting(params))
+      when 'textDocument/prepareRename' then reply(id, prepare_rename(params))
+      when 'textDocument/rename' then handle_rename(id, params)
       else
         reply_error(id, METHOD_NOT_FOUND, "method not found: #{method}")
       end
@@ -131,10 +138,25 @@ module Kapusta
       {
         capabilities: {
           textDocumentSync: { openClose: true, change: FULL_SYNC, save: { includeText: false } },
-          documentFormattingProvider: true
+          documentFormattingProvider: true,
+          renameProvider: { prepareProvider: true }
         },
         serverInfo: { name: 'kapusta-ls', version: Kapusta::VERSION }
       }
+    end
+
+    def on_initialize(params)
+      folders = params['workspaceFolders'] || []
+      roots = folders.filter_map { |f| uri_to_path(f['uri']) }
+      roots << uri_to_path(params['rootUri']) if params['rootUri']
+      roots.compact!
+      roots.uniq!
+      debug("initialize: roots=#{roots.inspect}")
+      @workspace_index = WorkspaceIndex.new(roots:)
+      @workspace_index.scan!
+      debug("workspace scan complete: #{@workspace_index.entry_count} files")
+    rescue StandardError => e
+      log("workspace scan failed: #{e.class}: #{e.message}")
     end
 
     def on_did_open(params)
@@ -144,7 +166,9 @@ module Kapusta
 
       version = doc['version']
       text = doc['text'] || ''
+      debug("didOpen: uri=#{uri} version=#{version} bytes=#{text.bytesize}")
       store(uri, text, version)
+      @workspace_index.refresh(uri, text)
       publish_diagnostics(uri, text, version)
     end
 
@@ -155,7 +179,9 @@ module Kapusta
       return if uri.nil? || changes.empty?
 
       text = changes.last['text']
+      debug("didChange: uri=#{uri} version=#{version} bytes=#{text.bytesize}")
       store(uri, text, version)
+      @workspace_index.refresh(uri, text)
       publish_diagnostics(uri, text, version)
     end
 
@@ -164,6 +190,8 @@ module Kapusta
       entry = @sources[uri]
       return unless entry
 
+      debug("didSave: uri=#{uri}")
+      @workspace_index.refresh(uri, entry[:text])
       publish_diagnostics(uri, entry[:text], entry[:version])
     end
 
@@ -171,7 +199,9 @@ module Kapusta
       uri = params.dig('textDocument', 'uri')
       return unless uri
 
+      debug("didClose: uri=#{uri}")
       @sources.delete(uri)
+      @workspace_index.remove(uri)
       notify('textDocument/publishDiagnostics', { uri:, diagnostics: [] })
     end
 
@@ -180,12 +210,56 @@ module Kapusta
       entry = @sources[uri]
       return [] unless entry
 
-      formatted = Kapusta::Formatter.format(entry[:text], path: uri_to_path(uri))
-      return [] if formatted == entry[:text]
+      Formatting.text_edits(entry[:text], uri_to_path(uri))
+    end
 
-      [{ range: full_range(entry[:text]), newText: formatted }]
-    rescue Kapusta::Error
-      []
+    def prepare_rename(params)
+      uri = params.dig('textDocument', 'uri')
+      pos = params['position'] || {}
+      entry = @sources[uri]
+      unless entry
+        debug("prepareRename: no source for uri=#{uri.inspect}; tracked=#{@sources.keys.inspect}")
+        return
+      end
+
+      result = Rename.prepare(entry[:text], pos['line'] || 0, pos['character'] || 0)
+      debug("prepareRename: uri=#{uri} pos=#{pos.inspect} result=#{result.inspect}")
+      result
+    end
+
+    def handle_rename(id, params)
+      uri = params.dig('textDocument', 'uri')
+      pos = params['position'] || {}
+      new_name = params['newName']
+      entry = @sources[uri]
+      unless entry
+        debug("rename: no source for uri=#{uri.inspect}; tracked=#{@sources.keys.inspect}")
+        return reply(id, nil)
+      end
+
+      debug("rename: uri=#{uri} pos=#{pos.inspect} newName=#{new_name.inspect}")
+      result = Rename.perform(uri, entry[:text], pos['line'] || 0, pos['character'] || 0,
+                              new_name, workspace_index: @workspace_index)
+      if result[:error]
+        debug("rename error: #{result[:error].inspect}")
+        reply_error(id, result[:error][:code], result[:error][:message])
+      else
+        edit = build_workspace_edit(result[:changes])
+        debug("rename ok: files=#{result[:changes].keys.length} edits=#{result[:changes].values.sum(&:length)}")
+        reply(id, edit)
+      end
+    end
+
+    def build_workspace_edit(changes_by_uri)
+      document_changes = changes_by_uri.map do |uri, edits|
+        sorted = edits.sort_by { |e| [-e[:range][:start][:line], -e[:range][:start][:character]] }
+        version = @sources.dig(uri, :version)
+        {
+          textDocument: { uri:, version: },
+          edits: sorted
+        }
+      end
+      { documentChanges: document_changes }
     end
 
     def store(uri, text, version)
@@ -193,51 +267,10 @@ module Kapusta
     end
 
     def publish_diagnostics(uri, text, version)
-      diagnostics = collect_diagnostics(text, uri_to_path(uri))
+      diagnostics = Diagnostics.collect(text, uri_to_path(uri))
       params = { uri:, diagnostics: }
       params[:version] = version unless version.nil?
       notify('textDocument/publishDiagnostics', params)
-    end
-
-    def collect_diagnostics(text, path)
-      Kapusta.compile(text, path: path || '(buffer)')
-      []
-    rescue Kapusta::Error => e
-      [diagnostic_from(e, text)]
-    end
-
-    def diagnostic_from(error, text)
-      line = [(error.line || 1) - 1, 0].max
-      column = [(error.column || 1) - 1, 0].max
-
-      {
-        range: {
-          start: { line:, character: column },
-          end: { line:, character: column + token_length(text, line, column) }
-        },
-        severity: SEVERITY_ERROR,
-        source: 'kapusta-ls',
-        message: error.reason
-      }
-    end
-
-    def token_length(text, line, column)
-      source_line = text.lines[line]
-      return 1 unless source_line
-
-      tail = source_line[column..] || ''
-      match = tail.match(/\A[^\s()\[\]{}";`,]+/)
-      match && match[0].length.positive? ? match[0].length : 1
-    end
-
-    def full_range(text)
-      lines = text.split("\n", -1)
-      end_line = [lines.length - 1, 0].max
-      end_character = lines.last ? lines.last.length : 0
-      {
-        start: { line: 0, character: 0 },
-        end: { line: end_line, character: end_character }
-      }
     end
 
     def uri_to_path(uri)
@@ -253,6 +286,12 @@ module Kapusta
 
     def log(message)
       @log.puts "kapusta-ls: #{message}"
+    end
+
+    def debug(message)
+      return unless @debug
+
+      @log.puts "kapusta-ls[debug]: #{message}"
     end
   end
 end
