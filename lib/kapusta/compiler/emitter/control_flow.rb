@@ -116,11 +116,7 @@ module Kapusta
           while i < clauses.length
             pattern = clauses[i]
             body = clauses[i + 1]
-            inner, where_guards = if where_pattern?(pattern)
-                                    [pattern.items[1], pattern.items[2..]]
-                                  else
-                                    [pattern, []]
-                                  end
+            inner, where_guards = extract_pattern_and_guards(pattern)
             sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
             sub_arms = sub_patterns.map do |sub|
               try_native_arm(sub, body, where_guards, env, current_scope, mode)
@@ -154,11 +150,7 @@ module Kapusta
           while i < clauses.length
             pattern = clauses[i]
             body = clauses[i + 1]
-            inner, where_guards = if where_pattern?(pattern)
-                                    [pattern.items[1], pattern.items[2..]]
-                                  else
-                                    [pattern, []]
-                                  end
+            inner, where_guards = extract_pattern_and_guards(pattern)
             sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
             sub_arms = sub_patterns.map do |sub|
               try_compat_arm(sub, body, where_guards, value_var, env, current_scope, mode)
@@ -174,6 +166,12 @@ module Kapusta
         def wildcard_last?(clauses)
           last_pattern = clauses[-2]
           last_pattern.is_a?(Sym) && last_pattern.name == '_'
+        end
+
+        def extract_pattern_and_guards(pattern)
+          return [pattern, []] unless where_pattern?(pattern)
+
+          [pattern.items[1], pattern.items[2..]]
         end
 
         def try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)

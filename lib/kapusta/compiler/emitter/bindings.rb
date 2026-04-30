@@ -148,10 +148,7 @@ module Kapusta
           return unless ruby_name
           return if captures_outer_binding?(body, env, pattern_names(pattern))
 
-          body_env = env.child
-          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
-          body_code, = emit_sequence(body, body_env, :toplevel,
-                                     allow_method_definitions: false, result: false)
+          params, body_code = build_simple_block_parts(pattern, body, env, :toplevel)
           header = params.empty? ? "def #{ruby_name}" : "def #{ruby_name}(#{params.join(', ')})"
           [
             header,
