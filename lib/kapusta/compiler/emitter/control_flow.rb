@@ -154,7 +154,7 @@ module Kapusta
             arms.concat(sub_arms)
             i += 2
           end
-          emit_compat_case_lines(arms, wildcard_last?(clauses))
+          emit_compat_case_lines(arms)
         end
 
         def wildcard_last?(clauses)
@@ -181,29 +181,24 @@ module Kapusta
           [guard_codes, prelude, body_code]
         end
 
-        def emit_compat_case_lines(arms, wildcard_last)
-          unconditional_arm = arms.any? { |conditions, _prelude, _body_code| conditions.empty? }
+        def emit_compat_case_lines(arms)
+          last_idx = arms.length - 1
+          has_unconditional = arms.any? { |conditions, _prelude, _body_code| conditions.empty? }
           lines = ['case']
           arms.each_with_index do |(conditions, prelude, body_code), idx|
-            lines << if wildcard_last && idx == arms.length - 1
-                       'else'
+            lines << if conditions.empty?
+                       idx == last_idx ? 'else' : 'when true'
                      else
-                       emit_compat_condition_header(conditions)
+                       "when #{conditions.join(' && ')}"
                      end
             lines << indent([*prelude, body_code].join("\n"))
           end
-          unless wildcard_last || unconditional_arm
+          unless has_unconditional
             lines << 'else'
             lines << indent('nil')
           end
           lines << 'end'
           lines.join("\n")
-        end
-
-        def emit_compat_condition_header(conditions)
-          return 'when true' if conditions.empty?
-
-          "when #{conditions.join(' && ')}"
         end
 
         def emit_while(args, env, current_scope)
