@@ -1,0 +1,3 @@
+(local PLAYER-SPEED 520)
+
+(print (PLAYER-SPEED))

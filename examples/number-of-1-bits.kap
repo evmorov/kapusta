@@ -1,0 +1,13 @@
+(local BIT-WIDTH 32)
+
+(fn hamming-weight [n]
+  (var x n)
+  (var count 0)
+  (for [_ 1 BIT-WIDTH]
+    (set count (+ count (% x 2)))
+    (set x (: (/ x 2) :floor)))
+  count)
+
+(print (hamming-weight 11))
+(print (hamming-weight 128))
+(print (hamming-weight 4294967293))

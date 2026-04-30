@@ -300,6 +300,8 @@ module Kapusta
         def emit_bound_call(binding, args, env, current_scope)
           return emit_self_method_binding_call(binding, args, env, current_scope) if method_binding?(binding)
 
+          emit_error!(:cannot_call_constant, name: binding) if constant_binding?(binding)
+
           emit_callable_call(binding, args, env, current_scope)
         end
 

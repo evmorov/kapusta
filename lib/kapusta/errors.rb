@@ -10,6 +10,7 @@ module Kapusta
       bad_set_target: 'bad set target: %{target}',
       bad_shorthand: 'bad shorthand',
       bind_table_dots: 'unable to bind table ...',
+      cannot_call_constant: 'cannot call constant %{name}; reference it without parentheses',
       cannot_call_literal: 'cannot call literal value %{value}',
       cannot_emit_form: 'cannot emit form: %{form}',
       cannot_set_method_binding: 'cannot set method binding: %{name}',

@@ -14,6 +14,7 @@ COMPATIBLE = %w[
   anonymous-greeter.kap
   classify-wallet.kap
   climbing-stairs.kap
+  convert-temperature.kap
   describe.kap
   destructure.kap
   even-squares.kap
@@ -34,6 +35,7 @@ COMPATIBLE = %w[
   macros-unless.kap
   macros-when-let.kap
   match.kap
+  max-achievable.kap
   min-max.kap
   or-patterns.kap
   power-of-three.kap

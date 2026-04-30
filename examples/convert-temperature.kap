@@ -1,0 +1,14 @@
+(local KELVIN-OFFSET 273.15)
+(local FAHRENHEIT-SCALE 1.8)
+(local FAHRENHEIT-OFFSET 32.0)
+
+(fn convert-temperature [celsius]
+  (let [k (+ celsius KELVIN-OFFSET)
+        f (+ (* celsius FAHRENHEIT-SCALE) FAHRENHEIT-OFFSET)]
+    [k f]))
+
+(let [[k f] (convert-temperature 36.5)]
+  (print k f))
+
+(let [[k f] (convert-temperature 122.11)]
+  (print k f))

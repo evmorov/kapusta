@@ -163,6 +163,22 @@ RSpec.describe 'examples' do
     expect(run_example('happy-number.kap')).to eq("true\nfalse\ntrue\n")
   end
 
+  it 'number-of-1-bits.kap' do
+    expect(run_example('number-of-1-bits.kap')).to eq("3\n1\n31\n")
+  end
+
+  it 'number-of-steps.kap' do
+    expect(run_example('number-of-steps.kap')).to eq("6\n4\n12\n")
+  end
+
+  it 'convert-temperature.kap' do
+    expect(run_example('convert-temperature.kap')).to eq("309.65\n97.7\n395.26\n251.798\n")
+  end
+
+  it 'max-achievable.kap' do
+    expect(run_example('max-achievable.kap')).to eq("6\n7\n10\n")
+  end
+
   it 'move-zeroes.kap' do
     expect(run_example('move-zeroes.kap')).to eq(<<~OUT)
       [1, 3, 12, 0, 0]

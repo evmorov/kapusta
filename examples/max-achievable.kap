@@ -1,0 +1,8 @@
+(local steps 2)
+
+(fn max-achievable [num t]
+  (+ num (* steps t)))
+
+(print (max-achievable 4 1))
+(print (max-achievable 3 2))
+(print (max-achievable 0 5))
