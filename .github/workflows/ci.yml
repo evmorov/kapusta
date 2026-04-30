@@ -28,5 +28,8 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
 
+      - name: Install mruby
+        run: sudo apt-get update && sudo apt-get install -y mruby
+
       - name: Run specs
         run: bundle exec rspec
