@@ -175,6 +175,10 @@ RSpec.describe 'examples' do
     expect(run_example('convert-temperature.kap')).to eq("309.65\n97.7\n395.26\n251.798\n")
   end
 
+  it 'count-effects.kap' do
+    expect(run_example('count-effects.kap')).to eq("1\n2\n")
+  end
+
   it 'max-achievable.kap' do
     expect(run_example('max-achievable.kap')).to eq("6\n7\n10\n")
   end

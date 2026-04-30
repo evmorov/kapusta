@@ -141,7 +141,7 @@ module Kapusta
         def sequence_statement_form?(form)
           return false unless form.is_a?(List) && form.head.is_a?(Sym)
 
-          %w[let while for each].include?(form.head.name)
+          %w[let while for each case match].include?(form.head.name)
         end
 
         def emit_sequence_statement_form(form, env, current_scope, result_needed:)
@@ -157,6 +157,8 @@ module Kapusta
             return ["#{code}\nnil", env] if result_needed && current_scope != :toplevel
 
             return [code, env]
+          when 'case', 'match'
+            return [emit_case_statement(form.rest, env, current_scope, form.head.name.to_sym), env] unless result_needed
           end
 
           [emit_expr(form, env, current_scope), env]

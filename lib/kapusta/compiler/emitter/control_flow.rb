@@ -57,6 +57,25 @@ module Kapusta
         end
 
         def emit_case(args, env, current_scope, mode)
+          value_code, value_var, body = build_case_parts(args, env, current_scope, mode)
+          return body unless value_var
+
+          [
+            '(-> do',
+            indent("#{value_var} = #{value_code}"),
+            indent(body),
+            'end).call'
+          ].join("\n")
+        end
+
+        def emit_case_statement(args, env, current_scope, mode)
+          value_code, value_var, body = build_case_parts(args, env, current_scope, mode)
+          return body unless value_var
+
+          "#{value_var} = #{value_code}\n#{body}"
+        end
+
+        def build_case_parts(args, env, current_scope, mode)
           emit_error!(:case_no_subject) if args.empty?
 
           clauses = args[1..]
@@ -67,18 +86,13 @@ module Kapusta
           if simple_case_subject?(args[0]) && simple_expression?(value_code)
             body = emit_case_body(value_code, clauses, env, current_scope, mode)
             emit_error!(:case_unsupported) unless body
-            return body
+            return [value_code, nil, body]
           end
 
           value_var = temp('case_value')
           body = emit_case_body(value_var, clauses, env, current_scope, mode)
           emit_error!(:case_unsupported) unless body
-          [
-            '(-> do',
-            indent("#{value_var} = #{value_code}"),
-            indent(body),
-            'end).call'
-          ].join("\n")
+          [value_code, value_var, body]
         end
 
         def emit_case_body(value_var, clauses, env, current_scope, mode)

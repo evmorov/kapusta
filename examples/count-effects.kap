@@ -1,0 +1,13 @@
+(fn count-by-kind [effects]
+  (var quits 0)
+  (var moves 0)
+  (each [_ effect (ipairs effects)]
+    (case (. effect :kind)
+      :quit (set quits (+ quits 1))
+      :move (set moves (+ moves 1))
+      _ nil))
+  [quits moves])
+
+(let [effects [{:kind :move} {:kind :quit} {:kind :move} {:kind :other}]
+      [q m] (count-by-kind effects)]
+  (print q m))

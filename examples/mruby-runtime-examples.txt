@@ -15,6 +15,7 @@ classify-wallet
 climbing-stairs
 contains-duplicate
 convert-temperature
+count-effects
 counter
 describe
 destructure

@@ -9,47 +9,10 @@ EXAMPLES_ERRORS = File.join(ROOT, 'examples-errors')
 KAPUSTA = File.join(ROOT, 'exe', 'kapusta')
 KAPFMT = File.join(ROOT, 'exe', 'kapfmt')
 
-COMPATIBLE = %w[
-  ackermann.kap
-  anonymous-greeter.kap
-  classify-wallet.kap
-  climbing-stairs.kap
-  convert-temperature.kap
-  describe.kap
-  destructure.kap
-  even-squares.kap
-  factorial.kap
-  falling-drops.kap
-  fib.kap
-  fizzbuzz.kap
-  gcd.kap
-  hashfn.kap
-  leap-year.kap
-  macros-dbg.kap
-  macros-import-helpers.kap
-  macros-import-whole.kap
-  macros-import.kap
-  macros-multi.kap
-  macros-swap.kap
-  macros-thrice-if.kap
-  macros-unless.kap
-  macros-when-let.kap
-  match.kap
-  max-achievable.kap
-  min-max.kap
-  or-patterns.kap
-  power-of-three.kap
-  packet-router.kap
-  points.kap
-  primes.kap
-  safe-lookup.kap
-  shapes.kap
-  squares.kap
-  sum.kap
-  thread-styles.kap
-  tic-tac-toe.kap
-  underscore-patterns.kap
-].freeze
+COMPATIBLE = File.readlines(File.join(EXAMPLES, 'fennel-parity-examples.txt'), chomp: true)
+                 .reject(&:empty?)
+                 .map { |name| "#{name}.kap" }
+                 .freeze
 
 def run(cmd, file, chdir: EXAMPLES, env: {})
   out, err, status = Open3.capture3(env, cmd, file, chdir:)
