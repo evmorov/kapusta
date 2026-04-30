@@ -130,7 +130,7 @@ Use `kapusta-ls` in the editor of your choice.
 
 ## Syntax highlight
 
-For Vim, you can use https://git.sr.ht/~m15a/vim-fennel-syntax
+For Vim, you can use [`vim-syntax/`](https://github.com/evmorov/kapusta/tree/main/vim-syntax/).
 
 ## License
 
