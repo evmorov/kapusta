@@ -12,9 +12,9 @@ module Kapusta
       def normalize(form)
         case form
         when List then normalize_list(form)
-        when Vec then inherit_position(Vec.new(form.items.map { |item| normalize(item) }), form)
+        when Vec then Kapusta.copy_position(Vec.new(form.items.map { |item| normalize(item) }), form)
         when HashLit
-          inherit_position(
+          Kapusta.copy_position(
             HashLit.new(form.pairs.map { |key, value| [normalize_hash_key(key), normalize(value)] }),
             form
           )
@@ -37,7 +37,7 @@ module Kapusta
 
         head = list.head
         items = list.items.map { |item| normalize(item) }
-        return inherit_position(List.new(items), list) unless head.is_a?(Sym)
+        return Kapusta.copy_position(List.new(items), list) unless head.is_a?(Sym)
 
         case head.name
         when 'when'
@@ -45,37 +45,29 @@ module Kapusta
 
           cond = items[1]
           body = wrap_do(items[2..])
-          inherit_position(List.new([Sym.new('if'), cond, body]), list)
+          Kapusta.copy_position(List.new([Sym.new('if'), cond, body]), list)
         when 'unless'
           raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
 
           cond = items[1]
           body = wrap_do(items[2..])
-          inherit_position(List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body]), list)
+          Kapusta.copy_position(List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body]), list)
         when 'tset'
           raise compiler_error(:tset_no_value, list) if items.length < 4
 
-          inherit_position(
+          Kapusta.copy_position(
             List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]]),
             list
           )
         when *LuaCompat::SPECIAL_FORMS
           normalize_lua_compat_form(head.name, items)
         when '->', '->>', '-?>', '-?>>'
-          inherit_position(normalize(thread(items[1..], head.name)), list)
+          Kapusta.copy_position(normalize(thread(items[1..], head.name)), list)
         when 'doto'
-          inherit_position(normalize(doto(items[1..])), list)
+          Kapusta.copy_position(normalize(doto(items[1..])), list)
         else
-          inherit_position(List.new(items), list)
+          Kapusta.copy_position(List.new(items), list)
         end
-      end
-
-      def inherit_position(target, source)
-        return target unless target.respond_to?(:line=) && source.respond_to?(:line)
-
-        target.line ||= source.line
-        target.column ||= source.column
-        target
       end
 
       def compiler_error(code, form, **args)

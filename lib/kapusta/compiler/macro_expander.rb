@@ -57,9 +57,9 @@ module Kapusta
       def expand(form)
         case form
         when List then expand_list(form)
-        when Vec then copy_position(Vec.new(form.items.map { |item| expand(item) }), form)
+        when Vec then Kapusta.copy_position(Vec.new(form.items.map { |item| expand(item) }), form)
         when HashLit
-          copy_position(
+          Kapusta.copy_position(
             HashLit.new(form.entries.map do |entry|
               entry.is_a?(Array) ? [expand(entry[0]), expand(entry[1])] : entry
             end),
@@ -68,14 +68,6 @@ module Kapusta
         else
           form
         end
-      end
-
-      def copy_position(target, source)
-        return target unless target.respond_to?(:line=) && source.respond_to?(:line)
-
-        target.line ||= source.line
-        target.column ||= source.column
-        target
       end
 
       def expand_list(list)
@@ -100,11 +92,11 @@ module Kapusta
           if @macros.key?(key)
             args = list.rest
             result = invoke_macro(key, args)
-            return copy_position(expand(result), list)
+            return Kapusta.copy_position(expand(result), list)
           end
         end
 
-        copy_position(List.new(list.items.map { |item| expand(item) }), list)
+        Kapusta.copy_position(List.new(list.items.map { |item| expand(item) }), list)
       end
 
       def lookup_key(name)

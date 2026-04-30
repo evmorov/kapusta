@@ -34,15 +34,15 @@ module Kapusta
 
       def lower(form)
         case form
-        when Quasiquote then copy_position(lower_quasi(form.form), form)
+        when Quasiquote then Kapusta.copy_position(lower_quasi(form.form), form)
         when Unquote, UnquoteSplice
           raise @error_class, Kapusta::Errors.format(:unquote_outside_quasiquote)
         when AutoGensym
           raise @error_class, Kapusta::Errors.format(:auto_gensym_outside_quasiquote, name: form.name)
-        when List then copy_position(List.new(form.items.map { |item| lower(item) }), form)
-        when Vec then copy_position(Vec.new(form.items.map { |item| lower(item) }), form)
+        when List then Kapusta.copy_position(List.new(form.items.map { |item| lower(item) }), form)
+        when Vec then Kapusta.copy_position(Vec.new(form.items.map { |item| lower(item) }), form)
         when HashLit
-          copy_position(
+          Kapusta.copy_position(
             HashLit.new(form.entries.map do |entry|
               entry.is_a?(Array) ? [lower(entry[0]), lower(entry[1])] : entry
             end),
@@ -92,14 +92,6 @@ module Kapusta
 
       def fn_form?(form)
         form.is_a?(List) && form.head.is_a?(Sym) && FN_HEADS.include?(form.head.name)
-      end
-
-      def copy_position(target, source)
-        return target unless target.respond_to?(:line=) && source.respond_to?(:line)
-
-        target.line ||= source.line
-        target.column ||= source.column
-        target
       end
 
       def lower_quasi(form)
