@@ -2,11 +2,9 @@
 
 Kapusta is a Lisp for the Ruby runtime.
 
-It is inspired by [Fennel](https://fennel-lang.org). It is not intended to be production-ready like Clojure: that would be a lot of work, and Ruby is already a rich, elegant language.
+It is inspired by [Fennel](https://fennel-lang.org). Kapusta aims to bring the simplicity and joy of Lisp to Ruby. Where Fennel uses Lua's stdlib and runtime, Kapusta uses Ruby's.
 
-Instead, Kapusta aims to bring some of the simplicity and joy of Lisp to Ruby. Where Fennel uses Lua's stdlib and runtime, Kapusta uses Ruby's. You can use it for small apps, LeetCode, DragonRuby, or maybe even Rails.
-
-For more information about Kapusta, see the official Fennel documentation and tutorials.
+For more information about Kapusta, see the official Fennel documentation and tutorials, but replace Lua with Ruby.
 
 ## Features
 
@@ -41,14 +39,14 @@ exe/kapusta examples/fizzbuzz.kap
 or
 
 ```
-exe/kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
+kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
 ruby examples/fizzbuzz.rb
 ```
 
 For mruby-compatible output, such as DragonRuby, use:
 
 ```
-exe/kapusta --compile --target=mruby examples/match.kap > examples/match-mruby.rb
+kapusta --compile --target=mruby examples/match.kap > examples/match-mruby.rb
 ```
 
 ## Use from Ruby
@@ -115,8 +113,8 @@ Kapusta-specific additions:
 - `ivar` or `@var` / `cvar` or `@@var` / `gvar` or `$var`
 - `try` / `catch` / `finally` plus `raise` for exceptions
 - `(ruby "...")` raw host escape hatch
-- a trailing symbol-keyed hash is emitted as Ruby keyword arguments
-- a final function literal argument is emitted as a Ruby block
+- pass Ruby keyword arguments by ending a call with a symbol-keyed hash: `(File.open path "r" {:encoding "UTF-8"})`
+- pass a Ruby block by ending a call with a `(fn ...)` or `#(...)` literal: `(File.open path "r" (fn [io] (: io :read)))`
 
 ## Format
 
