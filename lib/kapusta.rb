@@ -23,8 +23,8 @@ module Kapusta
     self.eval(source, path:)
   end
 
-  def self.compile(source, path: '(eval)', **_opts)
-    Compiler.compile(source, path:)
+  def self.compile(source, path: '(eval)', target: nil, **_opts)
+    Compiler.compile(source, path:, target:)
   end
 
   def self.require(feature, relative_to: nil)

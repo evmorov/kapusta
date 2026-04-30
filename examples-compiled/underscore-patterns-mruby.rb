@@ -1,16 +1,17 @@
 def loose(v)
-  case v
-  in _x
+  case
+  when true
+    _x = v
     _x
-  in _
+  else
     "not-reachable"
   end
 end
 def strict(v)
-  case v
-  in x if !x.nil?
+  case
+  when (x = v) != nil
     x
-  in _
+  else
     "fallback"
   end
 end

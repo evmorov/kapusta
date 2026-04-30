@@ -4,6 +4,61 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_DIR="$ROOT_DIR/examples"
 TARGET_DIR="$ROOT_DIR/examples-compiled"
+tmp_files=()
+MRUBY_RUNTIME_EXAMPLES=()
+
+while IFS= read -r example || [[ -n "$example" ]]; do
+  [[ -n "$example" ]] && MRUBY_RUNTIME_EXAMPLES+=("$example")
+done < "$SOURCE_DIR/mruby-runtime-examples.txt"
+
+cleanup() {
+  rm -f "${tmp_files[@]}"
+}
+trap cleanup EXIT
+
+is_mruby_runtime_example() {
+  local name="$1"
+
+  for example in "${MRUBY_RUNTIME_EXAMPLES[@]}"; do
+    [[ "$name" == "$example" ]] && return 0
+  done
+
+  return 1
+}
+
+needs_mruby_artifact() {
+  local name="$1"
+  local ruby_file="$2"
+  local ruby_stdout
+  local ruby_stderr
+  local mruby_stdout
+  local mruby_stderr
+
+  is_mruby_runtime_example "$name" || return 1
+
+  ruby_stdout="$(mktemp)"
+  ruby_stderr="$(mktemp)"
+  mruby_stdout="$(mktemp)"
+  mruby_stderr="$(mktemp)"
+  tmp_files+=("$ruby_stdout" "$ruby_stderr" "$mruby_stdout" "$mruby_stderr")
+
+  if ! ruby "$ruby_file" > "$ruby_stdout" 2> "$ruby_stderr"; then
+    printf 'Compiled example failed under ruby: %s\n' "$ruby_file" >&2
+    cat "$ruby_stderr" >&2
+    exit 1
+  fi
+
+  if ! mruby "$ruby_file" > "$mruby_stdout" 2> "$mruby_stderr"; then
+    return 0
+  fi
+
+  ! cmp -s "$ruby_stdout" "$mruby_stdout"
+}
+
+if (($# > 0)); then
+  printf 'usage: bin/compile-examples\n' >&2
+  exit 1
+fi
 
 mkdir -p "$TARGET_DIR"
 
@@ -18,7 +73,22 @@ fi
 for kap_file in "${kap_files[@]}"; do
   name="$(basename "$kap_file" .kap)"
   ruby_file="$TARGET_DIR/$name.rb"
+  mruby_file="$TARGET_DIR/$name-mruby.rb"
 
   "$ROOT_DIR/exe/kapusta" --compile "$kap_file" > "$ruby_file"
   printf 'Compiled %s -> %s\n' "$kap_file" "$ruby_file"
+
+  if needs_mruby_artifact "$name" "$ruby_file"; then
+    tmp_mruby="$(mktemp)"
+    tmp_files+=("$tmp_mruby")
+    "$ROOT_DIR/exe/kapusta" --compile --target=mruby "$kap_file" > "$tmp_mruby"
+    if cmp -s "$ruby_file" "$tmp_mruby"; then
+      rm -f "$mruby_file"
+    else
+      mv "$tmp_mruby" "$mruby_file"
+      printf 'Compiled %s -> %s\n' "$kap_file" "$mruby_file"
+    fi
+  else
+    rm -f "$mruby_file"
+  fi
 done

@@ -66,6 +66,19 @@ RSpec.describe Kapusta::CLI do
     end
   end
 
+  it 'compiles case and match forms for mruby with --target=mruby' do
+    path = File.expand_path('../examples/match.kap', __dir__)
+
+    ruby = capture_stdout do
+      described_class.start(['--compile', '--target=mruby', path])
+    end
+
+    expect(ruby).not_to match(/^\s*in\b/)
+    expect(ruby).not_to include('^(')
+    expect(ruby).to include("case\n")
+    expect(ruby).to include('when ')
+  end
+
   it 'rejects extra positional arguments in compile mode' do
     path = File.expand_path('../examples/fizzbuzz.kap', __dir__)
 
@@ -75,6 +88,28 @@ RSpec.describe Kapusta::CLI do
     end
 
     expect(error_output).to include('usage: kapusta')
+  end
+
+  it 'rejects unsupported targets' do
+    path = File.expand_path('../examples/fizzbuzz.kap', __dir__)
+
+    error_output = capture_stderr do
+      expect { described_class.start(['--compile', '--target=mri', path]) }
+        .to raise_error(SystemExit)
+    end
+
+    expect(error_output).to include('unknown target "mri"; only mruby is supported')
+  end
+
+  it 'rejects target without compile mode' do
+    path = File.expand_path('../examples/fizzbuzz.kap', __dir__)
+
+    error_output = capture_stderr do
+      expect { described_class.start(['--target=mruby', path]) }
+        .to raise_error(SystemExit)
+    end
+
+    expect(error_output).to include('--target requires --compile')
   end
 
   it 'passes remaining arguments through to the Kapusta program' do

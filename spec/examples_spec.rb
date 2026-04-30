@@ -2,9 +2,20 @@
 
 require 'spec_helper'
 require 'fileutils'
+require 'open3'
 require 'stringio'
+require 'tempfile'
 
 EXAMPLES_DIR = File.expand_path('../examples', __dir__)
+
+def example_list(name)
+  File.readlines(File.join(EXAMPLES_DIR, name), chomp: true)
+      .reject(&:empty?)
+      .map { |example| "#{example}.kap" }
+      .freeze
+end
+
+MRUBY_RUNTIME_EXAMPLES = example_list('mruby-runtime-examples.txt')
 
 def run_example(name, argv: [])
   previous_argv = ARGV.dup
@@ -25,6 +36,39 @@ def run_ruby_example(name)
   $stdout.string
 ensure
   $stdout = previous_stdout
+end
+
+def compile_example(name, target: nil)
+  path = File.join(EXAMPLES_DIR, name)
+  Kapusta.compile(File.read(path), path:, target:)
+end
+
+def run_compiled_source(source, path:)
+  previous_argv = ARGV.dup
+  previous_stdout = $stdout
+  ARGV.replace([])
+  $stdout = StringIO.new
+  TOPLEVEL_BINDING.eval(source, path, 1)
+  $stdout.string
+ensure
+  $stdout = previous_stdout
+  ARGV.replace(previous_argv)
+end
+
+def run_mruby_source(source, path:)
+  stdout, stderr, status = capture_mruby_source(source, path:)
+
+  raise "mruby failed for #{path}:\n#{stderr}" unless status.success?
+
+  stdout
+end
+
+def capture_mruby_source(source, path:)
+  Tempfile.create([File.basename(path, '.kap'), '.rb']) do |file|
+    file.write(source)
+    file.close
+    Open3.capture3('mruby', file.path)
+  end
 end
 
 RSpec.describe 'examples' do
@@ -380,6 +424,18 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'underscore-patterns.kap on mruby keeps loose nil and strict fallback separate' do
+    path = File.join(EXAMPLES_DIR, 'underscore-patterns.kap')
+    ruby = compile_example('underscore-patterns.kap', target: :mruby)
+
+    expect(run_mruby_source(ruby, path:)).to eq(<<~OUT)
+      5
+      nil
+      5
+      "fallback"
+    OUT
+  end
+
   it 'scopes.kap' do
     expect(run_example('scopes.kap')).to eq("5\n9\n9\n9\n")
   end
@@ -587,5 +643,32 @@ RSpec.describe 'examples' do
       3
       "alice"
     OUT
+  end
+end
+
+RSpec.describe 'mruby runtime examples' do
+  MRUBY_RUNTIME_EXAMPLES.each do |name|
+    it name do
+      path = File.join(EXAMPLES_DIR, name)
+      ruby = compile_example(name)
+      expected = run_example(name)
+      expect(run_compiled_source(ruby, path:)).to eq(expected)
+      mruby_stdout, _mruby_stderr, mruby_status = capture_mruby_source(ruby, path:)
+
+      if mruby_status.success? && mruby_stdout == expected
+        expect(run_mruby_source(ruby, path:)).to eq(expected)
+      else
+        mruby_ruby = compile_example(name, target: :mruby)
+
+        if mruby_ruby == ruby
+          expect(mruby_status).to be_success
+        else
+          expect(mruby_ruby).not_to match(/^\s*in\b/)
+          expect(mruby_ruby).not_to include('^(')
+          expect(run_compiled_source(mruby_ruby, path:)).to eq(expected)
+          run_mruby_source(mruby_ruby, path:)
+        end
+      end
+    end
   end
 end

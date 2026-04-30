@@ -82,6 +82,8 @@ module Kapusta
         end
 
         def emit_case_body(value_var, clauses, env, current_scope, mode)
+          return try_emit_compat_case(value_var, clauses, env, current_scope, mode) if mruby_target?
+
           try_emit_native_case(value_var, clauses, env, current_scope, mode) ||
             try_emit_compat_case(value_var, clauses, env, current_scope, mode)
         end
@@ -166,25 +168,42 @@ module Kapusta
           plan = compat_pattern_plan(pattern, value_var, env, arm_env, mode:, allow_pins:)
           return unless plan
 
+          where_guard_codes = where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
+          prelude = plan[:prelude]
           guard_codes = plan[:conditions] +
-                        where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
-          condition = guard_codes.empty? ? 'true' : guard_codes.map { |code| parenthesize(code) }.join(' && ')
+                        if where_guard_codes.empty?
+                          []
+                        else
+                          prelude.map { |line| "begin #{line}; true end" } + where_guard_codes
+                        end
+          prelude = [] unless where_guard_codes.empty?
           body_code = emit_expr(body, arm_env, current_scope)
-          [condition, body_code]
+          [guard_codes, prelude, body_code]
         end
 
         def emit_compat_case_lines(arms, wildcard_last)
-          lines = []
-          arms.each_with_index do |(condition, body_code), idx|
-            lines << "#{idx.zero? ? 'if' : 'elsif'} #{condition}"
-            lines << indent(body_code)
+          unconditional_arm = arms.any? { |conditions, _prelude, _body_code| conditions.empty? }
+          lines = ['case']
+          arms.each_with_index do |(conditions, prelude, body_code), idx|
+            lines << if wildcard_last && idx == arms.length - 1
+                       'else'
+                     else
+                       emit_compat_condition_header(conditions)
+                     end
+            lines << indent([*prelude, body_code].join("\n"))
           end
-          unless wildcard_last
+          unless wildcard_last || unconditional_arm
             lines << 'else'
             lines << indent('nil')
           end
           lines << 'end'
           lines.join("\n")
+        end
+
+        def emit_compat_condition_header(conditions)
+          return 'when true' if conditions.empty?
+
+          "when #{conditions.join(' && ')}"
         end
 
         def emit_while(args, env, current_scope)

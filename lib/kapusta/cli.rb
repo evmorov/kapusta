@@ -5,7 +5,7 @@ require 'optparse'
 
 module Kapusta
   class CLI
-    Options = Struct.new(:compile, :help, :version, keyword_init: true)
+    Options = Struct.new(:compile, :target, :help, :version, keyword_init: true)
 
     def self.start(argv = ARGV)
       args = argv.dup
@@ -21,8 +21,10 @@ module Kapusta
         return
       end
 
+      raise Kapusta::Error, Kapusta::Errors.format(:target_requires_compile) if options.target && !options.compile
+
       if options.compile
-        compile_file(args)
+        compile_file(args, target: options.target)
       else
         run_file(args)
       end
@@ -32,11 +34,14 @@ module Kapusta
     end
 
     def self.parse_options(args)
-      options = Options.new(compile: false, help: false, version: false)
+      options = Options.new(compile: false, target: nil, help: false, version: false)
 
       OptionParser.new do |parser|
         parser.banner = usage
         parser.on('-c', '--compile', 'Compile .kap to Ruby') { options.compile = true }
+        parser.on('--target=TARGET', 'Compile for mruby') do |target|
+          options.target = Kapusta::Compiler.normalize_target(target)
+        end
         parser.on('-h', '--help', 'Show this help') { options.help = true }
         parser.on('-v', '--version', 'Show version') { options.version = true }
       end.order!(args)
@@ -44,12 +49,12 @@ module Kapusta
       options
     end
 
-    def self.compile_file(args)
+    def self.compile_file(args, target:)
       path = args.shift
       abort usage unless path
       abort usage unless args.empty?
 
-      $stdout.write(Kapusta.compile(File.read(path), path:))
+      $stdout.write(Kapusta.compile(File.read(path), path:, target:))
     end
 
     def self.run_file(args)
@@ -64,7 +69,7 @@ module Kapusta
     end
 
     def self.usage
-      'usage: kapusta [--compile|-c] <file.kap> | kapusta <file.kap> [args...]'
+      'usage: kapusta [--compile|-c] [--target=mruby] <file.kap> | kapusta <file.kap> [args...]'
     end
   end
 end

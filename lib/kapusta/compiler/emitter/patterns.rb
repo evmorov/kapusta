@@ -162,9 +162,9 @@ module Kapusta
         class PatternNotTranslatable < StandardError; end
 
         def compat_pattern_plan(pattern, value_code, env, arm_env, mode:, allow_pins:)
-          state = { bound_names: {}, conditions: [] }
+          state = { bound_names: {}, conditions: [], prelude: [] }
           compile_compat_pattern(pattern, value_code, env, arm_env, mode:, allow_pins:, state:)
-          { conditions: state[:conditions] }
+          { conditions: state[:conditions], prelude: state[:prelude] }
         rescue PatternNotTranslatable
           nil
         end
@@ -203,7 +203,7 @@ module Kapusta
 
             ruby = define_local(arm_env, name)
             state[:bound_names][name] = true
-            state[:conditions] << "((#{ruby} = #{value_code}) || true)"
+            state[:prelude] << "#{ruby} = #{value_code}"
             return
           end
 
@@ -215,7 +215,7 @@ module Kapusta
           else
             ruby = define_local(arm_env, name)
             state[:bound_names][name] = true
-            state[:conditions] << "!(#{ruby} = #{value_code}).nil?"
+            state[:conditions] << "(#{ruby} = #{value_code}) != nil"
           end
         end
 
@@ -233,7 +233,7 @@ module Kapusta
 
               unless sub.name == '_'
                 ruby = define_local(arm_env, sub.name)
-                state[:conditions] << "((#{ruby} = #{value_code}[#{index}..]) || true)"
+                state[:prelude] << "#{ruby} = #{value_code}[#{index}..]"
               end
               i += 2
             else

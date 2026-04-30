@@ -16,4 +16,21 @@ bin/fennel-parity
 echo "== compile examples =="
 bin/compile-examples
 
+echo "== run mruby-compatible examples on mruby =="
+MRUBY_RUNTIME_EXAMPLES=()
+while IFS= read -r example || [[ -n "$example" ]]; do
+  [[ -n "$example" ]] && MRUBY_RUNTIME_EXAMPLES+=("$example")
+done < examples/mruby-runtime-examples.txt
+
+for example in "${MRUBY_RUNTIME_EXAMPLES[@]}"; do
+  ruby_file="examples-compiled/$example.rb"
+  file="examples-compiled/$example-mruby.rb"
+  if [[ ! -f "$file" ]]; then
+    file="$ruby_file"
+  fi
+
+  ruby "$ruby_file" >/dev/null
+  mruby "$file" >/dev/null
+done
+
 echo "== Success! =="

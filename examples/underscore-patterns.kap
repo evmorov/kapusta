@@ -1,7 +1,7 @@
 (fn loose [v]
   (case v
     _x _x
-    _ "fallback"))
+    _ "not-reachable"))
 
 (fn strict [v]
   (case v

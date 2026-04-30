@@ -45,6 +45,12 @@ exe/kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
 ruby examples/fizzbuzz.rb
 ```
 
+For mruby-compatible output, such as DragonRuby, use:
+
+```
+exe/kapusta --compile --target=mruby examples/match.kap > examples/match-mruby.rb
+```
+
 ## Use from Ruby
 
 Ruby can require a `.kap` file and use it directly.

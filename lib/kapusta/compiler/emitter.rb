@@ -24,8 +24,9 @@ module Kapusta
       include EmitterModules::Interop
       include EmitterModules::Patterns
 
-      def initialize(path:)
+      def initialize(path:, target: nil)
         @path = path
+        @target = target
         @temp_index = 0
       end
 

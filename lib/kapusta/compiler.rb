@@ -34,17 +34,19 @@ module Kapusta
     ].freeze
     SPECIAL_FORMS = (CORE_SPECIAL_FORMS + LuaCompat::SPECIAL_FORMS).freeze
 
-    def self.compile(source, path: '(kapusta)')
+    def self.compile(source, path: '(kapusta)', target: nil)
+      target = normalize_target(target)
       forms = Reader.read_all(source)
       expanded = MacroExpander.new(path:).expand_all(forms)
-      compile_forms(expanded, path:)
+      compile_forms(expanded, path:, target:)
     rescue Kapusta::Error => e
       raise e.with_defaults(path:)
     end
 
-    def self.compile_forms(forms, path: '(kapusta)')
+    def self.compile_forms(forms, path: '(kapusta)', target: nil)
+      target = normalize_target(target)
       normalized = Normalizer.new.normalize_all(forms)
-      Emitter.new(path:).emit_file(normalized)
+      Emitter.new(path:, target:).emit_file(normalized)
     rescue Kapusta::Error => e
       raise e.with_defaults(path:)
     end
@@ -56,6 +58,15 @@ module Kapusta
 
     def self.run_file(path)
       run(File.read(path), path:)
+    end
+
+    def self.normalize_target(target)
+      case target
+      when nil then nil
+      when :mruby, 'mruby' then :mruby
+      else
+        raise Error, Kapusta::Errors.format(:unknown_target, target: target.inspect)
+      end
     end
   end
 end
