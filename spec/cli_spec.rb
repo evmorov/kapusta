@@ -66,11 +66,11 @@ RSpec.describe Kapusta::CLI do
     end
   end
 
-  it 'compiles case and match forms for mruby with --target=mruby' do
+  it 'compiles case and match forms for mruby3 with --target=mruby3' do
     path = File.expand_path('../examples/match.kap', __dir__)
 
     ruby = capture_stdout do
-      described_class.start(['--compile', '--target=mruby', path])
+      described_class.start(['--compile', '--target=mruby3', path])
     end
 
     expect(ruby).not_to match(/^\s*in\b/)
@@ -98,14 +98,14 @@ RSpec.describe Kapusta::CLI do
         .to raise_error(SystemExit)
     end
 
-    expect(error_output).to include('unknown target "mri"; only mruby is supported')
+    expect(error_output).to include('unknown target "mri"; only mruby3 is supported')
   end
 
   it 'rejects target without compile mode' do
     path = File.expand_path('../examples/fizzbuzz.kap', __dir__)
 
     error_output = capture_stderr do
-      expect { described_class.start(['--target=mruby', path]) }
+      expect { described_class.start(['--target=mruby3', path]) }
         .to raise_error(SystemExit)
     end
 

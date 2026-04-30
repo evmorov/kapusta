@@ -43,10 +43,10 @@ kapusta --compile examples/fizzbuzz.kap > examples/fizzbuzz.rb
 ruby examples/fizzbuzz.rb
 ```
 
-For mruby-compatible output, such as DragonRuby, use:
+For mruby 3 compatible output, such as DragonRuby, use:
 
 ```
-kapusta --compile --target=mruby examples/match.kap > examples/match-mruby.rb
+kapusta --compile --target=mruby3 examples/match.kap > examples/match-mruby3.rb
 ```
 
 ## Use from Ruby

@@ -64,7 +64,7 @@ module Kapusta
       unexpected_eof: 'unexpected eof',
       unexpected_vararg: 'unexpected vararg',
       unknown_special_form: 'unknown special form: %{name}',
-      unknown_target: 'unknown target %{target}; only mruby is supported',
+      unknown_target: 'unknown target %{target}; only mruby3 is supported',
       unquote_outside_quasiquote: 'unquote outside quasiquote',
       unquote_splice_outside_list: 'unquote-splice must appear inside a quoted list/vec',
       unterminated_string: 'unterminated string',

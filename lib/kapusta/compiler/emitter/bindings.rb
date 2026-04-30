@@ -178,7 +178,7 @@ module Kapusta
 
         def emit_toplevel_method_bridge(ruby_name)
           method_name = ruby_name.to_sym.inspect
-          if mruby_target?
+          if mruby3_target?
             return [
               "define_singleton_method(#{method_name}) do |*args|",
               indent("Object.instance_method(#{method_name}).bind(self).call(*args)"),

@@ -39,7 +39,7 @@ module Kapusta
       OptionParser.new do |parser|
         parser.banner = usage
         parser.on('-c', '--compile', 'Compile .kap to Ruby') { options.compile = true }
-        parser.on('--target=TARGET', 'Compile for mruby') do |target|
+        parser.on('--target=TARGET', 'Compile for mruby3') do |target|
           options.target = Kapusta::Compiler.normalize_target(target)
         end
         parser.on('-h', '--help', 'Show this help') { options.help = true }
@@ -69,7 +69,7 @@ module Kapusta
     end
 
     def self.usage
-      'usage: kapusta [--compile|-c] [--target=mruby] <file.kap> | kapusta <file.kap> [args...]'
+      'usage: kapusta [--compile|-c] [--target=mruby3] <file.kap> | kapusta <file.kap> [args...]'
     end
   end
 end

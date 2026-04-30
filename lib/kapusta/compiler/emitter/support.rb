@@ -25,8 +25,8 @@ module Kapusta
           (@form_stack ||= []).last
         end
 
-        def mruby_target?
-          @target == :mruby
+        def mruby3_target?
+          @target == :mruby3
         end
 
         def positionable?(form)

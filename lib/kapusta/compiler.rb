@@ -61,7 +61,7 @@ module Kapusta
     def self.normalize_target(target)
       case target
       when nil then nil
-      when :mruby, 'mruby' then :mruby
+      when :mruby3, 'mruby3', :mruby, 'mruby' then :mruby3
       else
         raise Error, Kapusta::Errors.format(:unknown_target, target: target.inspect)
       end

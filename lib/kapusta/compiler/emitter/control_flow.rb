@@ -96,7 +96,7 @@ module Kapusta
         end
 
         def emit_case_body(value_var, clauses, env, current_scope, mode)
-          return try_emit_compat_case(value_var, clauses, env, current_scope, mode) if mruby_target?
+          return try_emit_compat_case(value_var, clauses, env, current_scope, mode) if mruby3_target?
 
           try_emit_native_case(value_var, clauses, env, current_scope, mode) ||
             try_emit_compat_case(value_var, clauses, env, current_scope, mode)

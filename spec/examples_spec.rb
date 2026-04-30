@@ -446,7 +446,7 @@ RSpec.describe 'examples' do
 
   it 'underscore-patterns.kap on mruby keeps loose nil and strict fallback separate' do
     path = File.join(EXAMPLES_DIR, 'underscore-patterns.kap')
-    ruby = compile_example('underscore-patterns.kap', target: :mruby)
+    ruby = compile_example('underscore-patterns.kap', target: :mruby3)
 
     expect(run_mruby_source(ruby, path:)).to eq(<<~OUT)
       5
@@ -699,7 +699,7 @@ RSpec.describe 'mruby runtime examples' do
       if mruby_status.success? && mruby_stdout == expected
         expect(run_mruby_source(ruby, path:)).to eq(expected)
       else
-        mruby_ruby = compile_example(name, target: :mruby)
+        mruby_ruby = compile_example(name, target: :mruby3)
 
         if mruby_ruby == ruby
           expect(mruby_status).to be_success
