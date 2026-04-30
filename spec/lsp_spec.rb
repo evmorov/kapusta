@@ -587,6 +587,92 @@ RSpec.describe Kapusta::LSP do
     end
   end
 
+  it 'renames an @ivar across methods within a class' do
+    text = "(class C)\n(fn one [] (set @counter 1))\n(fn two [] @counter)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'counter'), new_name: 'total')
+    )
+    changes = result_for(responses)['result']['documentChanges']
+
+    expect(changes.length).to eq(1)
+    edits = changes.first['edits']
+    expect(edits.map { |e| e['newText'] }).to eq(%w[total total])
+    expect(edits.map { |e| [e['range']['start']['line'], e['range']['start']['character']] })
+      .to contain_exactly([1, 17], [2, 12])
+  end
+
+  it 'renames @ivar without touching a same-named fn parameter or value reference' do
+    text = "(class C)\n(fn init [val] (set @counter val))\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'counter'), new_name: 'total')
+    )
+    changes = result_for(responses)['result']['documentChanges']
+
+    expect(changes.length).to eq(1)
+    edits = changes.first['edits']
+    expect(edits.length).to eq(1)
+    expect(edits.first['newText']).to eq('total')
+    expect(edits.first['range']['start']).to eq('line' => 1, 'character' => 21)
+  end
+
+  it 'renames a $gvar within a file' do
+    text = "(set $last 1)\n(print $last)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'last'), new_name: 'latest')
+    )
+    changes = result_for(responses)['result']['documentChanges']
+
+    expect(changes.length).to eq(1)
+    edits = changes.first['edits']
+    expect(edits.map { |e| e['newText'] }).to eq(%w[latest latest])
+  end
+
+  it 'keeps @x and @@x in separate sigil namespaces' do
+    text = "(class C)\n(set @@flag 1)\n(fn show [] (set @flag 2))\n"
+    ivar_position = { line: 2, character: 18 }
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **ivar_position, new_name: 'mark')
+    )
+    changes = result_for(responses)['result']['documentChanges']
+
+    expect(changes.length).to eq(1)
+    edits = changes.first['edits']
+    expect(edits.length).to eq(1)
+    expect(edits.first['newText']).to eq('mark')
+    expect(edits.first['range']['start']).to eq('line' => 2, 'character' => 18)
+  end
+
+  it 'jumps to the first @@cvar binding from a later use site' do
+    text = "(class C)\n(set @@total 0)\n(fn add [] (set @@total (+ @@total 1)))\n"
+    use_index = text.rindex('@@total') + 2
+    prefix = text[0...use_index]
+    last_nl = prefix.rindex("\n")
+    pos = { line: prefix.count("\n"), character: last_nl ? use_index - last_nl - 1 : use_index }
+
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', **pos)
+    )
+    result = result_for(responses)['result']
+
+    expect(result).to eq(
+      'uri' => 'file:///x.kap',
+      'range' => {
+        'start' => { 'line' => 1, 'character' => 7 },
+        'end' => { 'line' => 1, 'character' => 12 }
+      }
+    )
+  end
+
   it 'escapes file URIs built during workspace scans' do
     Dir.mktmpdir do |dir|
       nested = File.join(dir, 'space dir')

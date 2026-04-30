@@ -1,0 +1,18 @@
+(class ParkingSystem)
+
+(fn initialize [big medium small]
+  (set @big big)
+  (set @medium medium)
+  (set @small small))
+
+(fn add-car [car-type]
+  (if (and (= car-type 1) (> @big 0)) (do (set @big (- @big 1)) true)
+      (and (= car-type 2) (> @medium 0)) (do (set @medium (- @medium 1)) true)
+      (and (= car-type 3) (> @small 0)) (do (set @small (- @small 1)) true)
+      false))
+
+(let [parking (ParkingSystem.new 1 1 0)]
+  (print (parking.add-car 1))
+  (print (parking.add-car 2))
+  (print (parking.add-car 3))
+  (print (parking.add-car 1)))

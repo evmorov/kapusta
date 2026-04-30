@@ -95,6 +95,8 @@ module Kapusta
         when '#' then read_hashfn
         when '`' then read_quasiquote
         when ',' then read_unquote
+        when '@' then peek_at(@pos + 1) == '@' ? read_sigil(:cvar, 2) : read_sigil(:ivar, 1)
+        when '$' then read_sigil(:gvar, 1)
         when *CLOSING_DELIMS then raise unexpected_closing_delim(peek)
         else
           read_atom
@@ -115,6 +117,32 @@ module Kapusta
     def read_quasiquote
       advance
       Quasiquote.new(read_form)
+    end
+
+    def read_sigil(kind, prefix_length)
+      return read_atom unless sigil_id_start?(peek_at(@pos + prefix_length))
+
+      position = source_position
+      prefix_length.times { advance }
+      name_position = source_position
+      name_start = @pos
+      advance until delim?(peek) || peek == '.'
+      inner = Sym.new(@src[name_start...@pos])
+      inner.line = name_position[0]
+      inner.column = name_position[1]
+      list = List.new([Sym.new(kind.to_s), inner])
+      list.sigil = kind
+      list.line = position[0]
+      list.column = position[1]
+      list
+    end
+
+    def peek_at(pos)
+      @src[pos]
+    end
+
+    def sigil_id_start?(char)
+      !char.nil? && char.match?(/[A-Za-z_]/)
     end
 
     def read_unquote

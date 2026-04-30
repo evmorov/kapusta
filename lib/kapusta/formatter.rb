@@ -178,7 +178,7 @@ module Kapusta
 
       case form
       when Comment then form.text
-      when List then render_list(form, indent, top_level:)
+      when List then form.sigil ? render_sigil(form) : render_list(form, indent, top_level:)
       when Vec then render_vec(form, indent, layout:, top_level:, force_expand:)
       when HashLit then render_hash(form, indent)
       when Quasiquote then render_prefix('`', form.form, indent, force_expand:)
@@ -187,6 +187,13 @@ module Kapusta
       else
         flat || raise(Error, "cannot format form: #{form.inspect}")
       end
+    end
+
+    SIGIL_PREFIXES = { ivar: '@', cvar: '@@', gvar: '$' }.freeze
+    private_constant :SIGIL_PREFIXES
+
+    def render_sigil(list)
+      "#{SIGIL_PREFIXES.fetch(list.sigil)}#{list.items[1].name}"
     end
 
     def render_prefix(prefix, inner, indent, force_expand: false)
@@ -221,6 +228,7 @@ module Kapusta
 
         "{#{rendered.join(' ')}}"
       when List
+        return render_sigil(form) if form.sigil
         return if contains_comments?(form.items)
         return "##{flat_render(semantic_items(form.items)[1])}" if hashfn_literal?(form)
         return if multiline_in_source?(form)

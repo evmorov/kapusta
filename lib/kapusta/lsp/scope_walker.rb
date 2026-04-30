@@ -16,7 +16,7 @@ module Kapusta
         end
       end
 
-      SKIPPED_HEADS = %w[macros ivar cvar gvar quasi-sym quasi-list
+      SKIPPED_HEADS = %w[macros quasi-sym quasi-list
                          quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym].freeze
 
       DISPATCHERS = {
@@ -42,7 +42,10 @@ module Kapusta
         'class' => :walk_module_class,
         'hashfn' => :walk_hashfn,
         'macro' => :walk_macro_def,
-        'import-macros' => :walk_import_macros
+        'import-macros' => :walk_import_macros,
+        'ivar' => :walk_sigil_form,
+        'cvar' => :walk_sigil_form,
+        'gvar' => :walk_sigil_form
       }.freeze
 
       attr_reader :bindings, :references, :root_scope
@@ -58,7 +61,9 @@ module Kapusta
         @references = []
         @scope_seq = 0
         @root_scope = make_scope(nil, :file)
+        @gvar_scope = make_scope(nil, :gvars)
         @in_module_or_class = 0
+        @sigil_scope_stack = [make_sigil_scopes]
       end
 
       def walk_top(forms)
@@ -132,7 +137,7 @@ module Kapusta
           name_sym, supers, = split_class_args(form.items[1..] || [])
           supers&.items&.each { |item| walk_form(item, scope) }
           add_constant_binding(name_sym, scope, :class) if name_sym.is_a?(Sym)
-          inside_module_or_class do
+          inside_class do
             remaining_forms.each { |item| walk_form(item, scope) }
           end
         end
@@ -152,6 +157,21 @@ module Kapusta
         yield
       ensure
         @in_module_or_class -= 1
+      end
+
+      def inside_class
+        inside_module_or_class do
+          @sigil_scope_stack.push(make_sigil_scopes)
+          begin
+            yield
+          ensure
+            @sigil_scope_stack.pop
+          end
+        end
+      end
+
+      def make_sigil_scopes
+        { ivar: make_scope(nil, :ivars), cvar: make_scope(nil, :cvars) }
       end
 
       def walk_form(form, scope)
@@ -291,6 +311,10 @@ module Kapusta
         target = list.items[1]
         value = list.items[2]
         walk_form(value, scope) if value
+        if target.is_a?(List)
+          walk_form(target, scope)
+          return
+        end
         return unless target.is_a?(Sym) && !target.dotted?
 
         existing = scope.lookup(target.name)
@@ -298,6 +322,29 @@ module Kapusta
           add_reference(target, scope, existing)
         else
           add_binding(target, scope, :set)
+        end
+      end
+
+      def walk_sigil_form(list, _scope)
+        return if list.items.length < 2
+
+        inner = list.items[1]
+        return unless inner.is_a?(Sym)
+
+        kind = list.head.name.to_sym
+        target_scope = sigil_target_scope(kind)
+        existing = target_scope.bindings[inner.name]
+        if existing
+          add_reference(inner, target_scope, existing)
+        else
+          add_binding(inner, target_scope, kind)
+        end
+      end
+
+      def sigil_target_scope(kind)
+        case kind
+        when :ivar, :cvar then @sigil_scope_stack.last.fetch(kind)
+        when :gvar then @gvar_scope
         end
       end
 
@@ -472,8 +519,11 @@ module Kapusta
 
         add_constant_binding(name_sym, scope, kind) if name_sym.is_a?(Sym)
 
-        inside_module_or_class do
-          list.items[body_start..]&.each { |form| walk_form(form, scope) }
+        body = list.items[body_start..] || []
+        if kind == :class
+          inside_class { body.each { |form| walk_form(form, scope) } }
+        else
+          inside_module_or_class { body.each { |form| walk_form(form, scope) } }
         end
       end
 

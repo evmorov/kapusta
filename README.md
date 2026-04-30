@@ -104,7 +104,7 @@ Kapusta keeps most core Fennel forms. The main differences come from Ruby's runt
 Kapusta-specific additions:
 
 - `module` and `class` for Ruby host structure, including file-header forms
-- `ivar` (`@var`) / `cvar` (`@@var`) / `gvar` (`$var`) escape hatches
+- `ivar` or `@var`) / `cvar` or `@@var` / `gvar` or `$var`
 - `try` / `catch` / `finally` plus `raise` for exceptions
 - `(ruby "...")` raw host escape hatch
 - a trailing symbol-keyed hash is emitted as Ruby keyword arguments

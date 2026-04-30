@@ -117,7 +117,7 @@ module Kapusta
 
   class List
     attr_reader :items
-    attr_accessor :multiline_source, :line, :column
+    attr_accessor :multiline_source, :line, :column, :sigil
 
     def initialize(items)
       @items = items

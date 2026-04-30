@@ -563,4 +563,17 @@ RSpec.describe 'examples' do
   it 'macros-import-whole.kap' do
     expect(run_example('macros-import-whole.kap')).to eq("7\n")
   end
+
+  it 'parking-system.kap' do
+    expect(run_example('parking-system.kap')).to eq("true\ntrue\nfalse\nfalse\n")
+  end
+
+  it 'hit-counter.kap' do
+    expect(run_example('hit-counter.kap')).to eq(<<~OUT)
+      1
+      2
+      3
+      "alice"
+    OUT
+  end
 end

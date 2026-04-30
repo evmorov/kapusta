@@ -1,0 +1,17 @@
+(class HitCounter)
+
+(set @@total 0)
+
+(fn initialize [name] (set @name name))
+
+(fn hit []
+  (set @@total (+ @@total 1))
+  (set $last-hitter @name)
+  @@total)
+
+(let [a (HitCounter.new "alice")
+      b (HitCounter.new "bob")]
+  (print (a.hit))
+  (print (b.hit))
+  (print (a.hit))
+  (print $last-hitter))
