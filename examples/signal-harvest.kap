@@ -3,10 +3,10 @@
 (local SCREEN-W 1280)
 (local TARGET-SCORE 36)
 
-(fn self.cell-width [columns]
+(defn cell-width [columns]
   (/ SCREEN-W columns))
 
-(fn self.win? [score]
+(defn win? [score]
   (>= score TARGET-SCORE))
 
 (end)

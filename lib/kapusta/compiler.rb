@@ -10,7 +10,7 @@ module Kapusta
   module Compiler
     class Error < Kapusta::Error; end
     CORE_SPECIAL_FORMS = %w[
-      fn lambda λ let local var global set if when unless case match
+      fn defn lambda λ let local var global set if when unless case match
       while for each do values
       -> ->> -?> -?>> doto
       icollect collect fcollect accumulate faccumulate

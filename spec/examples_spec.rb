@@ -573,6 +573,10 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'recent-counter.kap' do
+    expect(run_example('recent-counter.kap')).to eq("4\n5\n")
+  end
+
   it 'reverse-integer.kap' do
     expect(run_example('reverse-integer.kap')).to eq("321\n-321\n21\n0\n")
   end

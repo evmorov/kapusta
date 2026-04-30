@@ -266,7 +266,7 @@ module Kapusta
       raw_args = list_raw_rest(list)
 
       case head_name
-      when 'fn', 'lambda', 'λ', 'macro' then render_fn(head_name, list, indent, top_level:)
+      when 'fn', 'defn', 'lambda', 'λ', 'macro' then render_fn(head_name, list, indent, top_level:)
       when 'let' then render_let(list, indent)
       when 'do', 'finally' then render_prefix_body_form(head_name, [], raw_args, indent)
       when 'try' then render_try(list, indent)

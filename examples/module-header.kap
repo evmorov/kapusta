@@ -1,7 +1,7 @@
 ; File header forms map directly to Ruby modules.
 (module HeaderDemo)
 
-(fn self.greet [name]
+(defn greet [name]
   (.. "Hello, " name "!"))
 
 (end)

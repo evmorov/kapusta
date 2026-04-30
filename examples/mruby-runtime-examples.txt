@@ -66,6 +66,7 @@ points
 power-of-three
 primes
 raindrops
+recent-counter
 record
 reverse-integer
 roman-to-integer

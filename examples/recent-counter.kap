@@ -1,0 +1,17 @@
+(class RecentCounter)
+(fn initialize [] (set @pings []))
+(fn ping [t]
+  (let [pings @pings]
+    (pings.push t)
+    (while (< (. pings 0) (- t 3000))
+      (pings.shift))
+    (length pings)))
+(defn warm [history]
+  (let [c (RecentCounter.new)]
+    (each [_ t (ipairs history)] (c.ping t))
+    c))
+(end)
+
+(let [c (RecentCounter.warm [100 200 300])]
+  (print (c.ping 3001))
+  (print (c.ping 3002)))

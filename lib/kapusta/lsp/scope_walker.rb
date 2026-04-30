@@ -27,6 +27,7 @@ module Kapusta
         'global' => :walk_global,
         'set' => :walk_set,
         'fn' => :walk_fn,
+        'defn' => :walk_fn,
         'lambda' => :walk_fn,
         'λ' => :walk_fn,
         'for' => :walk_for,
