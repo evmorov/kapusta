@@ -387,28 +387,30 @@ module Kapusta
       def walk_fn(list, scope)
         items = list.items
         if items[1].is_a?(Vec)
+          name_sym = nil
           params = items[1]
           body = items[2..]
-          fn_scope = make_scope(scope, :fn)
-          bind_param_vec(params, fn_scope)
-          body.each { |form| walk_form(form, fn_scope) }
         elsif items[1].is_a?(Sym) && items[2].is_a?(Vec)
           name_sym = items[1]
           params = items[2]
           body = items[3..]
+        else
+          items[1..]&.each { |item| walk_form(item, scope) }
+          return
+        end
+
+        fn_scope = make_scope(scope, :fn)
+        if name_sym
           kind = if method_definition_context?
                    :method
                  else
                    (scope == @root_scope ? :toplevel_fn : :fn_local)
                  end
-          fn_scope = make_scope(scope, :fn)
           binding = add_binding(name_sym, scope, kind, lexical: kind != :method)
           fn_scope.bindings[name_sym.name] = binding unless kind == :method
-          bind_param_vec(params, fn_scope)
-          body.each { |form| walk_form(form, fn_scope) }
-        else
-          items[1..]&.each { |item| walk_form(item, scope) }
         end
+        bind_param_vec(params, fn_scope)
+        body.each { |form| walk_form(form, fn_scope) }
       end
 
       def method_definition_context?
