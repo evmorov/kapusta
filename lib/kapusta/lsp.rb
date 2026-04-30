@@ -19,6 +19,17 @@ module Kapusta
       new(input:, output:, log:).run
     end
 
+    def self.uri_to_path(uri)
+      return unless uri.is_a?(String)
+
+      parsed = URI.parse(uri)
+      return URI::DEFAULT_PARSER.unescape(parsed.path) if parsed.scheme == 'file'
+
+      uri
+    rescue URI::InvalidURIError
+      nil
+    end
+
     def initialize(input:, output:, log:)
       @input = input.binmode
       @output = output.binmode
@@ -150,8 +161,8 @@ module Kapusta
 
     def on_initialize(params)
       folders = params['workspaceFolders'] || []
-      roots = folders.filter_map { |f| uri_to_path(f['uri']) }
-      roots << uri_to_path(params['rootUri']) if params['rootUri']
+      roots = folders.filter_map { |f| LSP.uri_to_path(f['uri']) }
+      roots << LSP.uri_to_path(params['rootUri']) if params['rootUri']
       roots.compact!
       roots.uniq!
       debug("initialize: roots=#{roots.inspect}")
@@ -213,7 +224,7 @@ module Kapusta
       entry = @sources[uri]
       return [] unless entry
 
-      Formatting.text_edits(entry[:text], uri_to_path(uri))
+      Formatting.text_edits(entry[:text], LSP.uri_to_path(uri))
     end
 
     def definition(params)
@@ -283,21 +294,10 @@ module Kapusta
     end
 
     def publish_diagnostics(uri, text, version)
-      diagnostics = Diagnostics.collect(text, uri_to_path(uri))
+      diagnostics = Diagnostics.collect(text, LSP.uri_to_path(uri))
       params = { uri:, diagnostics: }
       params[:version] = version unless version.nil?
       notify('textDocument/publishDiagnostics', params)
-    end
-
-    def uri_to_path(uri)
-      return unless uri
-
-      parsed = URI.parse(uri)
-      return URI::DEFAULT_PARSER.unescape(parsed.path) if parsed.scheme == 'file'
-
-      uri
-    rescue URI::InvalidURIError
-      uri
     end
 
     def log(message)

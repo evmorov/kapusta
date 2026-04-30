@@ -35,7 +35,7 @@ module Kapusta
       end
 
       def remove(uri)
-        path = uri_to_path(uri)
+        path = LSP.uri_to_path(uri)
         if path && File.file?(path)
           store(uri, File.read(path))
         else
@@ -178,7 +178,7 @@ module Kapusta
       end
 
       def resolve_module_uris(importing_uri, module_label)
-        importing_path = uri_to_path(importing_uri)
+        importing_path = LSP.uri_to_path(importing_uri)
         return [] unless importing_path
 
         base_dir = File.dirname(importing_path)
@@ -208,17 +208,6 @@ module Kapusta
 
       def path_to_uri(path)
         "file://#{URI::DEFAULT_PARSER.escape(File.expand_path(path))}"
-      end
-
-      def uri_to_path(uri)
-        return unless uri.is_a?(String)
-
-        parsed = URI.parse(uri)
-        return URI::DEFAULT_PARSER.unescape(parsed.path) if parsed.scheme == 'file'
-
-        uri
-      rescue URI::InvalidURIError
-        nil
       end
     end
   end
