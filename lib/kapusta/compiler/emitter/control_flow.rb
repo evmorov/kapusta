@@ -185,11 +185,11 @@ module Kapusta
           where_guard_codes = where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
           if where_guard_codes.empty?
             guard_codes = plan[:conditions]
-            prelude     = plan[:prelude]
+            prelude = plan[:prelude]
           else
             prelude_guards = plan[:prelude].map { |line| "begin #{line}; true end" }
             guard_codes = plan[:conditions] + prelude_guards + where_guard_codes
-            prelude     = []
+            prelude = []
           end
           body_code = emit_expr(body, arm_env, current_scope)
           [guard_codes, prelude, body_code]

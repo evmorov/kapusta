@@ -50,3 +50,7 @@ Metrics/BlockLength:
 
 Style/HashSyntax:
   EnforcedShorthandSyntax: always
+
+Layout/ExtraSpacing:
+  AllowBeforeTrailingComments: false
+  AllowForAlignment: false
