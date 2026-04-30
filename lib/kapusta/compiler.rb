@@ -35,7 +35,6 @@ module Kapusta
     SPECIAL_FORMS = (CORE_SPECIAL_FORMS + LuaCompat::SPECIAL_FORMS).freeze
 
     def self.compile(source, path: '(kapusta)', target: nil)
-      target = normalize_target(target)
       forms = Reader.read_all(source)
       expanded = MacroExpander.new(path:).expand_all(forms)
       compile_forms(expanded, path:, target:)
@@ -44,9 +43,8 @@ module Kapusta
     end
 
     def self.compile_forms(forms, path: '(kapusta)', target: nil)
-      target = normalize_target(target)
       normalized = Normalizer.new.normalize_all(forms)
-      Emitter.new(path:, target:).emit_file(normalized)
+      Emitter.new(path:, target: normalize_target(target)).emit_file(normalized)
     rescue Kapusta::Error => e
       raise e.with_defaults(path:)
     end

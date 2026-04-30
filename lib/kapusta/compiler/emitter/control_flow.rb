@@ -169,14 +169,14 @@ module Kapusta
           return unless plan
 
           where_guard_codes = where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
-          prelude = plan[:prelude]
-          guard_codes = plan[:conditions] +
-                        if where_guard_codes.empty?
-                          []
-                        else
-                          prelude.map { |line| "begin #{line}; true end" } + where_guard_codes
-                        end
-          prelude = [] unless where_guard_codes.empty?
+          if where_guard_codes.empty?
+            guard_codes = plan[:conditions]
+            prelude     = plan[:prelude]
+          else
+            prelude_guards = plan[:prelude].map { |line| "begin #{line}; true end" }
+            guard_codes = plan[:conditions] + prelude_guards + where_guard_codes
+            prelude     = []
+          end
           body_code = emit_expr(body, arm_env, current_scope)
           [guard_codes, prelude, body_code]
         end
