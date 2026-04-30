@@ -58,8 +58,6 @@ module Kapusta
           current_env = env
           each_pattern_item(pattern.items) do |kind, sub|
             if kind == :rest
-              raise PatternNotTranslatable unless sub.is_a?(Sym)
-
               parts << native_rest_target(sub, current_env)
             else
               code, current_env, follow_up = native_destructure_target(sub, current_env, allow_follow_up: true)
@@ -473,18 +471,15 @@ module Kapusta
           name.length > 1 && (name.start_with?('?') || name.start_with?('_'))
         end
 
-        def rest_pattern_marker?(items, index)
-          items[index].is_a?(Sym) && items[index].name == '&'
-        end
-
         def each_pattern_item(items)
           i = 0
           while i < items.length
-            if rest_pattern_marker?(items, i)
+            item = items[i]
+            if item.is_a?(Sym) && item.name == '&'
               yield :rest, items[i + 1]
               i += 2
             else
-              yield :item, items[i]
+              yield :item, item
               i += 1
             end
           end
