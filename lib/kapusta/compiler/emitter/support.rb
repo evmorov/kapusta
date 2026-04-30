@@ -97,7 +97,8 @@ module Kapusta
             if named_function_form?(form)
               emit_named_fn_assignment(form, env, current_scope)
             elsif local_form?(form)
-              code, env = emit_local_form(form, env, current_scope)
+              code, env = emit_local_form(form, env, current_scope,
+                                          allow_constant: allow_method_definitions)
               code = code.delete_suffix("\nnil") unless result_needed
               [code, env]
             elsif do_form?(form)

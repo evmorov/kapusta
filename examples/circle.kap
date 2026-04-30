@@ -1,0 +1,16 @@
+(class Circle)
+
+(local pi 3.14159)
+
+(fn initialize [radius]
+  (set @radius radius))
+
+(fn area []
+  (* pi @radius @radius))
+
+(fn circumference []
+  (* 2 pi @radius))
+
+(let [c (Circle.new 5)]
+  (print (c.area))
+  (print (c.circumference)))

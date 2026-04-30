@@ -1,0 +1,11 @@
+(local max-missed 3)
+
+(fn classify [guesses]
+  (var missed 0)
+  (each [_ g (ipairs guesses)]
+    (when (= g 1) (set missed (+ missed 1))))
+  (if (< missed max-missed) :ok :locked))
+
+(print (classify [0 1 0 1]))
+(print (classify [1 1 1]))
+(print (classify [1 1 1 0]))

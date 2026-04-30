@@ -229,8 +229,14 @@ module Kapusta
 
           binding = env.lookup_if_defined(name)
           return false if binding.nil?
+          return false if method_binding?(binding)
+          return false if constant_binding?(binding)
 
-          !method_binding?(binding)
+          true
+        end
+
+        def constant_binding?(binding)
+          binding.is_a?(String) && binding.match?(/\A[A-Z][A-Z0-9_]*\z/)
         end
 
         def emit_let(args, env, current_scope)
@@ -277,7 +283,7 @@ module Kapusta
           chunks.reject(&:empty?).join("\n")
         end
 
-        def emit_local_form(form, env, current_scope)
+        def emit_local_form(form, env, current_scope, allow_constant: false)
           emit_error!(:local_arity, form: form.head.name) unless form.items.length == 3
 
           target = form.items[1]
@@ -285,6 +291,12 @@ module Kapusta
 
           if target.is_a?(Sym)
             validate_binding_symbol!(target)
+            if allow_constant && form.head.name == 'local' && (constant_name = constant_name_for(target.name))
+              env.define(target.name, constant_name)
+              mark_mutability(env, target.name, mutable: false)
+              return ["#{constant_name} = #{value_code}\nnil", env]
+            end
+
             ruby_name = define_local(env, target.name)
             mark_mutability(env, target.name, mutable: form.head.name == 'var')
             ["#{ruby_name} = #{value_code}\nnil", env]
@@ -292,6 +304,11 @@ module Kapusta
             bind_code, env = emit_pattern_bind(target, value_code, env)
             [join_code(bind_code, 'nil'), env]
           end
+        end
+
+        def constant_name_for(source_name)
+          candidate = source_name.tr('-', '_').upcase
+          candidate if candidate.match?(/\A[A-Z][A-Z0-9_]*\z/)
         end
 
         def check_destructure_value!(pattern, value_form)
