@@ -111,6 +111,16 @@ module Kapusta
         end
 
         def try_emit_native_case(value_var, clauses, env, current_scope, mode)
+          arms = collect_case_arms(clauses) do |pattern, body, where_guards|
+            try_native_arm(pattern, body, where_guards, env, current_scope, mode)
+          end
+          return unless arms
+
+          arms << ['else', indent('nil')].join("\n") unless wildcard_last?(clauses)
+          ["case #{value_var}", *arms, 'end'].join("\n")
+        end
+
+        def collect_case_arms(clauses)
           arms = []
           i = 0
           while i < clauses.length
@@ -118,16 +128,13 @@ module Kapusta
             body = clauses[i + 1]
             inner, where_guards = extract_pattern_and_guards(pattern)
             sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
-            sub_arms = sub_patterns.map do |sub|
-              try_native_arm(sub, body, where_guards, env, current_scope, mode)
-            end
+            sub_arms = sub_patterns.map { |sub| yield sub, body, where_guards }
             return if sub_arms.any?(&:nil?)
 
             arms.concat(sub_arms)
             i += 2
           end
-          arms << ['else', indent('nil')].join("\n") unless wildcard_last?(clauses)
-          ["case #{value_var}", *arms, 'end'].join("\n")
+          arms
         end
 
         def try_native_arm(pattern, body, where_guards, env, current_scope, mode)
@@ -145,21 +152,11 @@ module Kapusta
         end
 
         def try_emit_compat_case(value_var, clauses, env, current_scope, mode)
-          arms = []
-          i = 0
-          while i < clauses.length
-            pattern = clauses[i]
-            body = clauses[i + 1]
-            inner, where_guards = extract_pattern_and_guards(pattern)
-            sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
-            sub_arms = sub_patterns.map do |sub|
-              try_compat_arm(sub, body, where_guards, value_var, env, current_scope, mode)
-            end
-            return if sub_arms.any?(&:nil?)
-
-            arms.concat(sub_arms)
-            i += 2
+          arms = collect_case_arms(clauses) do |pattern, body, where_guards|
+            try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
           end
+          return unless arms
+
           emit_compat_case_lines(arms)
         end
 
