@@ -257,7 +257,8 @@ module Kapusta
                               new_name, workspace_index: @workspace_index)
       if result[:error]
         debug("rename error: #{result[:error].inspect}")
-        reply_error(id, result[:error][:code], result[:error][:message])
+        notify('window/showMessage', { type: 1, message: "Rename: #{result[:error][:message]}" })
+        reply(id, { documentChanges: [] })
       else
         edit = build_workspace_edit(result[:changes])
         debug("rename ok: files=#{result[:changes].keys.length} edits=#{result[:changes].values.sum(&:length)}")

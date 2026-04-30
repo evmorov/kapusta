@@ -9,8 +9,7 @@ class Circle
   def circumference
     2 * PI * @radius
   end
-  c = Circle.new(5)
-  p c.area
-  p c.circumference
 end
-Circle
+c = Circle.new(5)
+p c.area
+p c.circumference

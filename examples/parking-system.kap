@@ -11,6 +11,8 @@
       (and (= car-type 3) (> @small 0)) (do (set @small (- @small 1)) true)
       false))
 
+(end)
+
 (let [parking (ParkingSystem.new 1 1 0)]
   (print (parking.add-car 1))
   (print (parking.add-car 2))

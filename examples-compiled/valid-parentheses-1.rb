@@ -31,4 +31,3 @@ class ValidParenthesesSolution
     ok && stack.empty?
   end
 end
-ValidParenthesesSolution

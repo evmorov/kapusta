@@ -19,7 +19,7 @@ module Kapusta
       ..
       length
       require
-      module class
+      module class end
       try catch finally
       raise
       ivar cvar gvar

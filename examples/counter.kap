@@ -12,6 +12,8 @@
 (fn self.zero []
   (Counter.new 0))
 
+(end)
+
 (let [c (Counter.new 10)]
   (c.tick)
   (c.tick)

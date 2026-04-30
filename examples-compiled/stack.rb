@@ -29,14 +29,13 @@ class MinStack
   def get_min
     @mins[-1]
   end
-  s = MinStack.new
-  s.push(-2)
-  s.push(0)
-  s.push(-3)
-  p s.get_min
-  s.pop
-  p s.top
-  p s.get_min
-  p(MinStack.superclass == Object)
 end
-MinStack
+s = MinStack.new
+s.push(-2)
+s.push(0)
+s.push(-3)
+p s.get_min
+s.pop
+p s.top
+p s.get_min
+p(MinStack.superclass == Object)

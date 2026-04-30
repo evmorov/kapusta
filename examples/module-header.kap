@@ -4,4 +4,6 @@
 (fn self.greet [name]
   (.. "Hello, " name "!"))
 
-(print (self.greet "Ada"))
+(end)
+
+(print (HeaderDemo.greet "Ada"))

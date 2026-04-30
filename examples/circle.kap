@@ -11,6 +11,8 @@
 (fn circumference []
   (* 2 pi @radius))
 
+(end)
+
 (let [c (Circle.new 5)]
   (print (c.area))
   (print (c.circumference)))

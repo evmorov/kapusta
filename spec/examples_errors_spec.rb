@@ -92,6 +92,26 @@ RSpec.describe 'examples-errors' do
       .to eq("destructure-literal-table.kap:4:1: could not destructure literal\n")
   end
 
+  it 'end-outside-header.kap' do
+    expect(run_error_example('end-outside-header.kap'))
+      .to eq("end-outside-header.kap:1:1: end outside class or module\n")
+  end
+
+  it 'end-with-args.kap' do
+    expect(run_error_example('end-with-args.kap'))
+      .to eq("end-with-args.kap:5:1: end takes no arguments\n")
+  end
+
+  it 'extra-end.kap' do
+    expect(run_error_example('extra-end.kap'))
+      .to eq("extra-end.kap:7:1: end outside class or module\n")
+  end
+
+  it 'unclosed-header.kap' do
+    expect(run_error_example('unclosed-header.kap'))
+      .to eq("unclosed-header.kap:1:1: class or module not closed with (end)\n")
+  end
+
   it 'destructure-rest-as-table.kap' do
     expect(run_error_example('destructure-rest-as-table.kap'))
       .to eq("destructure-rest-as-table.kap:6:3: unable to bind table ...\n")

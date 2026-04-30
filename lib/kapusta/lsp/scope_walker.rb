@@ -15,6 +15,7 @@ module Kapusta
           bindings[name] || parent&.lookup(name)
         end
       end
+      EndMarker = Struct.new(:line, :column, :end_column, :target, keyword_init: true)
 
       SKIPPED_HEADS = %w[macros quasi-sym quasi-list
                          quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym].freeze
@@ -48,7 +49,7 @@ module Kapusta
         'gvar' => :walk_sigil_form
       }.freeze
 
-      attr_reader :bindings, :references, :root_scope
+      attr_reader :bindings, :references, :root_scope, :end_markers
 
       def self.analyze(forms)
         walker = new
@@ -59,6 +60,7 @@ module Kapusta
       def initialize
         @bindings = []
         @references = []
+        @end_markers = []
         @scope_seq = 0
         @root_scope = make_scope(nil, :file)
         @gvar_scope = make_scope(nil, :gvars)
@@ -67,17 +69,43 @@ module Kapusta
       end
 
       def walk_top(forms)
-        i = 0
+        walk_form_run(forms, 0, @root_scope)
+      end
+
+      def walk_form_run(forms, start, scope, header_target: nil)
+        i = start
         while i < forms.length
           form = forms[i]
-          if bodyless_header?(form)
-            walk_bodyless_header(form, forms[(i + 1)..] || [], @root_scope)
-            break
+          if end_form?(form)
+            record_end_marker(form, header_target) if header_target
+            return i + 1
           end
 
-          walk_form(form, @root_scope)
+          if bodyless_header?(form)
+            i = walk_bodyless_header(form, forms, i + 1, scope)
+            next
+          end
+
+          walk_form(form, scope)
           i += 1
         end
+        i
+      end
+
+      def record_end_marker(form, target)
+        head = form.head
+        return unless head.is_a?(Sym) && head.respond_to?(:line) && head.line
+
+        @end_markers << EndMarker.new(
+          line: head.line,
+          column: head.column,
+          end_column: head.column + head.name.length,
+          target:
+        )
+      end
+
+      def end_form?(form)
+        form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'end'
       end
 
       def binding_at(line, column)
@@ -120,25 +148,25 @@ module Kapusta
         end
       end
 
-      def walk_bodyless_header(form, remaining_forms, scope)
+      def walk_bodyless_header(form, forms, body_start, scope)
         case form.head.name
         when 'module'
           name_sym = form.items[1]
-          add_constant_binding(name_sym, scope, :module) if name_sym.is_a?(Sym)
+          binding = name_sym.is_a?(Sym) ? add_constant_binding(name_sym, scope, :module) : nil
           body = form.items[2..] || []
           inside_module_or_class do
             if body.length == 1 && bodyless_header?(body[0])
-              walk_bodyless_header(body[0], remaining_forms, scope)
+              walk_bodyless_header(body[0], forms, body_start, scope)
             else
-              remaining_forms.each { |item| walk_form(item, scope) }
+              walk_form_run(forms, body_start, scope, header_target: binding)
             end
           end
         when 'class'
           name_sym, supers, = split_class_args(form.items[1..] || [])
           supers&.items&.each { |item| walk_form(item, scope) }
-          add_constant_binding(name_sym, scope, :class) if name_sym.is_a?(Sym)
+          binding = name_sym.is_a?(Sym) ? add_constant_binding(name_sym, scope, :class) : nil
           inside_class do
-            remaining_forms.each { |item| walk_form(item, scope) }
+            walk_form_run(forms, body_start, scope, header_target: binding)
           end
         end
       end

@@ -18,10 +18,9 @@ class ParkingSystem
       false
     end
   end
-  parking = ParkingSystem.new(1, 1, 0)
-  p parking.add_car(1)
-  p parking.add_car(2)
-  p parking.add_car(3)
-  p parking.add_car(1)
 end
-ParkingSystem
+parking = ParkingSystem.new(1, 1, 0)
+p parking.add_car(1)
+p parking.add_car(2)
+p parking.add_car(3)
+p parking.add_car(1)

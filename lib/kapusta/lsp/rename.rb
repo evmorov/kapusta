@@ -344,7 +344,9 @@ module Kapusta
       end
 
       def rename_constant(target, new_name, workspace_index)
-        return error("invalid constant segment: #{new_name}") unless Identifier.valid_constant_segment?(new_name)
+        unless Identifier.valid_constant_segment?(new_name)
+          return error("class and module names must start with an uppercase letter (got #{new_name.inspect})")
+        end
 
         prefix = target.segment_prefix
         seg_index = target.segment_index

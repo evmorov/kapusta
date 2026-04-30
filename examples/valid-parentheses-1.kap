@@ -17,3 +17,5 @@
             (stack.push ch)))
       (set i (+ i 1)))
     (and ok (stack.empty?))))
+
+(end)

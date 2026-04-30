@@ -34,22 +34,52 @@ module Kapusta
         end
 
         def emit_forms_with_headers(forms, env, current_scope, result: true)
-          i = 0
+          _ = result
+          code, _next = emit_form_run(forms, 0, env, current_scope)
+          code
+        end
+
+        def emit_form_run(forms, start, env, current_scope, header_form: nil)
+          i = start
           codes = []
           while i < forms.length
             form = forms[i]
-            if bodyless_header?(form)
-              codes << emit_bodyless_header(form, forms[(i + 1)..], env, current_scope)
-              break
-            else
-              code, env = emit_form_in_sequence(form, env, current_scope,
-                                                allow_method_definitions: true,
-                                                result_needed: result && i == forms.length - 1)
-              codes << code
-              i += 1
+            if end_form?(form)
+              validate_end_form!(form)
+              with_current_form(form) { emit_error!(:end_outside_header) } unless header_form
+              return [codes.join("\n"), i + 1]
             end
+
+            if bodyless_header?(form)
+              header_code, i = emit_bodyless_header(form, forms, i + 1, env)
+              codes << header_code
+              next
+            end
+
+            code, env = emit_form_in_sequence(form, env, current_scope,
+                                              allow_method_definitions: true,
+                                              result_needed: false)
+            codes << code
+            i += 1
           end
-          codes.join("\n")
+          with_current_form(header_form) { emit_error!(:unclosed_header) } if header_form
+          [codes.join("\n"), i]
+        end
+
+        def end_form?(form)
+          form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'end'
+        end
+
+        def validate_end_form!(form)
+          with_current_form(form) { emit_error!(:end_with_args) } if form.items.length > 1
+        end
+
+        def validate_header_name!(form, head)
+          name_sym = head == 'module' ? form.items[1] : split_class_args(form.items[1..])[0]
+          return if constant_segments(name_sym)
+
+          code = head == 'module' ? :invalid_module_name : :invalid_class_name
+          emit_error!(code, name: name_sym.respond_to?(:name) ? name_sym.name : name_sym.inspect)
         end
 
         def bodyless_header?(form)
@@ -69,23 +99,25 @@ module Kapusta
           end
         end
 
-        def emit_bodyless_header(form, remaining_forms, env, _current_scope)
+        def emit_bodyless_header(form, forms, body_start, env)
           head = form.head.name
-          name_sym = form.items[1]
-
+          validate_header_name!(form, head)
           if head == 'module'
+            name_sym = form.items[1]
             inner = form.items[2..] || []
-            body =
-              if inner.length == 1 && bodyless_header?(inner[0])
-                emit_bodyless_header(inner[0], remaining_forms, env, :module)
-              else
-                emit_forms_with_headers(remaining_forms, env, :module, result: false)
-              end
-            emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body)
+            if inner.length == 1 && bodyless_header?(inner[0])
+              inner_code, next_i = emit_bodyless_header(inner[0], forms, body_start, env)
+              [emit_direct_module_header(name_sym, inner_code) || emit_module_wrapper(name_sym, inner_code), next_i]
+            else
+              body, next_i = emit_form_run(forms, body_start, env, :module, header_form: form)
+              [emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body), next_i]
+            end
           else
             name_sym, supers, = split_class_args(form.items[1..])
-            body = emit_forms_with_headers(remaining_forms, env, :class, result: false)
-            emit_direct_class_header(name_sym, supers, body, env) || emit_class_wrapper(name_sym, supers, env, body)
+            body, next_i = emit_form_run(forms, body_start, env, :class, header_form: form)
+            code = emit_direct_class_header(name_sym, supers, body, env) ||
+                   emit_class_wrapper(name_sym, supers, env, body)
+            [code, next_i]
           end
         end
 

@@ -18,4 +18,3 @@ class BankAccount
     self
   end
 end
-BankAccount

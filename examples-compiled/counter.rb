@@ -11,9 +11,8 @@ class Counter
   def self.zero
     Counter.new(0)
   end
-  c = Counter.new(10)
-  c.tick
-  c.tick
-  p c.value
 end
-Counter
+c = Counter.new(10)
+c.tick
+c.tick
+p c.value

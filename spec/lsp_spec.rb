@@ -268,7 +268,8 @@ RSpec.describe Kapusta::LSP do
         frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'foo'), new_name: 'bar')
       )
 
-      expect(result_for(responses).dig('error', 'message')).to include('already defined')
+      message = responses.find { |m| m['method'] == 'window/showMessage' }
+      expect(message['params']['message']).to include('already defined')
     end
   end
 
@@ -282,7 +283,8 @@ RSpec.describe Kapusta::LSP do
         frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'Foo'), new_name: 'Bar')
       )
 
-      expect(result_for(responses).dig('error', 'message')).to include('already defined')
+      message = responses.find { |m| m['method'] == 'window/showMessage' }
+      expect(message['params']['message']).to include('already defined')
     end
   end
 
@@ -302,6 +304,71 @@ RSpec.describe Kapusta::LSP do
         'end' => { 'line' => 0, 'character' => 7 }
       }
     )
+  end
+
+  it 'rejects renaming a class to a lowercase name with a clear message' do
+    text = "(class Accumulator)\n\n(end)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'Accumulator'), new_name: 'fff')
+    )
+
+    response = result_for(responses)
+    expect(response['error']).to be_nil
+    expect(response['result']).to eq('documentChanges' => [])
+
+    show_message = responses.find { |m| m['method'] == 'window/showMessage' }
+    expect(show_message).not_to be_nil
+    expect(show_message['params']['type']).to eq(1)
+    expect(show_message['params']['message']).to include('uppercase letter')
+  end
+
+  it 'renames a class declared with a bodyless header closed by (end) and its usages after (end)' do
+    text = "(class Accumulator)\n\n(fn add! [n] n)\n\n(end)\n\n(let [acc (Accumulator.new 10)]\n  (acc.add! 5))\n"
+    with_workspace('a.kap' => text) do |root_uri, uri|
+      responses = run(
+        frame_initialize([root_uri]),
+        frame_did_open(uri['a.kap'], text),
+        frame_rename(uri: uri['a.kap'], **cursor_at(text, 'Accumulator'), new_name: 'Foo')
+      )
+      result = result_for(responses)['result']
+
+      expect(result).not_to be_nil
+      edits = result['documentChanges'].first['edits']
+      expect(edits.map { |e| e['range']['start']['line'] }).to contain_exactly(0, 6)
+      expect(edits.map { |e| e['newText'] }).to all(eq('Foo'))
+    end
+  end
+
+  it 'jumps from (end) to the class header that opened the file scope' do
+    text = "(class Foo)\n\n(fn hi [] 1)\n\n(end)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', **cursor_at(text, 'end'))
+    )
+    result = result_for(responses)['result']
+
+    expect(result).to eq(
+      'uri' => 'file:///x.kap',
+      'range' => {
+        'start' => { 'line' => 0, 'character' => 7 },
+        'end' => { 'line' => 0, 'character' => 10 }
+      }
+    )
+  end
+
+  it 'jumps from (end) to the matching module header for nested headers' do
+    text = "(module Outer)\n\n(module Inner)\n(fn self.go [] 1)\n(end)\n\n(end)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', line: 4, character: 1)
+    )
+    result = result_for(responses)['result']
+
+    expect(result['range']['start']).to eq('line' => 2, 'character' => 8)
   end
 
   it 'jumps to a top-level fn definition across files' do
@@ -583,7 +650,8 @@ RSpec.describe Kapusta::LSP do
         frame_rename(uri: uri['a.kap'], **cursor_at(text_a, 'swap!'), new_name: 'flip!')
       )
 
-      expect(result_for(responses).dig('error', 'message')).to include('already defined')
+      message = responses.find { |m| m['method'] == 'window/showMessage' }
+      expect(message['params']['message']).to include('already defined')
     end
   end
 

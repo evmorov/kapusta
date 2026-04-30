@@ -1,0 +1,16 @@
+(module SignalHarvest)
+
+(local SCREEN-W 1280)
+(local TARGET-SCORE 36)
+
+(fn self.cell-width [columns]
+  (/ SCREEN-W columns))
+
+(fn self.win? [score]
+  (>= score TARGET-SCORE))
+
+(end)
+
+(print (SignalHarvest.cell-width 32))
+(print (SignalHarvest.win? 40))
+(print (SignalHarvest.win? 12))

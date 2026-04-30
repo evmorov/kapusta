@@ -9,6 +9,7 @@ best-time-to-buy-sell-stock
 binary-search
 binary-to-decimal
 block-sort
+bst-iterator
 calc
 circle
 classify-wallet
@@ -72,6 +73,7 @@ ruby-eval
 safe-lookup
 scopes
 shapes
+signal-harvest
 single-number
 squares
 stack

@@ -19,3 +19,5 @@
   (set (ivar balance)
     (- (ivar balance) amount))
   self)
+
+(end)

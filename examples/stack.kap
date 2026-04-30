@@ -24,6 +24,8 @@
 (fn get-min []
   (. (ivar mins) -1))
 
+(end)
+
 (let [s (MinStack.new)]
   (s.push -2)
   (s.push 0)

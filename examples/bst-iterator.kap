@@ -1,0 +1,52 @@
+(class TreeNode)
+
+(fn initialize [val left right]
+  (set @val val)
+  (set @left left)
+  (set @right right))
+
+(fn val [] @val)
+(fn left [] @left)
+(fn right [] @right)
+
+(end)
+
+(class BSTIterator)
+
+(fn initialize [root]
+  (set @stack [])
+  (self.push-left root))
+
+(fn push-left [node]
+  (var n node)
+  (while n
+    (let [stack @stack]
+      (stack.push n))
+    (set n (n.left))))
+
+(fn next []
+  (let [stack @stack
+        node (stack.pop)]
+    (self.push-left (node.right))
+    (node.val)))
+
+(fn has-next? []
+  (let [stack @stack]
+    (not (stack.empty?))))
+
+(end)
+
+(let [root (TreeNode.new 7
+             (TreeNode.new 3 nil nil)
+             (TreeNode.new 15
+               (TreeNode.new 9 nil nil)
+               (TreeNode.new 20 nil nil)))
+      it (BSTIterator.new root)]
+  (print (it.next))
+  (print (it.next))
+  (print (it.has-next?))
+  (print (it.next))
+  (print (it.has-next?))
+  (print (it.next))
+  (print (it.next))
+  (print (it.has-next?)))

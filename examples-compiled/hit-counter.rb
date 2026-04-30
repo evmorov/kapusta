@@ -8,11 +8,10 @@ class HitCounter
     $last_hitter = @name
     @@total
   end
-  a = HitCounter.new("alice")
-  b = HitCounter.new("bob")
-  p a.hit
-  p b.hit
-  p a.hit
-  p $last_hitter
 end
-HitCounter
+a = HitCounter.new("alice")
+b = HitCounter.new("bob")
+p a.hit
+p b.hit
+p a.hit
+p $last_hitter

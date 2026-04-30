@@ -487,6 +487,10 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'signal-harvest.kap' do
+    expect(run_example('signal-harvest.kap')).to eq("40\ntrue\nfalse\n")
+  end
+
   it 'shapes.kap' do
     expect(run_example('shapes.kap')).to eq("78.5\n9\n8\n0\n")
   end
@@ -523,6 +527,19 @@ RSpec.describe 'examples' do
 
   it 'two-sum-hash.kap' do
     expect(run_example('two-sum-hash.kap')).to eq("[0, 1]\n[1, 2]\nnil\n")
+  end
+
+  it 'bst-iterator.kap' do
+    expect(run_example('bst-iterator.kap')).to eq(<<~OUT)
+      3
+      7
+      true
+      9
+      true
+      15
+      20
+      false
+    OUT
   end
 
   it 'baseball-game.kap' do

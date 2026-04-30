@@ -9,9 +9,8 @@ class Accumulator
   def value
     @total
   end
-  acc = Accumulator.new(10)
-  acc.add!(5)
-  acc.add!(7)
-  p acc.value
 end
-Accumulator
+acc = Accumulator.new(10)
+acc.add!(5)
+acc.add!(7)
+p acc.value

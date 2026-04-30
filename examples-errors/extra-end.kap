@@ -1,0 +1,7 @@
+(module Foo)
+
+(fn self.hi [] "hi")
+
+(end)
+
+(end)

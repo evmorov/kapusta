@@ -9,6 +9,8 @@
   (set $last-hitter @name)
   @@total)
 
+(end)
+
 (let [a (HitCounter.new "alice")
       b (HitCounter.new "bob")]
   (print (a.hit))

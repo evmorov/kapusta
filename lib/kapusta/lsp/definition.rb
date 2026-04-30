@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative 'rename'
+require_relative '../reader'
+require_relative 'scope_walker'
 
 module Kapusta
   class LSP
@@ -8,6 +10,9 @@ module Kapusta
       module_function
 
       def find(uri, text, line_zero, character, workspace_index:)
+        marker = end_marker_at(text, line_zero, character)
+        return location_for_binding(uri, marker.target) if marker&.target
+
         target = Rename.locate(text, line_zero, character)
         return unless target
 
@@ -21,6 +26,18 @@ module Kapusta
         when :free_constant
           locations_for_constant(target.segment_prefix, workspace_index)
         end
+      end
+
+      def end_marker_at(text, line_zero, character)
+        forms = Reader.read_all(text)
+        walker = ScopeWalker.analyze(forms)
+        line = line_zero + 1
+        col = character + 1
+        walker.end_markers.find do |m|
+          m.line == line && col >= m.column && col <= m.end_column
+        end
+      rescue Kapusta::Error
+        nil
       end
 
       def locations_for_macro(uri, binding, workspace_index)

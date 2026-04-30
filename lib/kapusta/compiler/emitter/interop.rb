@@ -102,7 +102,7 @@ module Kapusta
           segments = constant_segments(name_sym)
           return unless segments
 
-          [build_nested_module(segments, body), segments.join('::')].join("\n")
+          build_nested_module(segments, body)
         end
 
         def emit_class_wrapper(name_sym, supers, env, body)
@@ -118,7 +118,7 @@ module Kapusta
           return unless segments
 
           super_code = class_super_code(supers, env)
-          [build_nested_class(segments, super_code, body), segments.join('::')].join("\n")
+          build_nested_class(segments, super_code, body)
         end
 
         def constant_segments(name_sym)

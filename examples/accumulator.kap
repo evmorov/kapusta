@@ -10,6 +10,8 @@
 (fn value []
   (ivar total))
 
+(end)
+
 (let [acc (Accumulator.new 10)]
   (acc.add! 5)
   (acc.add! 7)
