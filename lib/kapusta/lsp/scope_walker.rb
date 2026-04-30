@@ -593,37 +593,32 @@ module Kapusta
         end
       end
 
-      def bind_param_vec(vec, scope)
-        items = vec.items
+      def each_pattern_item(items)
         i = 0
         while i < items.length
-          item = items[i]
-          if item.is_a?(Sym) && item.name == '&'
-            rest = items[i + 1]
-            bind_pattern(rest, scope, :fn_param) if rest.is_a?(Sym) && rest.name != '_'
+          if items[i].is_a?(Sym) && items[i].name == '&'
+            yield :rest, items[i + 1]
             i += 2
-          elsif item.is_a?(Sym) && ['...', '_'].include?(item.name)
-            i += 1
           else
-            bind_pattern(item, scope, :fn_param)
+            yield :item, items[i]
             i += 1
           end
         end
       end
 
-      def bind_vec_pattern(vec, scope, kind)
-        items = vec.items
-        i = 0
-        while i < items.length
-          item = items[i]
-          if item.is_a?(Sym) && item.name == '&'
-            rest = items[i + 1]
-            bind_pattern(rest, scope, kind) if rest
-            i += 2
-          else
-            bind_pattern(item, scope, kind)
-            i += 1
+      def bind_param_vec(vec, scope)
+        each_pattern_item(vec.items) do |kind, item|
+          if kind == :rest
+            bind_pattern(item, scope, :fn_param) if item.is_a?(Sym) && item.name != '_'
+          elsif !(item.is_a?(Sym) && ['...', '_'].include?(item.name))
+            bind_pattern(item, scope, :fn_param)
           end
+        end
+      end
+
+      def bind_vec_pattern(vec, scope, kind)
+        each_pattern_item(vec.items) do |item_kind, item|
+          bind_pattern(item, scope, kind) if item_kind == :item || item
         end
       end
 
