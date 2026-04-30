@@ -4,7 +4,7 @@ Kapusta is a Lisp for the Ruby runtime.
 
 It is inspired by [Fennel](https://fennel-lang.org). It is not intended to be production-ready like Clojure: that would be a lot of work, and Ruby is already a rich, elegant language.
 
-Instead, Kapusta aims to bring some of the simplicity and joy of Lisp to Ruby. Where Lua is intentionally minimal, and Fennel follows that design for good reason, Kapusta exists mostly for fun. You can use it for small apps, LeetCode, DragonRuby, or maybe even Rails.
+Instead, Kapusta aims to bring some of the simplicity and joy of Lisp to Ruby. Where Fennel uses Lua's stdlib and runtime, Kapusta uses Ruby's. You can use it for small apps, LeetCode, DragonRuby, or maybe even Rails.
 
 For more information about Kapusta, see the official Fennel documentation and tutorials.
 
@@ -104,7 +104,7 @@ Kapusta keeps most core Fennel forms. The main differences come from Ruby's runt
 Kapusta-specific additions:
 
 - `module` and `class` for Ruby host structure, including file-header forms
-- `ivar` or `@var`) / `cvar` or `@@var` / `gvar` or `$var`
+- `ivar` or `@var` / `cvar` or `@@var` / `gvar` or `$var`
 - `try` / `catch` / `finally` plus `raise` for exceptions
 - `(ruby "...")` raw host escape hatch
 - a trailing symbol-keyed hash is emitted as Ruby keyword arguments

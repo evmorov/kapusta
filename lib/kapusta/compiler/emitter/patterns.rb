@@ -161,6 +161,131 @@ module Kapusta
 
         class PatternNotTranslatable < StandardError; end
 
+        def compat_pattern_plan(pattern, value_code, env, arm_env, mode:, allow_pins:)
+          state = { bound_names: {}, conditions: [] }
+          compile_compat_pattern(pattern, value_code, env, arm_env, mode:, allow_pins:, state:)
+          { conditions: state[:conditions] }
+        rescue PatternNotTranslatable
+          nil
+        end
+
+        def compile_compat_pattern(pattern, value_code, env, arm_env, mode:, allow_pins:, state:)
+          case pattern
+          when Sym
+            compile_compat_symbol(pattern, value_code, env, arm_env, mode:, state:)
+          when Vec
+            compile_compat_sequence(pattern.items, value_code, env, arm_env, mode:, allow_pins:, state:)
+          when HashLit
+            compile_compat_hash(pattern, value_code, env, arm_env, mode:, allow_pins:, state:)
+          when List
+            if pin_pattern?(pattern)
+              compile_compat_pin(pattern, value_code, env, mode:, allow_pins:, state:)
+            elsif or_pattern?(pattern)
+              raise PatternNotTranslatable
+            else
+              compile_compat_sequence(pattern.items, value_code, env, arm_env, mode:, allow_pins:, state:)
+            end
+          when nil
+            state[:conditions] << "#{value_code}.nil?"
+          when Symbol, String, Numeric, true, false
+            state[:conditions] << "#{value_code} == #{pattern.inspect}"
+          else
+            raise PatternNotTranslatable
+          end
+        end
+
+        def compile_compat_symbol(pattern, value_code, env, arm_env, mode:, state:)
+          name = pattern.name
+          return if name == '_'
+
+          if nil_allowing_pattern_name?(name)
+            raise PatternNotTranslatable if state[:bound_names].key?(name)
+
+            ruby = define_local(arm_env, name)
+            state[:bound_names][name] = true
+            state[:conditions] << "((#{ruby} = #{value_code}) || true)"
+            return
+          end
+
+          binding = mode == :match ? env.lookup_if_defined(name) : nil
+          if state[:bound_names].key?(name)
+            raise PatternNotTranslatable
+          elsif binding
+            state[:conditions] << "#{value_code} == #{binding_value_code(binding)}"
+          else
+            ruby = define_local(arm_env, name)
+            state[:bound_names][name] = true
+            state[:conditions] << "!(#{ruby} = #{value_code}).nil?"
+          end
+        end
+
+        def compile_compat_sequence(items, value_code, env, arm_env, mode:, allow_pins:, state:)
+          min_length = compat_sequence_min_length(items)
+          state[:conditions] << "#{value_code}.is_a?(Array)"
+          state[:conditions] << "#{value_code}.length >= #{min_length}"
+
+          index = 0
+          i = 0
+          while i < items.length
+            if rest_pattern_marker?(items, i)
+              sub = items[i + 1]
+              raise PatternNotTranslatable unless sub.is_a?(Sym)
+
+              unless sub.name == '_'
+                ruby = define_local(arm_env, sub.name)
+                state[:conditions] << "((#{ruby} = #{value_code}[#{index}..]) || true)"
+              end
+              i += 2
+            else
+              compile_compat_pattern(items[i], "#{value_code}[#{index}]", env, arm_env,
+                                     mode:, allow_pins:, state:)
+              index += 1
+              i += 1
+            end
+          end
+        end
+
+        def compat_sequence_min_length(items)
+          count = 0
+          i = 0
+          while i < items.length
+            if rest_pattern_marker?(items, i)
+              i += 2
+            else
+              count += 1
+              i += 1
+            end
+          end
+          count
+        end
+
+        def compile_compat_hash(pattern, value_code, env, arm_env, mode:, allow_pins:, state:)
+          state[:conditions] << "#{value_code}.is_a?(Hash)"
+          pattern.pairs.each do |key, value|
+            lookup = "#{value_code}[#{compile_compat_hash_key(key)}]"
+            compile_compat_pattern(value, lookup, env, arm_env, mode:, allow_pins:, state:)
+          end
+        end
+
+        def compile_compat_hash_key(key)
+          case key
+          when Symbol, String, Numeric, true, false, nil then key.inspect
+          else raise PatternNotTranslatable
+          end
+        end
+
+        def compile_compat_pin(pattern, value_code, env, mode:, allow_pins:, state:)
+          raise PatternNotTranslatable unless allow_pins && mode == :case
+
+          name_sym = pattern.items[1]
+          raise PatternNotTranslatable unless name_sym.is_a?(Sym)
+
+          binding = env.lookup_if_defined(name_sym.name)
+          raise PatternNotTranslatable unless binding
+
+          state[:conditions] << "#{value_code} == #{binding_value_code(binding)}"
+        end
+
         def native_pattern_plan(pattern, env, mode:, allow_pins:)
           state = { bound_names: {}, binding_names: [], guards: [] }
           ruby_pattern = compile_native_pattern(pattern, env, mode:, allow_pins:, state:)

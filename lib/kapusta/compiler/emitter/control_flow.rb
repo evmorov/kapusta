@@ -65,13 +65,13 @@ module Kapusta
 
           value_code = emit_expr(args[0], env, current_scope)
           if simple_case_subject?(args[0]) && simple_expression?(value_code)
-            body = try_emit_native_case(value_code, clauses, env, current_scope, mode)
+            body = emit_case_body(value_code, clauses, env, current_scope, mode)
             emit_error!(:case_unsupported) unless body
             return body
           end
 
           value_var = temp('case_value')
-          body = try_emit_native_case(value_var, clauses, env, current_scope, mode)
+          body = emit_case_body(value_var, clauses, env, current_scope, mode)
           emit_error!(:case_unsupported) unless body
           [
             '(-> do',
@@ -79,6 +79,11 @@ module Kapusta
             indent(body),
             'end).call'
           ].join("\n")
+        end
+
+        def emit_case_body(value_var, clauses, env, current_scope, mode)
+          try_emit_native_case(value_var, clauses, env, current_scope, mode) ||
+            try_emit_compat_case(value_var, clauses, env, current_scope, mode)
         end
 
         def simple_case_subject?(form)
@@ -113,11 +118,6 @@ module Kapusta
           ["case #{value_var}", *arms, 'end'].join("\n")
         end
 
-        def wildcard_last?(clauses)
-          last_pattern = clauses[-2]
-          last_pattern.is_a?(Sym) && last_pattern.name == '_'
-        end
-
         def try_native_arm(pattern, body, where_guards, env, current_scope, mode)
           allow_pins = !where_guards.empty? && mode == :case
           plan = native_pattern_plan(pattern, env, mode:, allow_pins:)
@@ -130,6 +130,61 @@ module Kapusta
           guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
           body_code = emit_expr(body, arm_env, current_scope)
           ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
+        end
+
+        def try_emit_compat_case(value_var, clauses, env, current_scope, mode)
+          arms = []
+          i = 0
+          while i < clauses.length
+            pattern = clauses[i]
+            body = clauses[i + 1]
+            inner, where_guards = if where_pattern?(pattern)
+                                    [pattern.items[1], pattern.items[2..]]
+                                  else
+                                    [pattern, []]
+                                  end
+            sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
+            sub_arms = sub_patterns.map do |sub|
+              try_compat_arm(sub, body, where_guards, value_var, env, current_scope, mode)
+            end
+            return if sub_arms.any?(&:nil?)
+
+            arms.concat(sub_arms)
+            i += 2
+          end
+          emit_compat_case_lines(arms, wildcard_last?(clauses))
+        end
+
+        def wildcard_last?(clauses)
+          last_pattern = clauses[-2]
+          last_pattern.is_a?(Sym) && last_pattern.name == '_'
+        end
+
+        def try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
+          allow_pins = !where_guards.empty? && mode == :case
+          arm_env = env.child
+          plan = compat_pattern_plan(pattern, value_var, env, arm_env, mode:, allow_pins:)
+          return unless plan
+
+          guard_codes = plan[:conditions] +
+                        where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
+          condition = guard_codes.empty? ? 'true' : guard_codes.map { |code| parenthesize(code) }.join(' && ')
+          body_code = emit_expr(body, arm_env, current_scope)
+          [condition, body_code]
+        end
+
+        def emit_compat_case_lines(arms, wildcard_last)
+          lines = []
+          arms.each_with_index do |(condition, body_code), idx|
+            lines << "#{idx.zero? ? 'if' : 'elsif'} #{condition}"
+            lines << indent(body_code)
+          end
+          unless wildcard_last
+            lines << 'else'
+            lines << indent('nil')
+          end
+          lines << 'end'
+          lines.join("\n")
         end
 
         def emit_while(args, env, current_scope)

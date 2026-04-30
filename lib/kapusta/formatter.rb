@@ -657,7 +657,6 @@ module Kapusta
 
     def render_let_bindings(bindings, indent)
       return render(bindings, indent + '(let '.length, force_expand: true) if contains_comments?(bindings.items)
-      return render(bindings, indent + '(let '.length, layout: :pairwise) if bindings.items.length <= 2
 
       hanging = render_hanging_pairwise_vec(bindings)
       hanging || render(bindings, indent + '(let '.length, layout: :pairwise)

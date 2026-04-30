@@ -18,6 +18,7 @@ COMPATIBLE = %w[
   destructure.kap
   even-squares.kap
   factorial.kap
+  falling-drops.kap
   fib.kap
   fizzbuzz.kap
   gcd.kap
