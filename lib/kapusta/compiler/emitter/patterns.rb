@@ -56,20 +56,15 @@ module Kapusta
           parts = []
           deferred = []
           current_env = env
-          items = pattern.items
-          i = 0
-          while i < items.length
-            if items[i].is_a?(Sym) && items[i].name == '&'
-              sub = items[i + 1]
+          each_pattern_item(pattern.items) do |kind, sub|
+            if kind == :rest
               raise PatternNotTranslatable unless sub.is_a?(Sym)
 
               parts << native_rest_target(sub, current_env)
-              i += 2
             else
-              code, current_env, follow_up = native_destructure_target(items[i], current_env, allow_follow_up: true)
+              code, current_env, follow_up = native_destructure_target(sub, current_env, allow_follow_up: true)
               parts << code
               deferred << follow_up if follow_up
-              i += 1
             end
           end
           if deferred.empty?
@@ -122,17 +117,13 @@ module Kapusta
             inner = []
             current = env
             deferred = []
-            items = pattern.items
-            i = 0
-            while i < items.length
-              if items[i].is_a?(Sym) && items[i].name == '&'
-                inner << native_rest_target(items[i + 1], current)
-                i += 2
+            each_pattern_item(pattern.items) do |kind, sub|
+              if kind == :rest
+                inner << native_rest_target(sub, current)
               else
-                code, current, follow_up = native_destructure_target(items[i], current)
+                code, current, follow_up = native_destructure_target(sub, current)
                 inner << code
                 deferred << follow_up if follow_up
-                i += 1
               end
             end
             raise PatternNotTranslatable unless deferred.empty?
@@ -225,36 +216,26 @@ module Kapusta
           state[:conditions] << "#{value_code}.length >= #{min_length}"
 
           index = 0
-          i = 0
-          while i < items.length
-            if rest_pattern_marker?(items, i)
-              sub = items[i + 1]
+          each_pattern_item(items) do |kind, sub|
+            if kind == :rest
               raise PatternNotTranslatable unless sub.is_a?(Sym)
 
               unless sub.name == '_'
                 ruby = define_local(arm_env, sub.name)
                 state[:prelude] << "#{ruby} = #{value_code}[#{index}..]"
               end
-              i += 2
             else
-              compile_compat_pattern(items[i], "#{value_code}[#{index}]", env, arm_env,
+              compile_compat_pattern(sub, "#{value_code}[#{index}]", env, arm_env,
                                      mode:, allow_pins:, state:)
               index += 1
-              i += 1
             end
           end
         end
 
         def compat_sequence_min_length(items)
           count = 0
-          i = 0
-          while i < items.length
-            if rest_pattern_marker?(items, i)
-              i += 2
-            else
-              count += 1
-              i += 1
-            end
+          each_pattern_item(items) do |kind, _sub|
+            count += 1 if kind == :item
           end
           count
         end
@@ -346,11 +327,9 @@ module Kapusta
         def compile_native_sequence(items, env, mode:, allow_pins:, state:)
           parts = []
           has_rest = false
-          i = 0
-          while i < items.length
-            if rest_pattern_marker?(items, i)
+          each_pattern_item(items) do |kind, sub|
+            if kind == :rest
               has_rest = true
-              sub = items[i + 1]
               raise PatternNotTranslatable unless sub.is_a?(Sym)
 
               if sub.name == '_'
@@ -360,10 +339,8 @@ module Kapusta
                 state[:binding_names] << sub.name
                 parts << "*#{sanitize_local(sub.name)}"
               end
-              i += 2
             else
-              parts << compile_native_pattern(items[i], env, mode:, allow_pins:, state:)
-              i += 1
+              parts << compile_native_pattern(sub, env, mode:, allow_pins:, state:)
             end
           end
           parts << '*' unless has_rest
@@ -464,16 +441,8 @@ module Kapusta
             pattern.name == '_' ? [] : [pattern.name]
           when Vec
             names = []
-            items = pattern.items
-            i = 0
-            while i < items.length
-              if items[i].is_a?(Sym) && items[i].name == '&'
-                names.concat(pattern_names(items[i + 1]))
-                i += 2
-              else
-                names.concat(pattern_names(items[i]))
-                i += 1
-              end
+            each_pattern_item(pattern.items) do |_kind, sub|
+              names.concat(pattern_names(sub))
             end
             names
           when HashLit
@@ -506,6 +475,19 @@ module Kapusta
 
         def rest_pattern_marker?(items, index)
           items[index].is_a?(Sym) && items[index].name == '&'
+        end
+
+        def each_pattern_item(items)
+          i = 0
+          while i < items.length
+            if rest_pattern_marker?(items, i)
+              yield :rest, items[i + 1]
+              i += 2
+            else
+              yield :item, items[i]
+              i += 1
+            end
+          end
         end
       end
     end
