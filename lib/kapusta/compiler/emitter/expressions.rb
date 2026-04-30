@@ -84,6 +84,7 @@ module Kapusta
           when 'module' then emit_module_expr(args, env)
           when 'class' then emit_class_expr(args, env)
           when 'end' then emit_error!(:end_outside_header)
+          when 'defn' then emit_error!(:defn_outside_header)
           when 'try' then emit_try(args, env, current_scope)
           when 'raise' then emit_raise(args, env, current_scope)
           when 'ivar' then "@#{Kapusta.kebab_to_snake(args[0].name)}"

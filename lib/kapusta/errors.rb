@@ -25,6 +25,7 @@ module Kapusta
       dot_no_args: 'expected table argument',
       each_no_binding: 'expected binding table',
       empty_call: 'expected a function, macro, or special to call',
+      defn_outside_header: 'defn outside class or module',
       end_outside_header: 'end outside class or module',
       end_with_args: 'end takes no arguments',
       unclosed_header: 'class or module not closed with (end)',

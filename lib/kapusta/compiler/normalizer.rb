@@ -40,12 +40,6 @@ module Kapusta
         return inherit_position(List.new(items), list) unless head.is_a?(Sym)
 
         case head.name
-        when 'defn'
-          name_sym = items[1]
-          raise compiler_error(:fn_no_params, list) unless name_sym.is_a?(Sym)
-
-          self_name = inherit_position(Sym.new("self.#{name_sym.name}"), name_sym)
-          inherit_position(List.new([inherit_position(Sym.new('fn'), head), self_name, *items[2..]]), list)
         when 'when'
           raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
 

@@ -92,6 +92,11 @@ RSpec.describe 'examples-errors' do
       .to eq("destructure-literal-table.kap:4:1: could not destructure literal\n")
   end
 
+  it 'defn-outside-header.kap' do
+    expect(run_error_example('defn-outside-header.kap'))
+      .to eq("defn-outside-header.kap:1:1: defn outside class or module\n")
+  end
+
   it 'end-outside-header.kap' do
     expect(run_error_example('end-outside-header.kap'))
       .to eq("end-outside-header.kap:1:1: end outside class or module\n")

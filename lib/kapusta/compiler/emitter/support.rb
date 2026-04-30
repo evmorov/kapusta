@@ -123,29 +123,39 @@ module Kapusta
 
         def emit_form_in_sequence(form, env, current_scope, allow_method_definitions:, result_needed: true)
           with_current_form(form) do
-            if allow_method_definitions &&
-               method_definition_form?(form) &&
-               %i[toplevel module class].include?(current_scope)
-              code, env = emit_definition_form(form, env, current_scope)
-              return [code, env] if code
-            end
+            form = lower_defn_in_sequence(form, current_scope) if defn_form?(form)
+            emit_form_body(form, env, current_scope, allow_method_definitions:, result_needed:)
+          end
+        end
 
-            if named_function_form?(form)
-              emit_named_fn_assignment(form, env, current_scope)
-            elsif local_form?(form)
-              code, env = emit_local_form(form, env, current_scope,
-                                          allow_constant: allow_method_definitions)
-              code = code.delete_suffix("\nnil") unless result_needed
-              [code, env]
-            elsif do_form?(form)
-              emit_do_form(form.rest, env, current_scope, result_needed:)
-            elsif sequence_statement_form?(form)
-              emit_sequence_statement_form(form, env, current_scope, result_needed:)
-            elsif set_new_local_form?(form, env)
-              emit_set_form(form, env, current_scope)
-            else
-              [emit_expr(form, env, current_scope), env]
-            end
+        def lower_defn_in_sequence(form, current_scope)
+          emit_error!(:defn_outside_header) unless %i[module class].include?(current_scope)
+          lower_defn_to_fn(form)
+        end
+
+        def emit_form_body(form, env, current_scope, allow_method_definitions:, result_needed:)
+          if allow_method_definitions &&
+             method_definition_form?(form) &&
+             %i[toplevel module class].include?(current_scope)
+            code, env = emit_definition_form(form, env, current_scope)
+            return [code, env] if code
+          end
+
+          if named_function_form?(form)
+            emit_named_fn_assignment(form, env, current_scope)
+          elsif local_form?(form)
+            code, env = emit_local_form(form, env, current_scope,
+                                        allow_constant: allow_method_definitions)
+            code = code.delete_suffix("\nnil") unless result_needed
+            [code, env]
+          elsif do_form?(form)
+            emit_do_form(form.rest, env, current_scope, result_needed:)
+          elsif sequence_statement_form?(form)
+            emit_sequence_statement_form(form, env, current_scope, result_needed:)
+          elsif set_new_local_form?(form, env)
+            emit_set_form(form, env, current_scope)
+          else
+            [emit_expr(form, env, current_scope), env]
           end
         end
 
@@ -212,6 +222,26 @@ module Kapusta
         def named_function_form?(form)
           form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) &&
             %w[fn lambda λ].include?(form.head.name) && form.items[1].is_a?(Sym)
+        end
+
+        def defn_form?(form)
+          form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'defn'
+        end
+
+        def lower_defn_to_fn(form)
+          name_sym = form.items[1]
+          emit_error!(:fn_no_params) unless name_sym.is_a?(Sym)
+
+          fn_sym = Sym.new('fn')
+          fn_sym.line = form.head.line
+          fn_sym.column = form.head.column
+          self_sym = Sym.new("self.#{name_sym.name}")
+          self_sym.line = name_sym.line
+          self_sym.column = name_sym.column
+          new_list = List.new([fn_sym, self_sym, *form.items[2..]])
+          new_list.line = form.line
+          new_list.column = form.column
+          new_list
         end
 
         def method_definition_form?(form)
