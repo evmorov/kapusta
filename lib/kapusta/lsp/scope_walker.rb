@@ -17,10 +17,15 @@ module Kapusta
       end
       EndMarker = Struct.new(:line, :column, :end_column, :target, keyword_init: true)
 
-      SKIPPED_HEADS = %w[macros quasi-sym quasi-list
-                         quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym].freeze
-
       DISPATCHERS = {
+        'macros' => :skip,
+        'quasi-sym' => :skip,
+        'quasi-list' => :skip,
+        'quasi-list-tail' => :skip,
+        'quasi-vec' => :skip,
+        'quasi-vec-tail' => :skip,
+        'quasi-hash' => :skip,
+        'quasi-gensym' => :skip,
         'let' => :walk_let,
         'local' => :walk_local_var,
         'var' => :walk_local_var,
@@ -246,10 +251,12 @@ module Kapusta
           return
         end
 
-        return if SKIPPED_HEADS.include?(head.name)
-
         dispatcher = DISPATCHERS[head.name]
-        return send(dispatcher, list, scope) if dispatcher
+        if dispatcher
+          return if dispatcher == :skip
+
+          return send(dispatcher, list, scope)
+        end
 
         list.items.each { |item| walk_form(item, scope) }
       end
