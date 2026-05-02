@@ -15,18 +15,37 @@ module Kapusta
     METHOD_NOT_FOUND = -32_601
     FULL_SYNC = 1
 
+    def self.debug?
+      %w[1 true yes on].include?(ENV['KAPUSTA_LS_DEBUG'].to_s.downcase)
+    end
+
     def self.start(input: $stdin, output: $stdout, log: $stderr)
       server = new(input:, output:, log:)
-      install_signal_handlers
+      install_signal_handlers(log)
       server.run
+      debug_log(log, 'run returned, calling exit!(0)')
       exit!(0)
     end
 
-    def self.install_signal_handlers
+    def self.install_signal_handlers(log)
       %w[TERM INT HUP].each do |sig|
-        Signal.trap(sig) { exit!(0) }
+        Signal.trap(sig) do
+          debug_log(log, "signal #{sig} received, exiting")
+          exit!(0)
+        rescue StandardError
+          exit!(0)
+        end
       rescue ArgumentError
       end
+    end
+
+    def self.debug_log(log, message)
+      return unless debug?
+
+      log.write("kapusta-ls[debug pid=#{Process.pid}]: #{message}\n")
+      log.flush
+    rescue StandardError
+      nil
     end
 
     def self.uri_to_path(uri)
@@ -44,7 +63,7 @@ module Kapusta
       @input = input.binmode
       @output = output.binmode
       @log = log
-      @debug = %w[1 true yes on].include?(ENV['KAPUSTA_LS_DEBUG'].to_s.downcase)
+      @debug = LSP.debug?
       @sources = {}
       @workspace_index = WorkspaceIndex.new
       @initialized = false
@@ -52,9 +71,11 @@ module Kapusta
     end
 
     def run
+      debug('run loop start')
       until (message = read_message).nil?
         handle(message)
       end
+      debug('stdin EOF, run loop exiting')
     end
 
     private
@@ -93,9 +114,13 @@ module Kapusta
 
     def write_message(payload)
       body = JSON.generate(payload)
+      tag = payload[:id] ? "response id=#{payload[:id]}" : "notify #{payload[:method]}"
+      debug("write begin (#{tag}, #{body.bytesize} bytes)")
       @output.write("Content-Length: #{body.bytesize}\r\n\r\n#{body}")
       @output.flush
-    rescue Errno::EPIPE, IOError
+      debug("write done (#{tag})")
+    rescue Errno::EPIPE, IOError => e
+      debug("write failed (#{e.class}: #{e.message}), exiting")
       exit!(0)
     end
 
@@ -104,9 +129,11 @@ module Kapusta
       id = message['id']
       params = message['params'] || {}
 
+      debug("dispatch begin method=#{method.inspect} id=#{id.inspect}")
       return handle_pre_init(method, id, params) unless @initialized || method == 'initialize' || method == 'exit'
 
       dispatch(method, id, params)
+      debug("dispatch end method=#{method.inspect} id=#{id.inspect}")
     rescue StandardError => e
       log("#{e.class}: #{e.message}")
       log(e.backtrace.first(5).join("\n"))
@@ -128,8 +155,12 @@ module Kapusta
       when 'initialized' then nil
       when 'shutdown'
         @shutdown = true
+        debug('shutdown received, replying and arming watchdog')
         reply(id, nil)
-      when 'exit' then exit!(@shutdown ? 0 : 1)
+        arm_shutdown_watchdog
+      when 'exit'
+        debug("exit notification received (shutdown=#{@shutdown}), calling exit!")
+        exit!(@shutdown ? 0 : 1)
       when 'textDocument/didOpen' then on_did_open(params)
       when 'textDocument/didChange' then on_did_change(params)
       when 'textDocument/didSave' then on_did_save(params)
@@ -312,14 +343,28 @@ module Kapusta
       notify('textDocument/publishDiagnostics', params)
     end
 
+    def arm_shutdown_watchdog(seconds: 2)
+      Thread.new do
+        sleep seconds
+        debug("shutdown watchdog firing after #{seconds}s, forcing exit")
+        exit!(0)
+      end
+    end
+
     def log(message)
       @log.puts "kapusta-ls: #{message}"
+      @log.flush
+    rescue StandardError
+      nil
     end
 
     def debug(message)
       return unless @debug
 
-      @log.puts "kapusta-ls[debug]: #{message}"
+      @log.write("kapusta-ls[debug pid=#{Process.pid}]: #{message}\n")
+      @log.flush
+    rescue StandardError
+      nil
     end
   end
 end
