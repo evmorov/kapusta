@@ -1,5 +1,6 @@
 ackermann
 anonymous-greeter
+array-sign
 arrange-coins
 case-vs-match
 classify-wallet

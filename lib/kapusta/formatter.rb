@@ -800,8 +800,7 @@ module Kapusta
            'fn', 'lambda', 'λ', 'macro'
         true
       else
-        flat = flat_render(form)
-        flat && flat.length > 40
+        false
       end
     end
 

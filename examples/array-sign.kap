@@ -1,0 +1,24 @@
+(fn sign [n]
+  (if (> n 0) 1
+      (< n 0) -1
+      0))
+
+(fn array-sign [nums]
+  (accumulate [acc 1 _ n (ipairs nums)]
+    (* acc (sign n))))
+
+(fn join [tbl sep]
+  (var s "")
+  (each [_ x (ipairs tbl)]
+    (if (= s "")
+        (set s (.. x))
+        (set s (.. s sep x))))
+  s)
+
+(fn debug-sign [label nums]
+  (local pretty #(.. "[" (join $ ", ") "]"))
+  (.. "case[" label "] in " (pretty nums) " out " (array-sign nums)))
+
+(print (debug-sign "mixed" [-1 -2 -3 -4 3 2 1]))
+(print (debug-sign "withzero" [1 5 0 2 -3]))
+(print (debug-sign "allneg" [-1 1 -1 1 -1]))
