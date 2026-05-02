@@ -87,6 +87,11 @@ RSpec.describe 'examples-errors' do
       .to eq("concat-case-subject.kap:3:20: attempt to concatenate a table value\n")
   end
 
+  it 'concat-nil.kap' do
+    expect(run_error_example('concat-nil.kap'))
+      .to eq("concat-nil.kap:1:8: attempt to concatenate a nil value\n")
+  end
+
   it 'concat-table.kap' do
     expect(run_error_example('concat-table.kap'))
       .to eq("concat-table.kap:1:18: attempt to concatenate a table value\n")

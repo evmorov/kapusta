@@ -18,6 +18,7 @@ module Kapusta
       case_no_subject: 'missing subject',
       case_odd_patterns: 'expected even number of pattern/body pairs',
       case_unsupported: 'case/match clauses use patterns this compiler cannot translate',
+      concat_nil_value: 'attempt to concatenate a nil value',
       concat_table_value: 'attempt to concatenate a table value',
       could_not_destructure_literal: 'could not destructure literal',
       could_not_read_number: 'could not read number "%{token}"',

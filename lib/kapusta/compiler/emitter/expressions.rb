@@ -152,6 +152,7 @@ module Kapusta
                (arg.is_a?(Sym) && !arg.dotted? && env.lookup_type(arg.name) == :table)
               with_current_form(arg) { emit_error!(:concat_table_value) }
             end
+            emit_error!(:concat_nil_value) if arg.nil?
           end
           args.map { |arg| emit_string_part(arg, env, current_scope) }.join(' + ')
         end
