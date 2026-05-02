@@ -82,26 +82,6 @@ RSpec.describe 'examples-errors' do
       .to eq("case-unsupported.kap:1:1: case/match clauses use patterns this compiler cannot translate\n")
   end
 
-  it 'concat-case-subject.kap' do
-    expect(run_error_example('concat-case-subject.kap'))
-      .to eq("concat-case-subject.kap:3:20: cannot concatenate a vec\n")
-  end
-
-  it 'concat-hash.kap' do
-    expect(run_error_example('concat-hash.kap'))
-      .to eq("concat-hash.kap:1:18: cannot concatenate a hash\n")
-  end
-
-  it 'concat-nil.kap' do
-    expect(run_error_example('concat-nil.kap'))
-      .to eq("concat-nil.kap:1:8: cannot concatenate nil\n")
-  end
-
-  it 'concat-vec.kap' do
-    expect(run_error_example('concat-vec.kap'))
-      .to eq("concat-vec.kap:1:18: cannot concatenate a vec\n")
-  end
-
   it 'destructure-literal-number.kap' do
     expect(run_error_example('destructure-literal-number.kap'))
       .to eq("destructure-literal-number.kap:5:3: could not destructure literal\n")

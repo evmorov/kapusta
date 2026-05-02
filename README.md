@@ -103,6 +103,7 @@ Kapusta keeps most core Fennel forms. The main differences come from Ruby's runt
 | `string.format`, `table.insert`, etc. | use Ruby methods and stdlib instead                   |
 | `values` uses Lua multiple returns    | `values` lowers to a Ruby array, usually destructured |
 | `(print x)` is Lua's `print` (bare)   | `(print x)` is Ruby's `p` (inspect-style)             |
+| `(.. "x: " nil)` errors at runtime    | `(.. "x: " nil)` produces `"x: "` (Ruby `nil.to_s`)   |
 | `with-open`, `tail!`                  | not provided                                          |
 
 Kapusta-specific additions:

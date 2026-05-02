@@ -1,4 +1,0 @@
-(let [x [1]]
-  (case x
-    [a] (.. "got " x)
-    _ "no"))

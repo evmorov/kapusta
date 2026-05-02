@@ -148,9 +148,6 @@ module Kapusta
 
           args.each do |arg|
             emit_error!(:vararg_with_operator) if arg.is_a?(Sym) && arg.name == '...'
-            next unless (code = concat_violation(arg, env))
-
-            with_current_form(arg) { emit_error!(code) }
           end
           args.map { |arg| emit_string_part(arg, env, current_scope) }.join(' + ')
         end
@@ -162,18 +159,6 @@ module Kapusta
           return "p #{rendered[0]}" if rendered.length == 1 && simple_expression?(rendered[0])
 
           "p(#{rendered.join(', ')})"
-        end
-
-        def concat_violation(arg, env)
-          return :concat_nil_value if arg.nil?
-          return :concat_vec_value if arg.is_a?(Vec)
-          return :concat_hash_value if arg.is_a?(HashLit)
-          return unless arg.is_a?(Sym) && !arg.dotted?
-
-          case env.lookup_type(arg.name)
-          when :vec then :concat_vec_value
-          when :hash then :concat_hash_value
-          end
         end
 
         def emit_string_part(arg, env, current_scope)

@@ -82,25 +82,24 @@ module Kapusta
           emit_error!(:case_no_patterns) if clauses.empty?
           emit_error!(:case_odd_patterns) if clauses.length.odd?
 
-          subject_sym = args[0].is_a?(Sym) && !args[0].dotted? ? args[0] : nil
           value_code = emit_expr(args[0], env, current_scope)
           if simple_case_subject?(args[0]) && simple_expression?(value_code)
-            body = emit_case_body(value_code, clauses, env, current_scope, mode, subject_sym:)
+            body = emit_case_body(value_code, clauses, env, current_scope, mode)
             emit_error!(:case_unsupported) unless body
             return [value_code, nil, body]
           end
 
           value_var = temp('case_value')
-          body = emit_case_body(value_var, clauses, env, current_scope, mode, subject_sym:)
+          body = emit_case_body(value_var, clauses, env, current_scope, mode)
           emit_error!(:case_unsupported) unless body
           [value_code, value_var, body]
         end
 
-        def emit_case_body(value_var, clauses, env, current_scope, mode, subject_sym: nil)
-          return try_emit_compat_case(value_var, clauses, env, current_scope, mode, subject_sym:) if mruby3_target?
+        def emit_case_body(value_var, clauses, env, current_scope, mode)
+          return try_emit_compat_case(value_var, clauses, env, current_scope, mode) if mruby3_target?
 
-          try_emit_native_case(value_var, clauses, env, current_scope, mode, subject_sym:) ||
-            try_emit_compat_case(value_var, clauses, env, current_scope, mode, subject_sym:)
+          try_emit_native_case(value_var, clauses, env, current_scope, mode) ||
+            try_emit_compat_case(value_var, clauses, env, current_scope, mode)
         end
 
         def simple_case_subject?(form)
@@ -111,9 +110,9 @@ module Kapusta
           end
         end
 
-        def try_emit_native_case(value_var, clauses, env, current_scope, mode, subject_sym: nil)
+        def try_emit_native_case(value_var, clauses, env, current_scope, mode)
           arms = collect_case_arms(clauses) do |pattern, body, where_guards|
-            try_native_arm(pattern, body, where_guards, env, current_scope, mode, subject_sym:)
+            try_native_arm(pattern, body, where_guards, env, current_scope, mode)
           end
           return unless arms
 
@@ -138,14 +137,13 @@ module Kapusta
           arms
         end
 
-        def try_native_arm(pattern, body, where_guards, env, current_scope, mode, subject_sym: nil)
+        def try_native_arm(pattern, body, where_guards, env, current_scope, mode)
           allow_pins = !where_guards.empty? && mode == :case
           plan = native_pattern_plan(pattern, env, mode:, allow_pins:)
           return unless plan
 
           arm_env = env.child
           plan[:bindings].each { |name| arm_env.define(name, sanitize_local(name)) }
-          tag_subject_type!(arm_env, subject_sym, pattern)
           guard_codes = plan[:guards] +
                         where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
           guard_clause = guard_codes.empty? ? '' : " if #{guard_codes.join(' && ')}"
@@ -153,23 +151,13 @@ module Kapusta
           ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
         end
 
-        def try_emit_compat_case(value_var, clauses, env, current_scope, mode, subject_sym: nil)
+        def try_emit_compat_case(value_var, clauses, env, current_scope, mode)
           arms = collect_case_arms(clauses) do |pattern, body, where_guards|
-            try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode, subject_sym:)
+            try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
           end
           return unless arms
 
           emit_compat_case_lines(arms)
-        end
-
-        def tag_subject_type!(arm_env, subject_sym, pattern)
-          return unless subject_sym
-
-          type = case pattern
-                 when Vec then :vec
-                 when HashLit then :hash
-                 end
-          arm_env.tag_type!(subject_sym.name, type) if type
         end
 
         def wildcard_last?(clauses)
@@ -183,13 +171,12 @@ module Kapusta
           [pattern.items[1], pattern.items[2..]]
         end
 
-        def try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode, subject_sym: nil)
+        def try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
           allow_pins = !where_guards.empty? && mode == :case
           arm_env = env.child
           plan = compat_pattern_plan(pattern, value_var, env, arm_env, mode:, allow_pins:)
           return unless plan
 
-          tag_subject_type!(arm_env, subject_sym, pattern)
           where_guard_codes = where_guards.map { |g| emit_expr(g, arm_env, current_scope) }
           if where_guard_codes.empty?
             guard_codes = plan[:conditions]

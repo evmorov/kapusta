@@ -7,22 +7,10 @@ module Kapusta
     def initialize(parent = nil)
       @parent = parent
       @vars = {}
-      @types = {}
     end
 
     def define(name, value)
       @vars[binding_key(name)] = value
-    end
-
-    def tag_type!(name, type)
-      @types[binding_key(name)] = type
-    end
-
-    def lookup_type(name)
-      key = binding_key(name)
-      return @types[key] if @types.key?(key)
-
-      @parent&.lookup_type(name)
     end
 
     def lookup(name)
