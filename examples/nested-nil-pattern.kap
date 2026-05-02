@@ -1,0 +1,7 @@
+(fn check [packet]
+  (case packet
+    [:ping seq] (.. "got " seq)
+    _ "other"))
+
+(print (check [:ping 42]))
+(print (check [:ping nil]))

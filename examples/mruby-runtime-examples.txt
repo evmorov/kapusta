@@ -54,6 +54,7 @@ max-achievable
 maximum-subarray
 min-max
 module-header
+nested-nil-pattern
 move-zeroes
 number-of-1-bits
 number-of-steps

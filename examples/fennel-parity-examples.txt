@@ -27,6 +27,7 @@ macros-when-let
 match
 max-achievable
 min-max
+nested-nil-pattern
 or-patterns
 packet-router
 points

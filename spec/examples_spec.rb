@@ -455,6 +455,13 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'nested-nil-pattern.kap' do
+    expect(run_example('nested-nil-pattern.kap')).to eq(<<~OUT)
+      "got 42"
+      "other"
+    OUT
+  end
+
   it 'underscore-patterns.kap on mruby keeps loose nil and strict fallback separate' do
     path = File.join(EXAMPLES_DIR, 'underscore-patterns.kap')
     ruby = compile_example('underscore-patterns.kap', target: :mruby3)
