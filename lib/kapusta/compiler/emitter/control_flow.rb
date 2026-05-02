@@ -164,9 +164,12 @@ module Kapusta
 
         def tag_subject_type!(arm_env, subject_sym, pattern)
           return unless subject_sym
-          return unless pattern.is_a?(Vec) || pattern.is_a?(HashLit)
 
-          arm_env.tag_type!(subject_sym.name, :table)
+          type = case pattern
+                 when Vec then :vec
+                 when HashLit then :hash
+                 end
+          arm_env.tag_type!(subject_sym.name, type) if type
         end
 
         def wildcard_last?(clauses)
