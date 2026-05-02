@@ -103,6 +103,30 @@ RSpec.describe 'examples' do
     expect(run_example('circle.kap')).to eq("78.53975\n31.4159\n")
   end
 
+  it 'arrange-coins.kap' do
+    expect(run_example('arrange-coins.kap')).to eq(<<~OUT)
+      0
+      0
+      1
+      1
+      2
+      3
+      3
+      6
+      4
+      10
+    OUT
+  end
+
+  it 'divisibility-stats.kap' do
+    expect(run_example('divisibility-stats.kap')).to eq(<<~OUT)
+      10
+      6
+      33
+      20
+    OUT
+  end
+
   it 'anagram.kap' do
     expect(run_example('anagram.kap')).to eq("true\ntrue\nfalse\n")
   end

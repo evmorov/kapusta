@@ -3,6 +3,7 @@ accumulator
 ackermann
 anagram
 anonymous-greeter
+arrange-coins
 bank-account
 baseball-game
 best-time-to-buy-sell-stock
@@ -21,6 +22,7 @@ count-effects
 counter
 describe
 destructure
+divisibility-stats
 doto
 doto-hygiene
 egg-count

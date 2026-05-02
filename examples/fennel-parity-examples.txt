@@ -1,5 +1,6 @@
 ackermann
 anonymous-greeter
+arrange-coins
 case-vs-match
 classify-wallet
 climbing-stairs
@@ -7,6 +8,7 @@ convert-temperature
 count-effects
 describe
 destructure
+divisibility-stats
 even-squares
 factorial
 falling-drops

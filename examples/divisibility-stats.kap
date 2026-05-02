@@ -1,0 +1,16 @@
+(fn divisibility-stats [n]
+  (let [threes (faccumulate [acc 0 i 1 n]
+                 (let [step (if (= 0 (% i 3)) 1 0)]
+                   (+ acc step)))
+        fives (faccumulate [acc 0 i 1 n]
+                (let [step (if (= 0 (% i 5)) 1 0)]
+                  (+ acc step)))]
+    [threes fives]))
+
+(let [[t f] (divisibility-stats 30)]
+  (print t)
+  (print f))
+
+(let [[t f] (divisibility-stats 100)]
+  (print t)
+  (print f))
