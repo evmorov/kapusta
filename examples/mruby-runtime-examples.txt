@@ -11,6 +11,7 @@ binary-to-decimal
 block-sort
 bst-iterator
 calc
+case-vs-match
 circle
 classify-wallet
 climbing-stairs
@@ -20,8 +21,8 @@ count-effects
 counter
 describe
 destructure
-doto-hygiene
 doto
+doto-hygiene
 egg-count
 even-squares
 exceptions
@@ -38,9 +39,9 @@ kwargs
 leap-year
 length-of-last-word
 macros-dbg
+macros-import
 macros-import-helpers
 macros-import-whole
-macros-import
 macros-multi
 macros-swap
 macros-thrice-if
@@ -84,8 +85,8 @@ thread-styles
 threading
 tic-tac-toe
 tset
-two-sum-hash
 two-sum
+two-sum-hash
 ugly-number
 underscore-patterns
 valid-parentheses-1

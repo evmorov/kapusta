@@ -1,0 +1,16 @@
+(fn show-case [packet seq]
+  (case packet
+    [:ping seq] (.. "packet" packet " seq " seq)
+    _ "other"))
+
+(fn show-match [packet seq]
+  (match packet
+    [:ping seq] (.. "packet" packet " seq " seq)
+    _ "other"))
+
+(print (.. "case: " (show-case [:ping 42] 7)))
+(print (.. "case: " (show-case [:ping 42] nil)))
+(print (.. "case: " (show-case [:ping 42] 42)))
+(print (.. "match: " (show-match [:ping 42] 7)))
+(print (.. "match: " (show-match [:ping 42] nil)))
+(print (.. "match: " (show-match [:ping 42] 42)))

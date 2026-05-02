@@ -1,5 +1,6 @@
 ackermann
 anonymous-greeter
+case-vs-match
 classify-wallet
 climbing-stairs
 convert-temperature
@@ -15,9 +16,9 @@ gcd
 hashfn
 leap-year
 macros-dbg
+macros-import
 macros-import-helpers
 macros-import-whole
-macros-import
 macros-multi
 macros-swap
 macros-thrice-if
@@ -27,9 +28,9 @@ match
 max-achievable
 min-max
 or-patterns
-power-of-three
 packet-router
 points
+power-of-three
 primes
 safe-lookup
 shapes

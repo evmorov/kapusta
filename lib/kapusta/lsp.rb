@@ -36,6 +36,7 @@ module Kapusta
           exit!(0)
         end
       rescue ArgumentError
+        nil
       end
     end
 

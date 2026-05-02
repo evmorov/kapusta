@@ -76,6 +76,17 @@ RSpec.describe 'examples' do
     expect(run_example('ackermann.kap')).to eq("9\n61\n")
   end
 
+  it 'case-vs-match.kap' do
+    expect(run_example('case-vs-match.kap')).to eq(<<~OUT)
+      "case: packet[:ping, 42] seq 42"
+      "case: packet[:ping, 42] seq 42"
+      "case: packet[:ping, 42] seq 42"
+      "match: other"
+      "match: other"
+      "match: packet[:ping, 42] seq 42"
+    OUT
+  end
+
   it 'accumulator.kap' do
     expect(run_example('accumulator.kap')).to eq("22\n")
   end
