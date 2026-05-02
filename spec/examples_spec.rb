@@ -76,6 +76,16 @@ RSpec.describe 'examples' do
     expect(run_example('ackermann.kap')).to eq("9\n61\n")
   end
 
+  it 'non-constant-local.kap' do
+    expect(run_example('non-constant-local.kap')).to eq(<<~OUT)
+      "nil"
+      6
+      10
+      3
+      1
+    OUT
+  end
+
   it 'case-vs-match.kap' do
     expect(run_example('case-vs-match.kap')).to eq(<<~OUT)
       "case: packet[:ping, 42] seq 42"

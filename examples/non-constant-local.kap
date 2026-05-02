@@ -1,0 +1,11 @@
+(local hash-fn #(or $ "nil"))
+(local regular-fn (fn [x] (+ x 1)))
+(local lambda-fn (λ [x] (* x 2)))
+(local vec-binding [10 20 30])
+(local hash-binding {:a 1})
+
+(print (hash-fn nil))
+(print (regular-fn 5))
+(print (lambda-fn 5))
+(print (length vec-binding))
+(print (. hash-binding :a))

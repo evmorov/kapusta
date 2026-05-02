@@ -30,6 +30,7 @@ match
 max-achievable
 min-max
 nested-nil-pattern
+non-constant-local
 or-patterns
 packet-router
 points

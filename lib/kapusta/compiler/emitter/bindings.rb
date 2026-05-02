@@ -296,7 +296,9 @@ module Kapusta
 
           if target.is_a?(Sym)
             validate_binding_symbol!(target)
-            if allow_constant && form.head.name == 'local' && (constant_name = constant_name_for(target.name))
+            if allow_constant && form.head.name == 'local' &&
+               constant_value?(form.items[2]) &&
+               (constant_name = constant_name_for(target.name))
               env.define(target.name, constant_name)
               mark_mutability(env, target.name, mutable: false)
               return ["#{constant_name} = #{value_code}\nnil", env]
@@ -314,6 +316,13 @@ module Kapusta
         def constant_name_for(source_name)
           candidate = source_name.tr('-', '_').upcase
           candidate if candidate.match?(/\A[A-Z][A-Z0-9_]*\z/)
+        end
+
+        def constant_value?(value_form)
+          case value_form
+          when Numeric, String, ::Symbol, true, false, nil then true
+          else false
+          end
         end
 
         def check_destructure_value!(pattern, value_form)
