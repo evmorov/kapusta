@@ -1,6 +1,6 @@
 __doto__ = 99
 xs = []
-doto_1 = xs
-doto_1.push(__doto__)
-doto_1
+xs.tap do |doto_1|
+  doto_1.push(__doto__)
+end
 p xs.inspect

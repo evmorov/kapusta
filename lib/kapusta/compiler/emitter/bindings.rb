@@ -57,7 +57,7 @@ module Kapusta
 
         def build_simple_block_parts(pattern, body, env, current_scope)
           body_env = env.child
-          params = pattern.items.map { |sym| define_local(body_env, sym.name, shadow: true) }
+          params = pattern.items.map { |sym| define_local(body_env, sym, shadow: true) }
           body_code, = emit_sequence(body, body_env, current_scope,
                                      allow_method_definitions: false, result: false)
           [params, body_code]

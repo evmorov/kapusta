@@ -139,6 +139,8 @@ module Kapusta
 
       def doto(forms)
         value = forms.first
+        return value if forms[1..].empty?
+
         temp = gensym('doto')
         body = forms[1..].map do |form|
           if form.is_a?(List)
@@ -147,7 +149,8 @@ module Kapusta
             List.new([form, temp])
           end
         end
-        List.new([Sym.new('let'), Vec.new([temp, value]), *body, temp])
+        fn = List.new([Sym.new('fn'), Vec.new([temp]), *body])
+        List.new([Sym.new(':'), value, :tap, fn])
       end
 
       def gensym(prefix)
