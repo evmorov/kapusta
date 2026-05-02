@@ -16,7 +16,17 @@ module Kapusta
     FULL_SYNC = 1
 
     def self.start(input: $stdin, output: $stdout, log: $stderr)
-      new(input:, output:, log:).run
+      server = new(input:, output:, log:)
+      install_signal_handlers
+      server.run
+      exit!(0)
+    end
+
+    def self.install_signal_handlers
+      %w[TERM INT HUP].each do |sig|
+        Signal.trap(sig) { exit!(0) }
+      rescue ArgumentError
+      end
     end
 
     def self.uri_to_path(uri)
@@ -85,6 +95,8 @@ module Kapusta
       body = JSON.generate(payload)
       @output.write("Content-Length: #{body.bytesize}\r\n\r\n#{body}")
       @output.flush
+    rescue Errno::EPIPE, IOError
+      exit!(0)
     end
 
     def handle(message)
@@ -117,7 +129,7 @@ module Kapusta
       when 'shutdown'
         @shutdown = true
         reply(id, nil)
-      when 'exit' then exit(@shutdown ? 0 : 1)
+      when 'exit' then exit!(@shutdown ? 0 : 1)
       when 'textDocument/didOpen' then on_did_open(params)
       when 'textDocument/didChange' then on_did_change(params)
       when 'textDocument/didSave' then on_did_save(params)
