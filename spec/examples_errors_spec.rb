@@ -82,6 +82,16 @@ RSpec.describe 'examples-errors' do
       .to eq("case-unsupported.kap:1:1: case/match clauses use patterns this compiler cannot translate\n")
   end
 
+  it 'concat-case-subject.kap' do
+    expect(run_error_example('concat-case-subject.kap'))
+      .to eq("concat-case-subject.kap:3:20: attempt to concatenate a table value\n")
+  end
+
+  it 'concat-table.kap' do
+    expect(run_error_example('concat-table.kap'))
+      .to eq("concat-table.kap:1:18: attempt to concatenate a table value\n")
+  end
+
   it 'destructure-literal-number.kap' do
     expect(run_error_example('destructure-literal-number.kap'))
       .to eq("destructure-literal-number.kap:5:3: could not destructure literal\n")

@@ -148,6 +148,10 @@ module Kapusta
 
           args.each do |arg|
             emit_error!(:vararg_with_operator) if arg.is_a?(Sym) && arg.name == '...'
+            if arg.is_a?(Vec) || arg.is_a?(HashLit) ||
+               (arg.is_a?(Sym) && !arg.dotted? && env.lookup_type(arg.name) == :table)
+              with_current_form(arg) { emit_error!(:concat_table_value) }
+            end
           end
           args.map { |arg| emit_string_part(arg, env, current_scope) }.join(' + ')
         end
