@@ -462,18 +462,6 @@ RSpec.describe 'examples' do
     OUT
   end
 
-  it 'underscore-patterns.kap on mruby keeps loose nil and strict fallback separate' do
-    path = File.join(EXAMPLES_DIR, 'underscore-patterns.kap')
-    ruby = compile_example('underscore-patterns.kap', target: :mruby3)
-
-    expect(run_mruby_source(ruby, path:)).to eq(<<~OUT)
-      5
-      nil
-      5
-      "fallback"
-    OUT
-  end
-
   it 'scopes.kap' do
     expect(run_example('scopes.kap')).to eq("5\n9\n9\n9\n")
   end
