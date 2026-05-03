@@ -1,0 +1,7 @@
+(fn equal-sums? [a b]
+  (= (accumulate [s 0 _ x (ipairs a)] (+ s x))
+     (accumulate [s 0 _ x (ipairs b)] (+ s x))))
+
+(print (equal-sums? [1 2 3] [3 2 1]))
+(print (equal-sums? [1 2 3] [4 5 6]))
+(print (equal-sums? [0] [0]))

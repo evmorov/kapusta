@@ -10,6 +10,7 @@ count-effects
 describe
 destructure
 divisibility-stats
+equal-sums
 even-squares
 factorial
 falling-drops
