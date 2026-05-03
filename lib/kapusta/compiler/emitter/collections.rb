@@ -111,30 +111,23 @@ module Kapusta
           bindings = args[0].items
           emit_error!(:accumulate_no_iterator) if bindings.length < 5
 
-          acc_name = bindings[0]
-          loop_name = bindings[2]
-          loop_env = env.child
-          acc_var = define_local(loop_env, acc_name.name)
-          loop_var = define_local(loop_env, loop_name.name)
-          body_code, = emit_sequence(args[1..], loop_env, current_scope, allow_method_definitions: false)
-          accumulating_body = emit_sequence_value_assignment(acc_var, body_code)
-          loop_code = emit_counted_loop(
-            ruby_name: loop_var,
-            start_code: emit_expr(bindings[3], env, current_scope),
-            finish_code: emit_expr(bindings[4], env, current_scope),
-            step_code: bindings[5] ? emit_expr(bindings[5], env, current_scope) : '1',
-            until_form: nil,
-            loop_env:,
-            current_scope:,
-            body_code: accumulating_body
-          )
-          [
-            '(-> do',
-            indent("#{acc_var} = #{emit_expr(bindings[1], env, current_scope)}"),
-            indent(loop_code),
-            indent(acc_var),
-            'end).call'
-          ].join("\n")
+          body_env = env.child
+          acc_var = define_local(body_env, bindings[0].name)
+          loop_var = define_local(body_env, bindings[2].name)
+
+          init_code = emit_expr(bindings[1], env, current_scope)
+          start_code = emit_expr(bindings[3], env, current_scope)
+          finish_code = emit_expr(bindings[4], env, current_scope)
+          step_code = bindings[5] ? emit_expr(bindings[5], env, current_scope) : nil
+          body_code, = emit_sequence(args[1..], body_env, current_scope, allow_method_definitions: false)
+
+          receiver =
+            if step_code
+              "#{parenthesize(start_code)}.step(#{finish_code}, #{step_code})"
+            else
+              "(#{start_code}..#{finish_code})"
+            end
+          inject_block(receiver, "#{acc_var}, #{loop_var}", init_code, '', body_code)
         end
 
         def emit_hashfn(args, env, current_scope)
