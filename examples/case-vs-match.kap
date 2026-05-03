@@ -1,16 +1,23 @@
+(fn debug-data [packet seq]
+  (local no-nil #(or $ "nil"))
+  (let [[_ packet-seq] packet]
+    (.. "packet[:ping, " (no-nil packet-seq) "] seq " (no-nil seq))))
+
 (fn show-case [packet seq]
   (case packet
-    [:ping seq] (.. "packet[:ping, " seq "] seq " seq)
+    [:ping seq] (debug-data packet seq)
     _ "other"))
 
 (fn show-match [packet seq]
   (match packet
-    [:ping seq] (.. "packet[:ping, " seq "] seq " seq)
+    [:ping seq] (debug-data packet seq)
     _ "other"))
 
 (print (.. "case: " (show-case [:ping 42] 7)))
 (print (.. "case: " (show-case [:ping 42] nil)))
+(print (.. "case: " (show-case [:ping nil] nil)))
 (print (.. "case: " (show-case [:ping 42] 42)))
 (print (.. "match: " (show-match [:ping 42] 7)))
 (print (.. "match: " (show-match [:ping 42] nil)))
+(print (.. "match: " (show-match [:ping nil] nil)))
 (print (.. "match: " (show-match [:ping 42] 42)))

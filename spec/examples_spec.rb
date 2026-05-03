@@ -90,9 +90,11 @@ RSpec.describe 'examples' do
     expect(run_example('case-vs-match.kap')).to eq(<<~OUT)
       "case: packet[:ping, 42] seq 42"
       "case: packet[:ping, 42] seq 42"
+      "case: other"
       "case: packet[:ping, 42] seq 42"
       "match: other"
       "match: other"
+      "match: packet[:ping, nil] seq nil"
       "match: packet[:ping, 42] seq 42"
     OUT
   end

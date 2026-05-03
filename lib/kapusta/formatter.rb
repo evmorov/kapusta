@@ -555,30 +555,18 @@ module Kapusta
       lines = [base]
       args = list_raw_rest(list)
       semantic_length = semantic_items(args).length
+      hang_subsequent_args = hang_call_args?(list, indent)
 
       semantic_index = 0
+      hanging = nil
       args.each do |arg|
         if comment?(arg)
           lines << indent_block(render(arg, indent + INDENT), INDENT)
           next
-        end
-
-        if semantic_index.zero?
-          first = render(
-            arg,
-            indent + base.length + 1,
-            force_expand: semantic_length == 1 && fn_form?(arg)
-          )
-          first_line, *rest = first.lines(chomp: true)
-          candidate = "#{base} #{first_line}"
-
-          if lines.length == 1 && fits?(candidate, indent)
-            lines[0] = candidate
-            hanging = ' ' * (base.length + 1)
-            rest.each { |line| lines << "#{hanging}#{line}" }
-          else
-            lines << indent_block(first, INDENT)
-          end
+        elsif semantic_index.zero?
+          hanging = append_first_call_arg(lines, arg, base, indent, semantic_length)
+        elsif hanging && hang_subsequent_args
+          lines << prefix_continuation(hanging, render(arg, indent + hanging.length))
         else
           lines << indent_block(render(arg, indent + INDENT), INDENT)
         end
@@ -587,6 +575,48 @@ module Kapusta
       end
 
       append_suffix(lines, ')')
+    end
+
+    def append_first_call_arg(lines, arg, base, indent, semantic_length)
+      first = render(
+        arg,
+        indent + base.length + 1,
+        force_expand: semantic_length == 1 && fn_form?(arg)
+      )
+      first_line, *rest = first.lines(chomp: true)
+      candidate = "#{base} #{first_line}"
+
+      unless lines.length == 1 && fits?(candidate, indent)
+        lines << indent_block(first, INDENT)
+        return
+      end
+
+      hanging = ' ' * (base.length + 1)
+      lines[0] = candidate
+      rest.each { |line| lines << "#{hanging}#{line}" }
+      hanging
+    end
+
+    def hang_call_args?(list, indent)
+      return false unless operator_call?(list)
+
+      flat = flat_call_render(list)
+      flat && !fits?(flat, indent)
+    end
+
+    def operator_call?(list)
+      head = list_head(list)
+      head.is_a?(Sym) && head.name.match?(/\A[^\w.]+\z/)
+    end
+
+    def flat_call_render(list)
+      head = flat_render(list_head(list))
+      return unless head
+
+      rendered_args = semantic_items(list_raw_rest(list)).map { |arg| flat_render(arg) }
+      return if rendered_args.any?(&:nil?)
+
+      "(#{[head, *rendered_args].join(' ')})"
     end
 
     def render_vec(vec, indent, layout: nil, top_level: false, force_expand: false)
