@@ -41,29 +41,29 @@ module Kapusta
 
         def emit_form_run(forms, start, env, current_scope, header_form: nil)
           i = start
-          codes = []
+          entries = []
           while i < forms.length
             form = forms[i]
             if end_form?(form)
               validate_end_form!(form)
               with_current_form(form) { emit_error!(:end_outside_header) } unless header_form
-              return [codes.join("\n"), i + 1]
+              return [join_definition_aware(entries, current_scope), i + 1]
             end
 
             if bodyless_header?(form)
               header_code, i = emit_bodyless_header(form, forms, i + 1, env)
-              codes << header_code
+              entries << [form, header_code]
               next
             end
 
             code, env = emit_form_in_sequence(form, env, current_scope,
                                               allow_method_definitions: true,
                                               result_needed: false)
-            codes << code
+            entries << [form, code]
             i += 1
           end
           with_current_form(header_form) { emit_error!(:unclosed_header) } if header_form
-          [codes.join("\n"), i]
+          [join_definition_aware(entries, current_scope), i]
         end
 
         def end_form?(form)
@@ -170,14 +170,41 @@ module Kapusta
 
         def emit_sequence(forms, env, current_scope, allow_method_definitions:, result: true)
           current_env = env
-          codes = []
+          entries = []
           forms.each_with_index do |form, index|
             code, current_env = emit_form_in_sequence(form, current_env, current_scope,
                                                       allow_method_definitions:,
                                                       result_needed: result && index == forms.length - 1)
-            codes << code unless code.empty?
+            entries << [form, code] unless code.empty?
           end
-          [codes.join("\n"), current_env]
+          [join_definition_aware(entries, current_scope), current_env]
+        end
+
+        def join_definition_aware(entries, current_scope)
+          return '' if entries.empty?
+
+          result = +entries.first[1]
+          entries.each_cons(2) do |(prev_form, _), (curr_form, curr_code)|
+            sep = blank_between_definitions?(prev_form, curr_form, current_scope) ? "\n\n" : "\n"
+            result << sep << curr_code
+          end
+          result
+        end
+
+        def blank_between_definitions?(prev_form, curr_form, current_scope)
+          return false unless %i[toplevel module class].include?(current_scope)
+
+          definition_form?(prev_form) || definition_form?(curr_form)
+        end
+
+        def definition_form?(form)
+          return false unless form.is_a?(List) && !form.empty? && form.head.is_a?(Sym)
+
+          case form.head.name
+          when 'defn', 'class', 'module' then true
+          when 'fn', 'lambda', 'λ' then form.items[1].is_a?(Sym)
+          else false
+          end
         end
 
         def sequence_statement_form?(form)
