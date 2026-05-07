@@ -1,7 +1,7 @@
 def manhattan(edge)
   x1, y1 = edge[:from]
   x2, y2 = edge[:to]
-  ((x1 - x2).abs) + ((y1 - y2).abs)
+  (x1 - x2).abs + (y1 - y2).abs
 end
 
 def total_distance(edges)
