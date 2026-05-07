@@ -158,8 +158,35 @@ module Kapusta
             emit_sequence_statement_form(form, env, current_scope, result_needed:)
           elsif set_new_local_form?(form, env)
             emit_set_form(form, env, current_scope)
+          elsif !result_needed && class_or_module_form?(form)
+            [emit_class_or_module_statement(form, env), env]
           else
             [emit_expr(form, env, current_scope), env]
+          end
+        end
+
+        def class_or_module_form?(form)
+          form.is_a?(List) && form.head.is_a?(Sym) &&
+            %w[class module].include?(form.head.name)
+        end
+
+        def emit_class_or_module_statement(form, env)
+          args = form.rest
+          if form.head.name == 'module'
+            name_sym = args[0]
+            body = with_class_body do
+              emit_sequence(args[1..], env.child, :module, allow_method_definitions: true,
+                                                           result: false).first
+            end
+            emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body)
+          else
+            name_sym, supers, body_forms = split_class_args(args)
+            body = with_class_body do
+              emit_sequence(body_forms, env.child, :class, allow_method_definitions: true,
+                                                           result: false).first
+            end
+            emit_direct_class_header(name_sym, supers, body, env) ||
+              emit_class_wrapper(name_sym, supers, env, body)
           end
         end
 
