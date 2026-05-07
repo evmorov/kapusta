@@ -18,4 +18,5 @@ def raindrops(n)
     drops.join
   end
 end
+
 p raindrops(15)

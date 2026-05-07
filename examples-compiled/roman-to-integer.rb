@@ -25,6 +25,7 @@ def roman_to_integer(s)
   end
   total
 end
+
 p roman_to_integer("III")
 p roman_to_integer("LVIII")
 p roman_to_integer("MCMXCIV")

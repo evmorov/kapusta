@@ -5,4 +5,5 @@ def fib(n)
     fib(n - 1) + fib(n - 2)
   end
 end
+
 p fib(10)

@@ -15,6 +15,7 @@ def ugly?(n)
     x == 1
   end
 end
+
 p ugly?(6)
 p ugly?(1)
 p ugly?(14)

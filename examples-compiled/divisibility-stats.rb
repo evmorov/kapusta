@@ -21,6 +21,7 @@ def divisibility_stats(n)
   end
   [threes, fives]
 end
+
 t, f = divisibility_stats(30)
 p t
 p f

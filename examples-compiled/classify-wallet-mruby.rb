@@ -10,6 +10,7 @@ def classify_wallet(wallet)
     "mixed"
   end
 end
+
 p classify_wallet({1 => 5, 25 => 2})
 p classify_wallet({25 => 4})
 p classify_wallet({1 => 10})

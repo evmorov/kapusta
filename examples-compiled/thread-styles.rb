@@ -1,15 +1,19 @@
 def positive?(n)
   n > 0
 end
+
 def square(n)
   n * n
 end
+
 def add(x, y)
   x + y
 end
+
 def mul(x, y)
   x * y
 end
+
 def nonzero(n)
   if n == 0
     nil
@@ -17,6 +21,7 @@ def nonzero(n)
     n
   end
 end
+
 def non_empty(s)
   if s == ""
     nil
@@ -24,22 +29,27 @@ def non_empty(s)
     s
   end
 end
+
 def wrap(s)
   ">>" + s.to_s + "<<"
 end
+
 def shout(s)
   s.to_s + "!"
 end
+
 def keep(pred, xs)
   xs.filter_map do |x|
     x if pred.call(x)
   end
 end
+
 def map(f, xs)
   xs.filter_map do |x|
     f.call(x)
   end
 end
+
 def join(sep, xs)
   s = ""
   xs.each do |x|
@@ -51,6 +61,7 @@ def join(sep, xs)
   end
   s
 end
+
 scores = [-2, 3, -1, 4, 0, 5]
 report = join(", ", map(method(:square), keep(method(:positive?), scores)))
 adjusted = square(mul(add(7, 3), 2))

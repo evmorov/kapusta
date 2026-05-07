@@ -13,6 +13,7 @@ def inbox_line(user, event)
     "other"
   end
 end
+
 def score_delta(user, event)
   case
   when event.is_a?(Array) && event.length >= 3 && event[0] == :bonus && event[1] == user && (p = event[2]) != nil && p > 0 && p < 10
@@ -23,6 +24,7 @@ def score_delta(user, event)
     0
   end
 end
+
 def packet_kind(packet)
   case
   when packet.is_a?(Array) && packet.length >= 2 && packet[0] == :ping && (seq = packet[1]) != nil
@@ -33,6 +35,7 @@ def packet_kind(packet)
     "other"
   end
 end
+
 p inbox_line("Ada", [:score, "Ada", 9])
 p inbox_line("Ada", [:score, "Lin", 7])
 p inbox_line("Ada", [:profile, "Ada", nil])

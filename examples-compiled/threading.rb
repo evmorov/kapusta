@@ -1,12 +1,15 @@
 def append(suffix, value)
   value.to_s + suffix.to_s
 end
+
 def wrap(left, right, value)
   left.to_s + value.to_s + right.to_s
 end
+
 def fetch_name(user)
   user&.[](:profile)&.[](:name)
 end
+
 thread_last = append("!", wrap("[", "]", append(" Lovelace", "Ada")))
 maybe_name = (-> do
   thread_1 = {:profile => {:name => "Ada"}}

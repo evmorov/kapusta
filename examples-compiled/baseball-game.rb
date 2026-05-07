@@ -19,5 +19,6 @@ def cal_points(ops)
   end
   scores.sum
 end
+
 p cal_points(["5", "2", "C", "D", "+"])
 p cal_points(["5", "-2", "4", "C", "D", "9", "+", "+"])

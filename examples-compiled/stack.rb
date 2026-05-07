@@ -3,6 +3,7 @@ class MinStack
     @xs = []
     @mins = []
   end
+
   def push(x)
     xs = @xs
     mins = @mins
@@ -17,19 +18,23 @@ class MinStack
     mins.push(current_min)
     self
   end
+
   def pop
     mins = @mins
     mins.pop
     xs = @xs
     xs.pop
   end
+
   def top
     @xs[-1]
   end
+
   def get_min
     @mins[-1]
   end
 end
+
 s = MinStack.new
 s.push(-2)
 s.push(0)

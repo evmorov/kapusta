@@ -10,6 +10,7 @@ def parse_date(s)
     nil
   end
 end
+
 ["2026-04-23", "hello", "1999-12-31"].each do |s|
   parsed = parse_date(s)
   p(s.to_s + " -> " + parsed.to_s)

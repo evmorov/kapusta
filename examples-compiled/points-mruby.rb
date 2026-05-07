@@ -12,6 +12,7 @@ def point_kind(point)
     nil
   end
 end
+
 [[0, 0], [0, 2], [3, 0], [3, 4]].each do |point|
   p point_kind(point)
 end

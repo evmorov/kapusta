@@ -12,6 +12,7 @@ def winner(board)
     "draw"
   end
 end
+
 [[["X", "X", "X"], ["O", "", ""], ["", "O", ""]], [["O", "X", "X"], ["O", "", "X"], ["O", "", ""]], [["X", "O", ""], ["", "X", "O"], ["", "", "X"]], [["X", "O", "X"], ["O", "X", "O"], ["O", "X", "O"]]].each do |board|
   p winner(board)
 end

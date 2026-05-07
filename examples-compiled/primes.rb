@@ -6,6 +6,7 @@ def prime?(n)
   end
   (n > 1) && ok
 end
+
 ps = (-> do
   kap_result_1 = []
   2.step(30) do |n|

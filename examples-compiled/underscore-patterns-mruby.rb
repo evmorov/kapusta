@@ -7,6 +7,7 @@ def loose(v)
     "not-reachable"
   end
 end
+
 def strict(v)
   case
   when (x = v) != nil
@@ -15,6 +16,7 @@ def strict(v)
     "fallback"
   end
 end
+
 p loose(5)
 p loose(nil)
 p strict(5)

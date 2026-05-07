@@ -8,6 +8,7 @@ def sum_of_squares(n)
   end
   total
 end
+
 def happy?(n)
   seen = {}
   x = n
@@ -17,6 +18,7 @@ def happy?(n)
   end
   x == 1
 end
+
 p happy?(19)
 p happy?(2)
 p happy?(1)

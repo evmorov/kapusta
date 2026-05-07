@@ -12,6 +12,7 @@ def reverse_integer(x)
   end
   result * sign
 end
+
 p reverse_integer(123)
 p reverse_integer(-123)
 p reverse_integer(120)

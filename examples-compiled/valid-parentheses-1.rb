@@ -2,6 +2,7 @@ class ValidParenthesesSolution
   def initialize
     @pairs = {")" => "(", "]" => "[", "}" => "{"}
   end
+
   def valid?(s)
     pairs = @pairs
     stack = []

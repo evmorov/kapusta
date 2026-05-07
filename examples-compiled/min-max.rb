@@ -8,5 +8,6 @@ def min_max(xs)
   end
   [lo, hi]
 end
+
 lo, hi = min_max([3, 1, 4, 1, 5, 9, 2, 6])
 p(lo, hi)

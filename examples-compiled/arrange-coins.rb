@@ -21,6 +21,7 @@ def arrange_coins(n)
   end
   [rows[:rows], used[:sum]]
 end
+
 r, u = arrange_coins(0)
 p r
 p u

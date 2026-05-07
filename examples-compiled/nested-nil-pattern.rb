@@ -6,5 +6,6 @@ def check(packet)
     "other"
   end
 end
+
 p check([:ping, 42])
 p check([:ping, nil])

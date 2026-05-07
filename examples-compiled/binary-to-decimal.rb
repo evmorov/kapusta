@@ -7,6 +7,7 @@ def binary_to_decimal(bits)
     end)
   end
 end
+
 p binary_to_decimal("1011")
 p binary_to_decimal("0")
 p binary_to_decimal("101010")

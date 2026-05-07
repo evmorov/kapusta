@@ -5,6 +5,7 @@ def power_of_three?(n)
   end
   x == 1
 end
+
 p power_of_three?(27)
 p power_of_three?(9)
 p power_of_three?(45)

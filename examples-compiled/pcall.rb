@@ -1,6 +1,7 @@
 def parse_int(s)
   Kernel.public_send(:Integer, s)
 end
+
 ok, value = begin
   [true, parse_int("12")]
 rescue StandardError => e

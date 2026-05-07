@@ -11,6 +11,7 @@ def pivot_index(nums)
   end
   found
 end
+
 p pivot_index([1, 7, 3, 6, 5, 6])
 p pivot_index([1, 2, 3])
 p pivot_index([2, 1, -1])

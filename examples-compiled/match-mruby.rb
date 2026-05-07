@@ -8,6 +8,7 @@ def describe_user(user)
     "unknown"
   end
 end
+
 p describe_user({:name => "Ada", :stats => {:score => 9}})
 p describe_user({:name => "Lin"})
 p describe_user({})

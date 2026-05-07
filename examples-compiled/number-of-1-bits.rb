@@ -1,4 +1,5 @@
 BIT_WIDTH = 32
+
 def hamming_weight(n)
   x = n
   count = 0
@@ -8,6 +9,7 @@ def hamming_weight(n)
   end
   count
 end
+
 p hamming_weight(11)
 p hamming_weight(128)
 p hamming_weight(4294967293)

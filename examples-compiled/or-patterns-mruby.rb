@@ -8,6 +8,7 @@ def swap_kind(v)
     "other"
   end
 end
+
 p swap_kind([:pair, 1, 2])
 p swap_kind([:flipped, 1, 2])
 p swap_kind([:nope, 1, 2])

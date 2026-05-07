@@ -10,6 +10,7 @@ def area(shape)
     0
   end
 end
+
 [[:circle, 5], [:square, 3], [:rect, 2, 4], [:dot]].each do |s|
   p area(s)
 end

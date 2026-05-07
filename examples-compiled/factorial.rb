@@ -8,6 +8,7 @@ def factorial(n)
     n * factorial(n - 1)
   end
 end
+
 [0, 1, 5, 6, 10].each do |n|
   p(n, factorial(n))
 end

@@ -14,6 +14,7 @@ def count_by_kind(effects)
   end
   [quits, moves]
 end
+
 effects = [{:kind => :move}, {:kind => :quit}, {:kind => :move}, {:kind => :other}]
 q, m = count_by_kind(effects)
 p(q, m)

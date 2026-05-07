@@ -5,6 +5,7 @@ def equal_sums?(a, b)
     s + x
   end)
 end
+
 p equal_sums?([1, 2, 3], [3, 2, 1])
 p equal_sums?([1, 2, 3], [4, 5, 6])
 p equal_sums?([0], [0])

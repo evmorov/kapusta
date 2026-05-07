@@ -1,4 +1,5 @@
 TARGET = 0
+
 def steps_to_zero(n)
   x = n
   steps = 0
@@ -12,6 +13,7 @@ def steps_to_zero(n)
   end
   steps
 end
+
 p steps_to_zero(14)
 p steps_to_zero(8)
 p steps_to_zero(123)

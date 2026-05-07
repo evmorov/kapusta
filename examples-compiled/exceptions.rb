@@ -5,6 +5,7 @@ def require_score(s)
     s.to_i
   end
 end
+
 def parse_score(s)
   begin
     require_score(s)
@@ -14,6 +15,7 @@ def parse_score(s)
     p("seen: " + s.to_s)
   end
 end
+
 ["12", "oops"].each do |s|
   p parse_score(s)
 end

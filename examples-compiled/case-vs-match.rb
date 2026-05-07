@@ -5,6 +5,7 @@ def debug_data(packet, seq)
   _, packet_seq = packet
   "packet[:ping, " + no_nil.call(packet_seq).to_s + "] seq " + no_nil.call(seq).to_s
 end
+
 def show_case(packet, seq)
   case packet
   in [:ping, seq, *] if !seq.nil?
@@ -13,6 +14,7 @@ def show_case(packet, seq)
     "other"
   end
 end
+
 def show_match(packet, seq)
   case packet
   in [:ping, ^(seq), *]
@@ -21,6 +23,7 @@ def show_match(packet, seq)
     "other"
   end
 end
+
 p("case: " + show_case([:ping, 42], 7).to_s)
 p("case: " + show_case([:ping, 42], nil).to_s)
 p("case: " + show_case([:ping, nil], nil).to_s)

@@ -4,4 +4,5 @@ def step(drops)
     p(falling[:kind], falling[:x], falling[:y])
   end
 end
+
 step([{:kind => "rain", :x => 0, :y => 0, :w => 1, :h => 1, :speed => 2}, {:kind => "snow", :x => 5, :y => 1, :w => 1, :h => 1, :speed => 1}])

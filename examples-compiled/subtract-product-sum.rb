@@ -10,6 +10,7 @@ def subtract_product_sum(n)
   end
   product - sum
 end
+
 p subtract_product_sum(234)
 p subtract_product_sum(4421)
 p subtract_product_sum(1)

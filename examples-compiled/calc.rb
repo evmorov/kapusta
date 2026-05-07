@@ -14,4 +14,5 @@ def eval_expr(expr)
     Kernel.raise(ArgumentError.new("unknown op: " + expr.inspect.to_s))
   end
 end
+
 p eval_expr([:add, [:num, 2], [:mul, [:num, 3], [:num, 4]]])

@@ -11,6 +11,7 @@ def two_sum(xs, target)
   end
   answer
 end
+
 first_pair = two_sum([2, 7, 11, 15], 9)
 second_pair = two_sum([3, 2, 4], 6)
 missing_pair = two_sum([1, 2, 3], 10)
