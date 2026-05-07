@@ -54,3 +54,41 @@ Style/HashSyntax:
 Layout/ExtraSpacing:
   AllowBeforeTrailingComments: false
   AllowForAlignment: false
+
+# Rules for checking emmited Ruby examples (keep them commented out):
+
+# Style/StringLiterals:
+#   Enabled: false
+
+# Layout/SpaceInsideHashLiteralBraces:
+#   Enabled: false
+
+# Style/FrozenStringLiteralComment:
+#   Enabled: false
+
+# Style/HashSyntax:
+#   Enabled: false
+
+# Style/StringConcatenation:
+#   Enabled: false
+
+# Style/NumericPredicate:
+#   Enabled: false
+
+# Style/TrivialAccessors:
+#   Enabled: false
+
+# Style/EvenOdd:
+#   Enabled: false
+
+# Layout/IndentationWidth:
+#   Enabled: false
+
+# Layout/EndAlignment:
+#   Enabled: false
+
+# Layout/ElseAlignment:
+#   Enabled: false
+
+# Style/WordArray:
+#   Enabled: false
