@@ -1,5 +1,5 @@
 def parse_int(s)
-  Kernel.public_send(:Integer, s)
+  Kernel.Integer(s)
 end
 
 ok, value = begin

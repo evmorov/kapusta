@@ -35,7 +35,7 @@ module Kapusta
           if literal_name && binary_operator_call?(literal_name.to_s, positional, kwargs, block_form)
             return emit_binary_operator_call(receiver, literal_name.to_s, positional[0])
           end
-          if literal_name && direct_method_name?(literal_name.to_s)
+          if literal_name && colon_call_direct_method_name?(literal_name.to_s)
             return emit_direct_method_call(receiver, Kapusta.kebab_to_snake(literal_name.to_s),
                                            positional, kwargs, block_form, env, current_scope)
           end
@@ -486,6 +486,10 @@ module Kapusta
 
         def direct_method_name?(name)
           Kapusta.kebab_to_snake(name).match?(/\A[a-z_]\w*[!?=]?\z/)
+        end
+
+        def colon_call_direct_method_name?(name)
+          Kapusta.kebab_to_snake(name).match?(/\A[a-zA-Z_]\w*[!?=]?\z/)
         end
 
         def global_name(name)
