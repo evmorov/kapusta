@@ -65,6 +65,7 @@ end
 scores = [-2, 3, -1, 4, 0, 5]
 report = join(", ", map(method(:square), keep(method(:positive?), scores)))
 adjusted = square(mul(add(7, 3), 2))
+
 ok = lambda do
   thread_1 = "hello"
   thread_2 = if thread_1.nil?
@@ -83,6 +84,7 @@ ok = lambda do
     shout(thread_3)
   end
 end.call
+
 bad = lambda do
   thread_4 = ""
   thread_5 = if thread_4.nil?
@@ -101,6 +103,7 @@ bad = lambda do
     shout(thread_6)
   end
 end.call
+
 live = lambda do
   thread_7 = 5
   thread_8 = if thread_7.nil?
@@ -119,6 +122,7 @@ live = lambda do
     add(1, thread_9)
   end
 end.call
+
 dead = lambda do
   thread_10 = 0
   thread_11 = if thread_10.nil?

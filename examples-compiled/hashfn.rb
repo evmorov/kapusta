@@ -1,6 +1,7 @@
 add = proc do
   _1 + _2
 end
+
 triple = proc do
   3 * _1
 end

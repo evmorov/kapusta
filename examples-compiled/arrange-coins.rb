@@ -9,6 +9,7 @@ def arrange_coins(n)
       end
     end.call
   end
+
   used = (1..n).inject({:sum => 0, :rows => 0}) do |acc, i|
     lambda do
       new_sum = acc[:sum] + i

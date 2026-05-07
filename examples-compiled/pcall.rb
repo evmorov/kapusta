@@ -12,6 +12,7 @@ bad_ok, error = begin
 rescue StandardError => e
   [false, e]
 end
+
 handled_ok, handled = begin
   [true, parse_int("oops")]
 rescue StandardError => e

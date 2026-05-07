@@ -293,7 +293,23 @@ module Kapusta
           body_code, = emit_sequence(body, child_env, current_scope,
                                      allow_method_definitions: false,
                                      result:)
-          [binding_codes.reject(&:empty?).join("\n"), body_code]
+          [join_binding_codes(binding_codes), body_code]
+        end
+
+        def join_binding_codes(binding_codes)
+          codes = binding_codes.reject(&:empty?)
+          return '' if codes.empty?
+
+          result = codes.first.dup
+          codes.each_cons(2) do |prev, curr|
+            separator = block_binding?(prev) || block_binding?(curr) ? "\n\n" : "\n"
+            result << separator << curr
+          end
+          result
+        end
+
+        def block_binding?(code)
+          code.match?(/\bdo\b/) && code.match?(/\bend\b/)
         end
 
         def join_code(*chunks)

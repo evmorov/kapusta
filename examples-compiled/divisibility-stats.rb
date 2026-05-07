@@ -9,6 +9,7 @@ def divisibility_stats(n)
       acc + step
     end.call
   end
+
   fives = (1..n).inject(0) do |acc, i|
     lambda do
       step = if 0 == (i % 5)
