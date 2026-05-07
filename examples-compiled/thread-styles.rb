@@ -65,7 +65,7 @@ end
 scores = [-2, 3, -1, 4, 0, 5]
 report = join(", ", map(method(:square), keep(method(:positive?), scores)))
 adjusted = square(mul(add(7, 3), 2))
-ok = (-> do
+ok = lambda do
   thread_1 = "hello"
   thread_2 = if thread_1.nil?
     nil
@@ -82,8 +82,8 @@ ok = (-> do
   else
     shout(thread_3)
   end
-end).call
-bad = (-> do
+end.call
+bad = lambda do
   thread_4 = ""
   thread_5 = if thread_4.nil?
     nil
@@ -100,8 +100,8 @@ bad = (-> do
   else
     shout(thread_6)
   end
-end).call
-live = (-> do
+end.call
+live = lambda do
   thread_7 = 5
   thread_8 = if thread_7.nil?
     nil
@@ -118,8 +118,8 @@ live = (-> do
   else
     add(1, thread_9)
   end
-end).call
-dead = (-> do
+end.call
+dead = lambda do
   thread_10 = 0
   thread_11 = if thread_10.nil?
     nil
@@ -136,7 +136,7 @@ dead = (-> do
   else
     add(1, thread_12)
   end
-end).call
+end.call
 p report
 p adjusted
 p ok

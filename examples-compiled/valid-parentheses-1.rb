@@ -12,14 +12,14 @@ class ValidParenthesesSolution
     while ok && (i < chars.length)
       ch = chars[i]
       if pairs.key?(ch)
-        if (-> do
+        if lambda do
           thread_1 = stack.pop
           if thread_1.nil?
             nil
           else
             thread_1 == pairs[ch]
           end
-        end).call
+        end.call
           nil
         else
           ok = false

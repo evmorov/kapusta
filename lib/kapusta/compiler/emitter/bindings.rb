@@ -18,11 +18,11 @@ module Kapusta
             fn_env = env.child
             ruby_name = define_local(fn_env, name_sym.name)
             <<~RUBY.chomp
-              (-> do
+              lambda do
                 #{ruby_name} = nil
                 #{ruby_name} = #{emit_lambda(pattern, body, fn_env, current_scope)}
                 #{ruby_name}
-              end).call
+              end.call
             RUBY
           end
         end
@@ -259,9 +259,9 @@ module Kapusta
         def emit_let(args, env, current_scope)
           binding_code, body_code = emit_let_parts(args, env, current_scope, result: true)
           [
-            '(-> do',
+            'lambda do',
             indent(join_code(binding_code, body_code)),
-            'end).call'
+            'end.call'
           ].join("\n")
         end
 
@@ -376,7 +376,7 @@ module Kapusta
 
         def emit_local_expr(args, env, current_scope)
           code, = emit_local_form(List.new([Sym.new('local'), *args]), env.child, current_scope)
-          "(-> do\n#{indent(code)}\nend).call"
+          "lambda do\n#{indent(code)}\nend.call"
         end
 
         def emit_global_expr(args, _env, _current_scope)

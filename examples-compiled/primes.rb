@@ -7,14 +7,14 @@ def prime?(n)
   (n > 1) && ok
 end
 
-ps = (-> do
+ps = lambda do
   kap_result_1 = []
   2.step(30) do |n|
     kap_value_2 = n if prime?(n)
     kap_result_1 << kap_value_2 unless kap_value_2.nil?
   end
   kap_result_1
-end).call
+end.call
 ps.each do |p|
   p p
 end

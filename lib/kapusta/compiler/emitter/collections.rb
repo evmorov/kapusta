@@ -89,11 +89,11 @@ module Kapusta
             emit_sequence_value_assignment(acc_var, body_code)
           end
           [
-            '(-> do',
+            'lambda do',
             indent("#{acc_var} = #{init_code}"),
             indent(iter_code),
             indent(acc_var),
-            'end).call'
+            'end.call'
           ].join("\n")
         end
 
@@ -221,11 +221,11 @@ module Kapusta
 
         def emit_collection_result(result_var, initial_code, iter_code)
           [
-            '(-> do',
+            'lambda do',
             indent("#{result_var} = #{initial_code}"),
             indent(iter_code),
             indent(result_var),
-            'end).call'
+            'end.call'
           ].join("\n")
         end
 

@@ -1,4 +1,4 @@
-(-> do
+lambda do
   module Zoo
     class Animal
       def initialize(name)
@@ -19,4 +19,4 @@
     end
   end
   Zoo::Animal
-end).call
+end.call

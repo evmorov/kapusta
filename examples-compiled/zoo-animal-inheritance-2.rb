@@ -1,6 +1,6 @@
 require_relative "zoo-animal-1"
 
-(-> do
+lambda do
   module Zoo
     class Dog < Zoo::Animal
       def label
@@ -13,7 +13,7 @@ require_relative "zoo-animal-1"
     end
   end
   Zoo::Dog
-end).call
+end.call
 
 dog = Zoo::Dog.new("Poppy")
 p(Zoo::Dog.superclass == Zoo::Animal, dog.kingdom, dog.label, dog.bark)

@@ -61,10 +61,10 @@ module Kapusta
           return body unless value_var
 
           [
-            '(-> do',
+            'lambda do',
             indent("#{value_var} = #{value_code}"),
             indent(body),
-            'end).call'
+            'end.call'
           ].join("\n")
         end
 
@@ -212,30 +212,30 @@ module Kapusta
 
         def emit_while(args, env, current_scope)
           <<~RUBY.chomp
-            (-> do
+            lambda do
               #{indent(emit_while_statement(args, env, current_scope))}
               nil
-            end).call
+            end.call
           RUBY
         end
 
         def emit_for(args, env, current_scope)
           loop_code = emit_for_statement(args, env, current_scope)
           <<~RUBY.chomp
-            (-> do
+            lambda do
               #{indent(loop_code)}
               nil
-            end).call
+            end.call
           RUBY
         end
 
         def emit_each(args, env, current_scope)
           iter_code = emit_each_statement(args, env, current_scope)
           <<~RUBY.chomp
-            (-> do
+            lambda do
               #{iter_code}
               nil
-            end).call
+            end.call
           RUBY
         end
 

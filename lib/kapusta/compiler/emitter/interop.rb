@@ -99,7 +99,7 @@ module Kapusta
           segments = constant_segments(name_sym)
           emit_error!(:invalid_module_name, name: name_sym.name) unless segments
           inner = build_nested_module(segments, body)
-          ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
+          ['lambda do', indent(inner), indent(segments.join('::')), 'end.call'].join("\n")
         end
 
         def emit_direct_module_header(name_sym, body)
@@ -114,7 +114,7 @@ module Kapusta
           emit_error!(:invalid_class_name, name: name_sym.name) unless segments
           super_code = class_super_code(supers, env)
           inner = build_nested_class(segments, super_code, body)
-          ['(-> do', indent(inner), indent(segments.join('::')), 'end).call'].join("\n")
+          ['lambda do', indent(inner), indent(segments.join('::')), 'end.call'].join("\n")
         end
 
         def emit_direct_class_header(name_sym, supers, body, env)

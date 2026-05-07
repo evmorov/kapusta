@@ -1,4 +1,4 @@
-p((-> do
+p(lambda do
   x_g5 = 10
   y_g6 = 20
   if x_g5 < y_g6
@@ -6,8 +6,8 @@ p((-> do
   else
     y_g6
   end
-end).call)
-p((-> do
+end.call)
+p(lambda do
   x_g7 = 10
   y_g8 = 20
   if x_g7 < y_g8
@@ -15,8 +15,8 @@ p((-> do
   else
     x_g7
   end
-end).call)
-p((-> do
+end.call)
+p(lambda do
   x_g9 = 7
   y_g10 = 7
   if x_g9 < y_g10
@@ -24,4 +24,4 @@ p((-> do
   else
     y_g10
   end
-end).call)
+end.call)

@@ -1,23 +1,23 @@
 def arrange_coins(n)
   rows = (1..n).inject({:sum => 0, :rows => 0}) do |acc, i|
-    (-> do
+    lambda do
       new_sum = acc[:sum] + i
       if new_sum <= n
         {:sum => new_sum, :rows => i}
       else
         acc
       end
-    end).call
+    end.call
   end
   used = (1..n).inject({:sum => 0, :rows => 0}) do |acc, i|
-    (-> do
+    lambda do
       new_sum = acc[:sum] + i
       if new_sum <= n
         {:sum => new_sum, :rows => i}
       else
         acc
       end
-    end).call
+    end.call
   end
   [rows[:rows], used[:sum]]
 end

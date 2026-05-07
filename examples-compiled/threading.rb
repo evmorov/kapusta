@@ -11,7 +11,7 @@ def fetch_name(user)
 end
 
 thread_last = append("!", wrap("[", "]", append(" Lovelace", "Ada")))
-maybe_name = (-> do
+maybe_name = lambda do
   thread_1 = {:profile => {:name => "Ada"}}
   thread_2 = if thread_1.nil?
     nil
@@ -28,8 +28,8 @@ maybe_name = (-> do
   else
     wrap("<", ">", thread_3)
   end
-end).call
-missing_name = (-> do
+end.call
+missing_name = lambda do
   thread_4 = {:profile => nil}
   thread_5 = if thread_4.nil?
     nil
@@ -46,8 +46,8 @@ missing_name = (-> do
   else
     wrap("<", ">", thread_6)
   end
-end).call
-thread_first = (-> do
+end.call
+thread_first = lambda do
   thread_7 = "kapusta"
   thread_8 = if thread_7.nil?
     nil
@@ -59,8 +59,8 @@ thread_first = (-> do
   else
     thread_8.reverse
   end
-end).call
-missing_first = (-> do
+end.call
+missing_first = lambda do
   thread_9 = nil
   thread_10 = if thread_9.nil?
     nil
@@ -72,5 +72,5 @@ missing_first = (-> do
   else
     thread_10.reverse
   end
-end).call
+end.call
 p(thread_last, maybe_name, missing_name, thread_first, missing_first)
