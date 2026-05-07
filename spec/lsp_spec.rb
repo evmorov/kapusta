@@ -234,7 +234,7 @@ RSpec.describe Kapusta::LSP do
     end
   end
 
-  it 'does not offer rename for method definitions after a bodyless class header' do
+  it 'offers rename for method definitions after a bodyless class header' do
     text = "(class Counter)\n(fn initialize [start] start)\n"
     responses = run(
       frame_initialize,
@@ -242,7 +242,60 @@ RSpec.describe Kapusta::LSP do
       frame_prepare_rename(uri: 'file:///x.kap', **cursor_at(text, 'initialize'))
     )
 
-    expect(result_for(responses)['result']).to be_nil
+    expect(result_for(responses)['result']).to include('placeholder' => 'initialize')
+  end
+
+  it 'renames a class method and its bare-self call sites within a file' do
+    text = "(class Greeter)\n" \
+           "(fn initialize [name] (set @name name))\n" \
+           "(fn greeting [] (.. \"Hello, \" (label)))\n" \
+           "(fn label [] @name)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'label'), new_name: 'who')
+    )
+    edits = result_for(responses)['result']['documentChanges'].first['edits']
+
+    expect(edits.map { |e| e['newText'] }).to all(eq('who'))
+    expect(edits.map { |e| [e['range']['start']['line'], e['range']['start']['character']] })
+      .to contain_exactly([2, 31], [3, 4])
+  end
+
+  it 'jumps from a bare-self method call to the class method definition' do
+    text = "(class Greeter)\n" \
+           "(fn label [] 1)\n" \
+           "(fn greeting [] (label))\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', line: 2, character: 17)
+    )
+    result = result_for(responses)['result']
+
+    expect(result).to eq(
+      'uri' => 'file:///x.kap',
+      'range' => {
+        'start' => { 'line' => 1, 'character' => 4 },
+        'end' => { 'line' => 1, 'character' => 9 }
+      }
+    )
+  end
+
+  it 'renames a class method when the cursor is on a bare-self call site' do
+    text = "(class Greeter)\n" \
+           "(fn label [] 1)\n" \
+           "(fn greeting [] (label))\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', line: 2, character: 17, new_name: 'who')
+    )
+    edits = result_for(responses)['result']['documentChanges'].first['edits']
+
+    expect(edits.map { |e| e['newText'] }).to all(eq('who'))
+    expect(edits.map { |e| [e['range']['start']['line'], e['range']['start']['character']] })
+      .to contain_exactly([1, 4], [2, 17])
   end
 
   it 'does not let class methods shadow top-level function references' do

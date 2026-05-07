@@ -3,6 +3,7 @@
 module Kapusta
   class Env
     MethodBinding = Struct.new(:ruby_name)
+    SelfMethodBinding = Struct.new(:ruby_name)
 
     def initialize(parent = nil)
       @parent = parent

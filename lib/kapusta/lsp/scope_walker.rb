@@ -76,6 +76,17 @@ module Kapusta
 
       def walk_top(forms)
         walk_form_run(forms, 0, @root_scope)
+        resolve_late_references
+      end
+
+      def resolve_late_references
+        @references.each do |r|
+          next if r.target
+          next unless r.scope
+
+          target = r.scope.lookup(r.name)
+          r.target = target if target
+        end
       end
 
       def walk_form_run(forms, start, scope, header_target: nil)
@@ -164,7 +175,8 @@ module Kapusta
             if body.length == 1 && bodyless_header?(body[0])
               walk_bodyless_header(body[0], forms, body_start, scope)
             else
-              walk_form_run(forms, body_start, scope, header_target: binding)
+              body_scope = make_scope(scope, :module)
+              walk_form_run(forms, body_start, body_scope, header_target: binding)
             end
           end
         when 'class'
@@ -172,7 +184,8 @@ module Kapusta
           supers&.items&.each { |item| walk_form(item, scope) }
           binding = name_sym.is_a?(Sym) ? add_constant_binding(name_sym, scope, :class) : nil
           inside_class do
-            walk_form_run(forms, body_start, scope, header_target: binding)
+            body_scope = make_scope(scope, :class)
+            walk_form_run(forms, body_start, body_scope, header_target: binding)
           end
         end
       end
@@ -406,7 +419,7 @@ module Kapusta
                  else
                    (scope == @root_scope ? :toplevel_fn : :fn_local)
                  end
-          binding = add_binding(name_sym, scope, kind, lexical: kind != :method)
+          binding = add_binding(name_sym, scope, kind, lexical: true)
           fn_scope.bindings[name_sym.name] = binding unless kind == :method
         end
         bind_param_vec(params, fn_scope)
@@ -558,10 +571,11 @@ module Kapusta
         add_constant_binding(name_sym, scope, kind) if name_sym.is_a?(Sym)
 
         body = list.items[body_start..] || []
+        body_scope = make_scope(scope, kind)
         if kind == :class
-          inside_class { body.each { |form| walk_form(form, scope) } }
+          inside_class { body.each { |form| walk_form(form, body_scope) } }
         else
-          inside_module_or_class { body.each { |form| walk_form(form, scope) } }
+          inside_module_or_class { body.each { |form| walk_form(form, body_scope) } }
         end
       end
 

@@ -2,4 +2,4 @@
   (fn initialize [name] (set (ivar name) name))
   (fn name [] (ivar name))
   (fn kingdom [] "animalia")
-  (fn label [] (.. (self.name) " the animal")))
+  (fn label [] (.. name " the animal")))

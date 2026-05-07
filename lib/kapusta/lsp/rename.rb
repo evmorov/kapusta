@@ -32,6 +32,8 @@ module Kapusta
         case target.kind
         when :local
           rename_local(uri, target, new_name)
+        when :method
+          rename_method(uri, target, new_name)
         when :toplevel_fn, :free_toplevel
           return error('cross-file rename requires a workspace') unless workspace_index
 
@@ -128,8 +130,6 @@ module Kapusta
         end
 
         if binding
-          return if binding.kind == :method
-
           return constant_target(walker, binding, seg) if %i[module class].include?(binding.kind)
 
           return local_target(walker, binding, seg)
@@ -138,7 +138,6 @@ module Kapusta
         if reference
           target = reference.target
           if target
-            return if target.kind == :method
             return constant_target(walker, target, seg, sym:) if %i[module class].include?(target.kind)
 
             return local_target(walker, target, seg, sym:)
@@ -164,6 +163,7 @@ module Kapusta
         kind = case binding.kind
                when :toplevel_fn then :toplevel_fn
                when :macro, :macro_import then :macro
+               when :method then :method
                else :local
                end
         Target.new(
@@ -205,6 +205,22 @@ module Kapusta
           start: { line: line - 1, character: start_col - 1 },
           end: { line: line - 1, character: end_col - 1 }
         }
+      end
+
+      def rename_method(uri, target, new_name)
+        return error("invalid identifier: #{new_name}") unless Identifier.valid_local?(new_name)
+        return error('cannot resolve binding') unless target.binding
+
+        walker = target.walker
+        binding = target.binding
+
+        occs = [binding]
+        walker.references.each do |r|
+          occs << r if r.target.equal?(binding)
+        end
+
+        edits = occs.map { |o| text_edit_first_segment(o, new_name) }
+        { changes: { uri => edits } }
       end
 
       def rename_local(uri, target, new_name)

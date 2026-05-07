@@ -80,13 +80,17 @@ module Kapusta
         end
 
         def emit_module_expr(args, env)
-          body = emit_sequence(args[1..], env, :module, allow_method_definitions: true, result: false).first
+          body = with_class_body do
+            emit_sequence(args[1..], env.child, :module, allow_method_definitions: true, result: false).first
+          end
           emit_module_wrapper(args[0], body)
         end
 
         def emit_class_expr(args, env)
           name_sym, supers, body_forms = split_class_args(args)
-          body = emit_sequence(body_forms, env, :class, allow_method_definitions: true, result: false).first
+          body = with_class_body do
+            emit_sequence(body_forms, env.child, :class, allow_method_definitions: true, result: false).first
+          end
           emit_class_wrapper(name_sym, supers, env,
                              body)
         end
@@ -298,7 +302,7 @@ module Kapusta
         end
 
         def emit_bound_call(binding, args, env, current_scope)
-          return emit_self_method_binding_call(binding, args, env, current_scope) if method_binding?(binding)
+          return emit_self_method_binding_call(binding, args, env, current_scope) if callable_method_binding?(binding)
 
           emit_error!(:cannot_call_constant, name: binding) if constant_binding?(binding)
 
@@ -438,8 +442,13 @@ module Kapusta
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
+          return Kapusta.kebab_to_snake(name) if implicit_self_method?(name)
 
           emit_error!(:undefined_symbol, name:)
+        end
+
+        def implicit_self_method?(name)
+          in_class_body? && direct_method_name?(Kapusta.kebab_to_snake(name))
         end
 
         def emit_gvar(sym)

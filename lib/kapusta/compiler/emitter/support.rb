@@ -109,12 +109,16 @@ module Kapusta
               inner_code, next_i = emit_bodyless_header(inner[0], forms, body_start, env)
               [emit_direct_module_header(name_sym, inner_code) || emit_module_wrapper(name_sym, inner_code), next_i]
             else
-              body, next_i = emit_form_run(forms, body_start, env, :module, header_form: form)
+              body, next_i = with_class_body do
+                emit_form_run(forms, body_start, env.child, :module, header_form: form)
+              end
               [emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body), next_i]
             end
           else
             name_sym, supers, = split_class_args(form.items[1..])
-            body, next_i = emit_form_run(forms, body_start, env, :class, header_form: form)
+            body, next_i = with_class_body do
+              emit_form_run(forms, body_start, env.child, :class, header_form: form)
+            end
             code = emit_direct_class_header(name_sym, supers, body, env) ||
                    emit_class_wrapper(name_sym, supers, env, body)
             [code, next_i]
@@ -340,8 +344,30 @@ module Kapusta
           binding.is_a?(Env::MethodBinding)
         end
 
+        def in_class_body?
+          @class_body_depth.positive?
+        end
+
+        def with_class_body
+          @class_body_depth += 1
+          yield
+        ensure
+          @class_body_depth -= 1
+        end
+
+        def self_method_binding?(binding)
+          binding.is_a?(Env::SelfMethodBinding)
+        end
+
+        def callable_method_binding?(binding)
+          method_binding?(binding) || self_method_binding?(binding)
+        end
+
         def binding_value_code(binding)
-          method_binding?(binding) ? "method(#{binding.ruby_name.to_sym.inspect})" : binding
+          return "method(#{binding.ruby_name.to_sym.inspect})" if method_binding?(binding)
+          return binding.ruby_name if self_method_binding?(binding)
+
+          binding
         end
 
         def parse_counted_for_bindings(bindings, env, current_scope)

@@ -15,7 +15,7 @@
 
 (fn initialize [root]
   (set @stack [])
-  (self.push-left root))
+  (push-left root))
 
 (fn push-left [node]
   (var n node)
@@ -27,7 +27,7 @@
 (fn next []
   (let [stack @stack
         node (stack.pop)]
-    (self.push-left (node.right))
+    (push-left (node.right))
     (node.val)))
 
 (fn has-next? []

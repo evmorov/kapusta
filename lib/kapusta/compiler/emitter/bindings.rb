@@ -81,9 +81,21 @@ module Kapusta
         end
 
         def emit_definition_form(form, env, current_scope)
-          return [emit_method_definition(form, env), env] unless current_scope == :toplevel
+          return emit_toplevel_method_definition(form, env) if current_scope == :toplevel
 
-          emit_toplevel_method_definition(form, env)
+          code = emit_method_definition(form, env)
+          register_self_method_binding(form, env)
+          [code, env]
+        end
+
+        def register_self_method_binding(form, env)
+          name_sym = form.items[1]
+          return unless name_sym.is_a?(Sym) && !name_sym.dotted?
+
+          ruby_name = Kapusta.kebab_to_snake(name_sym.name)
+          return unless direct_method_name?(ruby_name)
+
+          env.define(name_sym.name, Env::SelfMethodBinding.new(ruby_name))
         end
 
         def emit_toplevel_method_definition(form, env)
@@ -234,7 +246,7 @@ module Kapusta
 
           binding = env.lookup_if_defined(name)
           return false if binding.nil?
-          return false if method_binding?(binding)
+          return false if callable_method_binding?(binding)
           return false if constant_binding?(binding)
 
           true
@@ -385,7 +397,7 @@ module Kapusta
             binding = env.lookup_if_defined(target.name)
             ruby_name =
               if binding
-                emit_error!(:cannot_set_method_binding, name: target.name) if method_binding?(binding)
+                emit_error!(:cannot_set_method_binding, name: target.name) if callable_method_binding?(binding)
 
                 binding
               else
@@ -429,7 +441,7 @@ module Kapusta
               end
             else
               binding = env.lookup(target.name)
-              emit_error!(:cannot_set_method_binding, name: target.name) if method_binding?(binding)
+              emit_error!(:cannot_set_method_binding, name: target.name) if callable_method_binding?(binding)
               emit_error!(:expected_var, name: target.name) unless mutable_binding?(env, target.name)
 
               emit_assignment(binding, value_code)

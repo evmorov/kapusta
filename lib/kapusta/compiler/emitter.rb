@@ -28,6 +28,7 @@ module Kapusta
         @path = path
         @target = target
         @temp_index = 0
+        @class_body_depth = 0
       end
 
       def emit_file(forms)

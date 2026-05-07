@@ -14,7 +14,7 @@
       end
 
       def label
-        self.name.to_s + " the animal"
+        name.to_s + " the animal"
       end
     end
   end

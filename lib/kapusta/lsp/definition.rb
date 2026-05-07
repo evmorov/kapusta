@@ -17,7 +17,7 @@ module Kapusta
         return unless target
 
         case target.kind
-        when :local, :toplevel_fn, :constant
+        when :local, :toplevel_fn, :constant, :method
           location_for_binding(uri, target.binding) if target.binding
         when :macro
           locations_for_macro(uri, target.binding, workspace_index)

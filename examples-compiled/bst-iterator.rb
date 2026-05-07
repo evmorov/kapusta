@@ -21,7 +21,7 @@ end
 class BSTIterator
   def initialize(root)
     @stack = []
-    self.push_left(root)
+    push_left(root)
   end
 
   def push_left(node)
@@ -36,7 +36,7 @@ class BSTIterator
   def next
     stack = @stack
     node = stack.pop
-    self.push_left(node.right)
+    push_left(node.right)
     node.val
   end
 

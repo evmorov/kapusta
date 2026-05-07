@@ -4,7 +4,7 @@ require_relative "zoo-animal-1"
   module Zoo
     class Dog < Zoo::Animal
       def label
-        self.name.to_s + " the dog"
+        name.to_s + " the dog"
       end
 
       def bark
