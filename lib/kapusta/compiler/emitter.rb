@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'emitter/simple_expression'
 require_relative 'emitter/support'
 require_relative 'emitter/expressions'
 require_relative 'emitter/bindings'

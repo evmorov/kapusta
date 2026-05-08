@@ -496,37 +496,8 @@ module Kapusta
           Kapusta.kebab_to_snake(name).gsub(/[^a-zA-Z0-9_]/, '_')
         end
 
-        SIMPLE_EXPRESSION_PATTERNS = [
-          /\A[a-z_]\w*\z/, # local
-          /\A@@?[a-z_]\w*\z/, # @ivar / @@cvar
-          /\A\$[a-zA-Z_]\w*\z/, # $gvar
-          /\A[A-Z]\w*(?:::[A-Z]\w*)*\z/, # Constant / A::B::C
-          /\A[a-z_]\w*[!?=]?\([^()\n]*\)\z/, # bare call foo(...)
-          /\A-?\d+(?:\.\d+)?\z/, # number
-          /\A[a-z_]\w*(?:\.[a-z_]\w*[!?=]?(?:\([^()\n]*\))?|\[[^\[\]]*\])+\z/, # local + .m/[k] chain
-          /\A[A-Z]\w*(?:::[A-Z]\w*)*(?:\.[a-z_]\w*[!?=]?(?:\([^()\n]*\))?|\[[^\[\]]*\])+\z/, # const + chain
-          /\A\([^()\n]*\)(?:\.[a-zA-Z_]\w*[!?=]?(?:\([^()\n]*\))?|\[[^\[\]]*\])+\z/, # (expr).chain
-          /\A:[a-zA-Z_]\w*[!?=]?\z/, # :symbol
-          /\A"(?:[^"\\]|\\.)*"\z/, # "string"
-          /\A'(?:[^'\\]|\\.)*'\z/, # 'string'
-          /\A\[[^\[\]\n]*\]\z/ # [flat, array]
-        ].freeze
-        private_constant :SIMPLE_EXPRESSION_PATTERNS
-
-        SIMPLE_EXPRESSION_KEYWORDS = %w[nil true false self].freeze
-        private_constant :SIMPLE_EXPRESSION_KEYWORDS
-
         def simple_expression?(code)
-          SIMPLE_EXPRESSION_PATTERNS.any? { |re| code.match?(re) } ||
-            SIMPLE_EXPRESSION_KEYWORDS.include?(code) ||
-            negation_simple?(code)
-        end
-
-        def negation_simple?(code)
-          return false unless code.start_with?('!') && code.length > 1
-
-          rest = code[1..]
-          simple_expression?(rest) || (rest.start_with?('(') && rest.end_with?(')'))
+          SimpleExpression.match?(code)
         end
       end
     end
