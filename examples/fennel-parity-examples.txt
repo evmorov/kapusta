@@ -7,7 +7,6 @@ classify-wallet
 climbing-stairs
 convert-temperature
 count-effects
-describe
 destructure
 divisibility-stats
 equal-sums

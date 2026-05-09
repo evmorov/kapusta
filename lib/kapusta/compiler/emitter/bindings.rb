@@ -111,9 +111,6 @@ module Kapusta
 
           env.define(name_sym.name, Env::MethodBinding.new(ruby_name))
           definition = emit_direct_method_definition(name_sym, pattern, body, env)
-          if needs_toplevel_method_bridge?(ruby_name)
-            definition = join_code(definition, emit_toplevel_method_bridge(ruby_name))
-          end
           [definition, env]
         end
 
@@ -182,23 +179,6 @@ module Kapusta
 
             method_name
           end
-        end
-
-        def needs_toplevel_method_bridge?(ruby_name)
-          %w[context describe example it specify].include?(ruby_name)
-        end
-
-        def emit_toplevel_method_bridge(ruby_name)
-          method_name = ruby_name.to_sym.inspect
-          if mruby3_target?
-            return [
-              "define_singleton_method(#{method_name}) do |*args|",
-              indent("Object.instance_method(#{method_name}).bind(self).call(*args)"),
-              'end'
-            ].join("\n")
-          end
-
-          "define_singleton_method(#{method_name}, Object.instance_method(#{method_name}).bind(self))"
         end
 
         def emit_method_body(pattern, body, env)

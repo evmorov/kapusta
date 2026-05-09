@@ -250,21 +250,6 @@ RSpec.describe 'examples' do
     OUT
   end
 
-  it 'describe.kap' do
-    expect(run_example('describe.kap')).to eq(<<~OUT)
-      -3
-      "negative"
-      0
-      "zero"
-      1
-      "one"
-      2
-      "many"
-      99
-      "many"
-    OUT
-  end
-
   it 'destructure.kap' do
     expect(run_example('destructure.kap')).to eq(<<~OUT)
       6

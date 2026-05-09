@@ -20,7 +20,6 @@ contains-duplicate
 convert-temperature
 count-effects
 counter
-describe
 destructure
 divisibility-stats
 doto
