@@ -9,37 +9,32 @@ module Kapusta
         private
 
         def emit_icollect(args, env, current_scope)
-          emit_error!(:icollect_no_iterator) unless args[0].is_a?(Vec) && args[0].items.length >= 2
+          parsed = Language.parse_iteration_args(args)
+          emit_error!(:icollect_no_iterator) unless parsed.bindings.is_a?(Vec) && parsed.bindings.items.length >= 2
 
-          emit_iteration(args[0], env, current_scope, method: 'filter_map') do |iter_env|
-            emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
+          emit_iteration(parsed.bindings, env, current_scope, method: 'filter_map') do |iter_env|
+            emit_sequence(parsed.body, iter_env, current_scope, allow_method_definitions: false).first
           end
         end
 
         def emit_collect(args, env, current_scope)
+          parsed = Language.parse_iteration_args(args)
           result_var = temp('result')
-          values_form = simple_values_call(args[1]) if args.length == 2
-          emit_iteration(args[0], env, current_scope,
+          values_form = Language.parse_values_form(parsed.body[0]) if parsed.body.length == 1
+          emit_iteration(parsed.bindings, env, current_scope,
                          method: 'each_with_object({})', extra_block_param: result_var) do |iter_env|
             if values_form
               emit_collect_values_step(result_var, values_form, iter_env, current_scope)
             else
-              body = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false).first
+              body = emit_sequence(parsed.body, iter_env, current_scope, allow_method_definitions: false).first
               emit_hash_collection_step(result_var, body)
             end
           end
         end
 
-        def simple_values_call(form)
-          return unless form.is_a?(List) && form.items.length == 3
-
-          head = form.head
-          form if head.is_a?(Sym) && head.name == 'values'
-        end
-
         def emit_collect_values_step(result_var, values_form, iter_env, current_scope)
-          key_form = values_form.items[1]
-          val_form = values_form.items[2]
+          key_form = values_form.key
+          val_form = values_form.value
           key_code = emit_expr(key_form, iter_env, current_scope)
           val_code = emit_expr(val_form, iter_env, current_scope)
           assignment = "#{result_var}[#{key_code}] = #{val_code}"
@@ -60,32 +55,29 @@ module Kapusta
 
         def emit_fcollect(args, env, current_scope)
           result_var = temp('result')
-          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
-          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope, allow_method_definitions: false)
+          loop_form = Language.parse_counted_for_args(args)
+          parsed = parse_counted_for_bindings(loop_form, env, current_scope)
+          body_code, = emit_sequence(loop_form.body, parsed[:loop_env], current_scope,
+                                     allow_method_definitions: false)
           collecting_body = emit_array_collection_step(result_var, body_code)
           loop_code = emit_counted_loop(**parsed, current_scope:, body_code: collecting_body)
           emit_collection_result(result_var, '[]', loop_code)
         end
 
         def emit_accumulate(args, env, current_scope)
-          bindings = args[0].items
-          emit_error!(:accumulate_no_iterator) if bindings.length < 4
+          parsed = Language.parse_accumulate_args(args)
+          emit_error!(:accumulate_no_iterator) if parsed.items.length < 4
 
-          acc_name = bindings[0]
-          init_code = emit_expr(bindings[1], env, current_scope)
-          iter_items = bindings[2..]
-          iter_expr = iter_items.last
-          binding_pats = iter_items[0...-1]
-
+          init_code = emit_expr(parsed.initial, env, current_scope)
           body_env = env.child
-          acc_var = define_local(body_env, acc_name.name)
+          acc_var = define_local(body_env, parsed.acc_name.name)
 
-          inject_code = try_emit_inject(iter_expr, binding_pats, body_env, env, current_scope, acc_var,
-                                        init_code, args[1..])
+          inject_code = try_emit_inject(parsed.iter_expr, parsed.binding_pats, body_env, env, current_scope,
+                                        acc_var, init_code, parsed.body)
           return inject_code if inject_code
 
-          iter_code = emit_iteration(Vec.new(iter_items), body_env, current_scope) do |iter_env|
-            body_code, = emit_sequence(args[1..], iter_env, current_scope, allow_method_definitions: false)
+          iter_code = emit_iteration(Vec.new(parsed.iter_items), body_env, current_scope) do |iter_env|
+            body_code, = emit_sequence(parsed.body, iter_env, current_scope, allow_method_definitions: false)
             emit_sequence_value_assignment(acc_var, body_code)
           end
           [
@@ -108,18 +100,18 @@ module Kapusta
         end
 
         def emit_faccumulate(args, env, current_scope)
-          bindings = args[0].items
-          emit_error!(:accumulate_no_iterator) if bindings.length < 5
+          parsed = Language.parse_faccumulate_args(args)
+          emit_error!(:accumulate_no_iterator) if parsed.items.length < 5
 
           body_env = env.child
-          acc_var = define_local(body_env, bindings[0].name)
-          loop_var = define_local(body_env, bindings[2].name)
+          acc_var = define_local(body_env, parsed.acc_name.name)
+          loop_var = define_local(body_env, parsed.counter.name)
 
-          init_code = emit_expr(bindings[1], env, current_scope)
-          start_code = emit_expr(bindings[3], env, current_scope)
-          finish_code = emit_expr(bindings[4], env, current_scope)
-          step_code = bindings[5] ? emit_expr(bindings[5], env, current_scope) : nil
-          body_code, = emit_sequence(args[1..], body_env, current_scope, allow_method_definitions: false)
+          init_code = emit_expr(parsed.initial, env, current_scope)
+          start_code = emit_expr(parsed.start, env, current_scope)
+          finish_code = emit_expr(parsed.finish, env, current_scope)
+          step_code = parsed.step ? emit_expr(parsed.step, env, current_scope) : nil
+          body_code, = emit_sequence(parsed.body, body_env, current_scope, allow_method_definitions: false)
 
           receiver =
             if step_code

@@ -7,24 +7,19 @@ module Kapusta
         private
 
         def emit_fn(args, env, current_scope)
-          if args[0].is_a?(Vec)
-            emit_lambda(args[0], args[1..], env, current_scope)
-          else
-            name_sym = args[0]
-            pattern = args[1]
-            body = args[2..]
-            emit_error!(:fn_no_params) unless name_sym.is_a?(Sym) && pattern.is_a?(Vec)
+          parsed = Language.parse_function_args(args)
+          emit_error!(:fn_no_params) unless parsed
+          return emit_lambda(parsed.params, parsed.body, env, current_scope) if parsed.anonymous?
 
-            fn_env = env.child
-            ruby_name = define_local(fn_env, name_sym.name)
-            <<~RUBY.chomp
-              lambda do
-                #{ruby_name} = nil
-                #{ruby_name} = #{emit_lambda(pattern, body, fn_env, current_scope)}
-                #{ruby_name}
-              end.call
-            RUBY
-          end
+          fn_env = env.child
+          ruby_name = define_local(fn_env, parsed.name.name)
+          <<~RUBY.chomp
+            lambda do
+              #{ruby_name} = nil
+              #{ruby_name} = #{emit_lambda(parsed.params, parsed.body, fn_env, current_scope)}
+              #{ruby_name}
+            end.call
+          RUBY
         end
 
         def emit_lambda(pattern, body, env, current_scope)
@@ -89,7 +84,7 @@ module Kapusta
         end
 
         def register_self_method_binding(form, env)
-          name_sym = form.items[1]
+          name_sym = Language.parse_function_form(form)&.name
           return unless name_sym.is_a?(Sym) && !name_sym.dotted?
 
           ruby_name = Kapusta.kebab_to_snake(name_sym.name)
@@ -99,9 +94,10 @@ module Kapusta
         end
 
         def emit_toplevel_method_definition(form, env)
-          name_sym = form.items[1]
-          pattern = form.items[2]
-          body = form.items[3..]
+          parsed = Language.parse_function_form(form)
+          name_sym = parsed.name
+          pattern = parsed.params
+          body = parsed.body
           return [nil, env] if name_sym.dotted?
           return [nil, env] unless simple_parameter_pattern?(pattern)
 
@@ -115,18 +111,20 @@ module Kapusta
         end
 
         def emit_named_fn_assignment(form, env, current_scope)
-          name_sym = form.items[1]
+          parsed = Language.parse_function_form(form)
+          name_sym = parsed.name
           ruby_name = define_local(env, name_sym.name)
           fn_env = env.child
           fn_env.define(name_sym.name, ruby_name)
-          lambda_code = emit_lambda(form.items[2], form.items[3..], fn_env, current_scope)
+          lambda_code = emit_lambda(parsed.params, parsed.body, fn_env, current_scope)
           ["#{ruby_name} = nil\n#{ruby_name} = #{lambda_code}", env]
         end
 
         def emit_method_definition(form, env)
-          name_sym = form.items[1]
-          pattern = form.items[2]
-          body = form.items[3..]
+          parsed = Language.parse_function_form(form)
+          name_sym = parsed.name
+          pattern = parsed.params
+          body = parsed.body
           direct_definition = emit_direct_method_definition(name_sym, pattern, body, env)
           return direct_definition if direct_definition
 
@@ -251,26 +249,21 @@ module Kapusta
         end
 
         def emit_let_parts(args, env, current_scope, result:)
-          bindings = args[0]
+          parsed = Language.parse_let_args(args)
+          bindings = parsed.bindings
           emit_error!(:let_odd_bindings) if bindings.items.length.odd?
           emit_error!(:let_no_body) if args.length < 2
 
-          body = args[1..]
           child_env = env.child
           binding_codes = []
-          items = bindings.items
-          i = 0
-          while i < items.length
-            pattern = items[i]
-            value_form = items[i + 1]
+          parsed.binding_pairs.each do |pattern, value_form|
             check_destructure_value!(pattern, value_form)
             value_code = emit_expr(value_form, child_env, current_scope)
             bind_code, child_env = emit_pattern_bind(pattern, value_code, child_env)
             walk_pattern_syms(pattern) { |sym| mark_mutability(child_env, sym, mutable: false) }
             binding_codes << bind_code
-            i += 2
           end
-          body_code, = emit_sequence(body, child_env, current_scope,
+          body_code, = emit_sequence(parsed.body, child_env, current_scope,
                                      allow_method_definitions: false,
                                      result:)
           [join_binding_codes(binding_codes), body_code]
@@ -297,15 +290,17 @@ module Kapusta
         end
 
         def emit_local_form(form, env, current_scope, allow_constant: false)
-          emit_error!(:local_arity, form: form.head.name) unless form.items.length == 3
+          parsed = Language.parse_binding_form(form)
+          emit_error!(:local_arity, form: form.head.name) unless parsed
 
-          target = form.items[1]
-          value_code = emit_expr(form.items[2], env, current_scope)
+          target = parsed.target
+          value_form = parsed.value
+          value_code = emit_expr(value_form, env, current_scope)
 
           if target.is_a?(Sym)
             validate_binding_symbol!(target)
-            if allow_constant && form.head.name == 'local' &&
-               constant_value?(form.items[2]) &&
+            if allow_constant && parsed.head == 'local' &&
+               constant_value?(value_form) &&
                (constant_name = constant_name_for(target.name))
               env.define(target.name, constant_name)
               mark_mutability(env, target.name, mutable: false)
@@ -313,7 +308,7 @@ module Kapusta
             end
 
             ruby_name = define_local(env, target.name)
-            mark_mutability(env, target.name, mutable: form.head.name == 'var')
+            mark_mutability(env, target.name, mutable: parsed.mutable?)
             ["#{ruby_name} = #{value_code}\nnil", env]
           else
             bind_code, env = emit_pattern_bind(target, value_code, env)
@@ -370,24 +365,29 @@ module Kapusta
           (@binding_mutability ||= {}).fetch(ruby_name, true)
         end
 
-        def emit_local_expr(args, env, current_scope)
-          code, = emit_local_form(List.new([Sym.new('local'), *args]), env.child, current_scope)
+        def emit_local_expr(head, args, env, current_scope)
+          parsed = Language.parse_binding_args(head, args)
+          emit_error!(:local_arity, form: head) unless parsed
+
+          synthetic = List.new([Sym.new(head), parsed.target, parsed.value])
+          code, = emit_local_form(synthetic, env.child, current_scope)
           "lambda do\n#{indent(code)}\nend.call"
         end
 
         def emit_global_expr(args, _env, _current_scope)
-          emit_error!(:global_arity) unless args.length == 2
-          unless args[0].is_a?(Sym)
-            emit_error!(:global_non_symbol_name, type: args[0].class.name.downcase, value: args[0].inspect)
+          parsed = Language.parse_global_args(args)
+          emit_error!(:global_arity) unless parsed
+          unless parsed.name.is_a?(Sym)
+            emit_error!(:global_non_symbol_name, type: parsed.name.class.name.downcase, value: parsed.name.inspect)
           end
 
-          name = args[0].name
-          "$#{global_name(name)} = #{emit_expr(args[1], Env.new, :toplevel)}\nnil"
+          "$#{global_name(parsed.name.name)} = #{emit_expr(parsed.value, Env.new, :toplevel)}\nnil"
         end
 
         def emit_set_form(form, env, current_scope)
-          target = form.items[1]
-          value_code = emit_expr(form.items[2], env, current_scope)
+          parsed = Language.parse_set_form(form)
+          target = parsed.target
+          value_code = emit_expr(parsed.value, env, current_scope)
 
           if target.is_a?(Sym) && !target.dotted?
             binding = env.lookup_if_defined(target.name)
@@ -417,9 +417,8 @@ module Kapusta
         end
 
         def emit_set_expr(args, env, current_scope)
-          target = args[0]
-          value_code = emit_expr(args[1], env, current_scope)
-          emit_set_target(target, value_code, env, current_scope)
+          parsed = Language.parse_set_args(args)
+          emit_set_target(parsed.target, emit_expr(parsed.value, env, current_scope), env, current_scope)
         end
 
         def emit_set_target(target, value_code, env, current_scope)
@@ -443,24 +442,30 @@ module Kapusta
               emit_assignment(binding, value_code)
             end
           when List
-            head = target.head
-            if head.is_a?(Sym) && head.name == '.'
-              object_code = emit_expr(target.items[1], env, current_scope)
-              keys = target.items[2..].map { |item| emit_expr(item, env, current_scope) }
+            if (dot_target = Language.parse_dot_target(target))
+              object_code = emit_expr(dot_target.object, env, current_scope)
+              keys = dot_target.keys.map { |item| emit_expr(item, env, current_scope) }
               receiver = simple_expression?(object_code) ? object_code : parenthesize(object_code)
               prefix = keys[0...-1].map { |k| "[#{k}]" }.join
               emit_assignment("#{receiver}#{prefix}[#{keys.last}]", value_code)
-            elsif head.is_a?(Sym) && head.name == 'ivar'
-              emit_assignment("@#{Kapusta.kebab_to_snake(target.items[1].name)}", value_code)
-            elsif head.is_a?(Sym) && head.name == 'cvar'
-              emit_assignment("@@#{Kapusta.kebab_to_snake(target.items[1].name)}", value_code)
-            elsif head.is_a?(Sym) && head.name == 'gvar'
-              emit_assignment("$#{global_name(target.items[1].name)}", value_code)
+            elsif (sigil = Language.parse_sigil_form(target))
+              emit_sigil_assignment(sigil, value_code)
             else
               emit_error!(:bad_set_target, target: target.inspect)
             end
           else
             emit_error!(:bad_set_target, target: target.inspect)
+          end
+        end
+
+        def emit_sigil_assignment(sigil, value_code)
+          name = sigil.name
+          emit_error!(:bad_set_target, target: sigil.inspect) unless name.is_a?(Sym)
+
+          case sigil.kind
+          when :ivar then emit_assignment("@#{Kapusta.kebab_to_snake(name.name)}", value_code)
+          when :cvar then emit_assignment("@@#{Kapusta.kebab_to_snake(name.name)}", value_code)
+          when :gvar then emit_assignment("$#{global_name(name.name)}", value_code)
           end
         end
       end

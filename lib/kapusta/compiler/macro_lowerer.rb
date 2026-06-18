@@ -5,8 +5,6 @@ require_relative 'macro_gensym'
 module Kapusta
   module Compiler
     class MacroLowerer
-      FN_HEADS = %w[fn lambda λ].freeze
-
       def self.compile(params:, body:, path:, error_class:)
         callable = new(error_class:).callable_form(params, body)
         ruby = Compiler.compile_forms([callable], path:)
@@ -56,21 +54,11 @@ module Kapusta
       private
 
       def lower_fn_form(form)
-        items = form.items
-        if items[1].is_a?(Sym) && items[2].is_a?(Vec)
-          name_sym = items[1]
-          params = items[2]
-          body = items[3..] || []
-        elsif items[1].is_a?(Vec)
-          name_sym = nil
-          params = items[1]
-          body = items[2..] || []
-        else
-          return form
-        end
+        parsed = Language.parse_function_form(form)
+        return form unless parsed
 
-        head_items = name_sym ? [form.head, name_sym, params] : [form.head, params]
-        List.new(head_items + lowered_body_with_gensyms(body))
+        head_items = parsed.named? ? [form.head, parsed.name, parsed.params] : [form.head, parsed.params]
+        List.new(head_items + lowered_body_with_gensyms(parsed.body))
       end
 
       def lowered_body_with_gensyms(body)
@@ -91,7 +79,7 @@ module Kapusta
       end
 
       def fn_form?(form)
-        form.is_a?(List) && form.head.is_a?(Sym) && FN_HEADS.include?(form.head.name)
+        Language.function_form?(form)
       end
 
       def lower_quasi(form)
@@ -147,8 +135,8 @@ module Kapusta
       end
 
       def lower_quasi_item(item)
-        if item.is_a?(Unquote) && unpack_call?(item.form)
-          inner = lower(item.form.items[1])
+        if item.is_a?(Unquote) && (unpack = Language.parse_unpack_call(item.form))
+          inner = lower(unpack.value)
           List.new([Sym.new('.'), inner, 0])
         else
           lower_quasi(item)
@@ -159,13 +147,13 @@ module Kapusta
         last = items.last
         return unless last
         return lower(last.form) if last.is_a?(UnquoteSplice)
-        return lower(last.form.items[1]) if last.is_a?(Unquote) && unpack_call?(last.form)
+
+        if last.is_a?(Unquote)
+          unpack = Language.parse_unpack_call(last.form)
+          return lower(unpack.value) if unpack
+        end
 
         nil
-      end
-
-      def unpack_call?(form)
-        form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'unpack'
       end
 
       def gensym_local_for(prefix)

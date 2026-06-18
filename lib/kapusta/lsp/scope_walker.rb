@@ -19,22 +19,12 @@ module Kapusta
 
       DISPATCHERS = {
         'macros' => :skip,
-        'quasi-sym' => :skip,
-        'quasi-list' => :skip,
-        'quasi-list-tail' => :skip,
-        'quasi-vec' => :skip,
-        'quasi-vec-tail' => :skip,
-        'quasi-hash' => :skip,
-        'quasi-gensym' => :skip,
+        **Compiler::Language::QUASI_HEADS.to_h { |head| [head, :skip] },
         'let' => :walk_let,
-        'local' => :walk_local_var,
-        'var' => :walk_local_var,
+        **Compiler::Language::BINDING_HEADS.to_h { |head| [head, :walk_local_var] },
         'global' => :walk_global,
         'set' => :walk_set,
-        'fn' => :walk_fn,
-        'defn' => :walk_fn,
-        'lambda' => :walk_fn,
-        'λ' => :walk_fn,
+        **Compiler::Language::FUNCTION_DEFINITION_HEADS.to_h { |head| [head, :walk_fn] },
         'for' => :walk_for,
         'each' => :walk_each_like,
         'collect' => :walk_each_like,
@@ -122,7 +112,7 @@ module Kapusta
       end
 
       def end_form?(form)
-        form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'end'
+        Compiler::Language.end_form?(form)
       end
 
       def binding_at(line, column)
@@ -151,15 +141,14 @@ module Kapusta
       end
 
       def bodyless_header?(form)
-        return false unless form.is_a?(List) && !form.empty? && form.head.is_a?(Sym)
+        return false unless Compiler::Language.header_form?(form)
 
         case form.head.name
         when 'module'
-          body = form.items[2..] || []
-          body.empty? || (body.length == 1 && bodyless_header?(body[0]))
+          parsed = Compiler::Language.parse_module_form(form)
+          parsed.body.empty? || (parsed.body.length == 1 && bodyless_header?(parsed.body[0]))
         when 'class'
-          _name_sym, _supers, body = split_class_args(form.items[1..] || [])
-          body.empty?
+          Compiler::Language.parse_class_form(form).body.empty?
         else
           false
         end
@@ -168,34 +157,24 @@ module Kapusta
       def walk_bodyless_header(form, forms, body_start, scope)
         case form.head.name
         when 'module'
-          name_sym = form.items[1]
-          binding = name_sym.is_a?(Sym) ? add_constant_binding(name_sym, scope, :module) : nil
-          body = form.items[2..] || []
+          parsed = Compiler::Language.parse_module_form(form)
+          binding = parsed.name.is_a?(Sym) ? add_constant_binding(parsed.name, scope, :module) : nil
           inside_module_or_class do
-            if body.length == 1 && bodyless_header?(body[0])
-              walk_bodyless_header(body[0], forms, body_start, scope)
+            if parsed.body.length == 1 && bodyless_header?(parsed.body[0])
+              walk_bodyless_header(parsed.body[0], forms, body_start, scope)
             else
               body_scope = make_scope(scope, :module)
               walk_form_run(forms, body_start, body_scope, header_target: binding)
             end
           end
         when 'class'
-          name_sym, supers, = split_class_args(form.items[1..] || [])
-          supers&.items&.each { |item| walk_form(item, scope) }
-          binding = name_sym.is_a?(Sym) ? add_constant_binding(name_sym, scope, :class) : nil
+          parsed = Compiler::Language.parse_class_form(form)
+          parsed.supers&.items&.each { |item| walk_form(item, scope) }
+          binding = parsed.name.is_a?(Sym) ? add_constant_binding(parsed.name, scope, :class) : nil
           inside_class do
             body_scope = make_scope(scope, :class)
             walk_form_run(forms, body_start, body_scope, header_target: binding)
           end
-        end
-      end
-
-      def split_class_args(args)
-        name_sym = args[0]
-        if args[1].is_a?(Vec)
-          [name_sym, args[1], args[2..] || []]
-        else
-          [name_sym, nil, args[1..] || []]
         end
       end
 
@@ -275,62 +254,51 @@ module Kapusta
       end
 
       def walk_let(list, scope)
-        bindings_vec = list.items[1]
-        body = list.items[2..]
-        return unless bindings_vec.is_a?(Vec)
+        parsed = Compiler::Language.parse_let_form(list)
+        return unless parsed.bindings.is_a?(Vec)
 
         let_scope = make_scope(scope, :let)
-        items = bindings_vec.items
-        i = 0
-        while i < items.length
-          name_pat = items[i]
-          value = items[i + 1]
+        parsed.binding_pairs.each do |name_pat, value|
           walk_form(value, let_scope) if value
           bind_pattern(name_pat, let_scope, :let)
-          i += 2
         end
-        body&.each { |form| walk_form(form, let_scope) }
+        parsed.body.each { |form| walk_form(form, let_scope) }
       end
 
       def walk_local_var(list, scope)
-        kind = list.head.name == 'var' ? :var : :local
-        target = list.items[1]
-        value = list.items[2]
-        walk_form(value, scope) if value
-        bind_pattern(target, scope, kind)
+        parsed = Compiler::Language.parse_binding_form(list)
+        return unless parsed
+
+        walk_form(parsed.value, scope)
+        bind_pattern(parsed.target, scope, parsed.mutable? ? :var : :local)
       end
 
       def walk_global(list, _scope)
-        # Globals are not renamable; skip the binder name and walk only the value.
-        value = list.items[2]
-        walk_form(value, @root_scope) if value
+        parsed = Compiler::Language.parse_global_form(list)
+        walk_form(parsed.value, @root_scope) if parsed
       end
 
       def walk_hashfn(list, scope)
-        list.items[1..]&.each { |form| walk_form(form, scope) }
+        Compiler::Language.parse_hashfn_form(list).body.each { |form| walk_form(form, scope) }
       end
 
       def walk_macro_def(list, scope)
-        items = list.items
-        name_sym = items[1]
-        params = items[2]
-        body = items[3..] || []
-        return unless name_sym.is_a?(Sym) && params.is_a?(Vec)
+        parsed = Compiler::Language.parse_macro_definition_form(list)
+        return unless parsed.name.is_a?(Sym) && parsed.params.is_a?(Vec)
 
-        add_binding(name_sym, @root_scope, :macro)
+        add_binding(parsed.name, @root_scope, :macro)
         fn_scope = make_scope(scope, :fn)
-        bind_param_vec(params, fn_scope)
-        body.each { |form| walk_form(form, fn_scope) }
+        bind_param_vec(parsed.params, fn_scope)
+        parsed.body.each { |form| walk_form(form, fn_scope) }
       end
 
       def walk_import_macros(list, scope)
-        destructure = list.items[1]
-        module_arg = list.items[2]
-        return unless destructure.is_a?(HashLit)
-        return unless module_arg.is_a?(Symbol) || module_arg.is_a?(String)
+        parsed = Compiler::Language.parse_import_macros_form(list)
+        return unless parsed.destructure.is_a?(HashLit)
+        return unless parsed.module_arg.is_a?(Symbol) || parsed.module_arg.is_a?(String)
 
-        module_label = module_arg.to_s.tr('_', '-')
-        destructure.pairs.each do |key, target|
+        module_label = parsed.module_arg.to_s.tr('_', '-')
+        parsed.destructure.pairs.each do |key, target|
           next unless target.is_a?(Sym) && key.is_a?(Symbol)
 
           add_import_macro_binding(target, scope, module_label, key)
@@ -357,9 +325,9 @@ module Kapusta
       end
 
       def walk_set(list, scope)
-        target = list.items[1]
-        value = list.items[2]
-        walk_form(value, scope) if value
+        parsed = Compiler::Language.parse_set_form(list)
+        target = parsed.target
+        walk_form(parsed.value, scope) if parsed.value
         if target.is_a?(List)
           walk_form(target, scope)
           return
@@ -375,18 +343,15 @@ module Kapusta
       end
 
       def walk_sigil_form(list, _scope)
-        return if list.items.length < 2
+        parsed = Compiler::Language.parse_sigil_form(list)
+        return unless parsed&.name.is_a?(Sym)
 
-        inner = list.items[1]
-        return unless inner.is_a?(Sym)
-
-        kind = list.head.name.to_sym
-        target_scope = sigil_target_scope(kind)
-        existing = target_scope.bindings[inner.name]
+        target_scope = sigil_target_scope(parsed.kind)
+        existing = target_scope.bindings[parsed.name.name]
         if existing
-          add_reference(inner, target_scope, existing)
+          add_reference(parsed.name, target_scope, existing)
         else
-          add_binding(inner, target_scope, kind)
+          add_binding(parsed.name, target_scope, parsed.kind)
         end
       end
 
@@ -398,32 +363,24 @@ module Kapusta
       end
 
       def walk_fn(list, scope)
-        items = list.items
-        if items[1].is_a?(Vec)
-          name_sym = nil
-          params = items[1]
-          body = items[2..]
-        elsif items[1].is_a?(Sym) && items[2].is_a?(Vec)
-          name_sym = items[1]
-          params = items[2]
-          body = items[3..]
-        else
-          items[1..]&.each { |item| walk_form(item, scope) }
+        parsed = Compiler::Language.parse_function_form(list, heads: Compiler::Language::FUNCTION_DEFINITION_HEADS)
+        unless parsed
+          list.items[1..]&.each { |item| walk_form(item, scope) }
           return
         end
 
         fn_scope = make_scope(scope, :fn)
-        if name_sym
+        if parsed.named?
           kind = if method_definition_context?
                    :method
                  else
                    (scope == @root_scope ? :toplevel_fn : :fn_local)
                  end
-          binding = add_binding(name_sym, scope, kind, lexical: true)
-          fn_scope.bindings[name_sym.name] = binding unless kind == :method
+          binding = add_binding(parsed.name, scope, kind, lexical: true)
+          fn_scope.bindings[parsed.name.name] = binding unless kind == :method
         end
-        bind_param_vec(params, fn_scope)
-        body.each { |form| walk_form(form, fn_scope) }
+        bind_param_vec(parsed.params, fn_scope)
+        parsed.body.each { |form| walk_form(form, fn_scope) }
       end
 
       def method_definition_context?
@@ -431,94 +388,70 @@ module Kapusta
       end
 
       def walk_for(list, scope)
-        bindings_vec = list.items[1]
-        body = list.items[2..]
-        return unless bindings_vec.is_a?(Vec)
+        parsed = Compiler::Language.parse_counted_for_form(list)
+        return unless parsed.bindings.is_a?(Vec)
 
         for_scope = make_scope(scope, :for)
-        items = bindings_vec.items
-        counter = items[0]
-        i = 1
         until_forms = []
-        while i < items.length
-          item = items[i]
-          if item.is_a?(Sym) && item.name == '&until'
-            until_forms << items[i + 1] if items[i + 1]
-            i += 2
-          else
-            walk_form(item, scope)
-            i += 1
-          end
+        [parsed.start, parsed.finish].compact.each { |form| walk_form(form, scope) }
+        parsed.each_extra do |kind, form|
+          next unless form
+
+          kind == :until ? until_forms << form : walk_form(form, scope)
         end
-        bind_pattern(counter, for_scope, :for_counter) if counter
+        bind_pattern(parsed.counter, for_scope, :for_counter) if parsed.counter
         until_forms.each { |form| walk_form(form, for_scope) }
-        body&.each { |form| walk_form(form, for_scope) }
+        parsed.body.each { |form| walk_form(form, for_scope) }
       end
 
       def walk_for_like(list, scope) = walk_for(list, scope)
 
       def walk_each_like(list, scope)
-        bindings_vec = list.items[1]
-        body = list.items[2..]
+        parsed = Compiler::Language.parse_iteration_form(list)
+        bindings_vec = parsed.bindings
         return unless bindings_vec.is_a?(Vec)
 
-        items = bindings_vec.items
-        return if items.empty?
+        return if parsed.items.empty?
 
         each_scope = make_scope(scope, :each)
-        iter_expr = items.last
-        binders = items[0..-2]
-        walk_form(iter_expr, scope)
-        binders.each { |b| bind_pattern(b, each_scope, :each_var) }
-        body&.each { |form| walk_form(form, each_scope) }
+        walk_form(parsed.iter_expr, scope)
+        parsed.binding_pats.each { |b| bind_pattern(b, each_scope, :each_var) }
+        parsed.body.each { |form| walk_form(form, each_scope) }
       end
 
       def walk_accumulate(list, scope)
-        bindings_vec = list.items[1]
-        body = list.items[2..]
-        return unless bindings_vec.is_a?(Vec)
+        parsed = Compiler::Language.parse_accumulate_form(list)
+        return unless parsed.bindings.is_a?(Vec)
 
-        items = bindings_vec.items
-        return if items.length < 4
+        return if parsed.items.length < 4
 
         acc_scope = make_scope(scope, :accumulate)
-        acc_name = items[0]
-        acc_init = items[1]
-        iter_items = items[2..]
-        iter_expr = iter_items.last
-        binders = iter_items[0...-1]
-        walk_form(acc_init, scope)
-        bind_pattern(acc_name, acc_scope, :accumulator)
-        walk_form(iter_expr, scope)
-        binders.each { |b| bind_pattern(b, acc_scope, :each_var) }
-        body&.each { |form| walk_form(form, acc_scope) }
+        walk_form(parsed.initial, scope)
+        bind_pattern(parsed.acc_name, acc_scope, :accumulator)
+        walk_form(parsed.iter_expr, scope)
+        parsed.binding_pats.each { |b| bind_pattern(b, acc_scope, :each_var) }
+        parsed.body.each { |form| walk_form(form, acc_scope) }
       end
 
       def walk_faccumulate(list, scope)
-        bindings_vec = list.items[1]
-        body = list.items[2..]
-        return unless bindings_vec.is_a?(Vec)
+        parsed = Compiler::Language.parse_faccumulate_form(list)
+        return unless parsed.bindings.is_a?(Vec)
 
-        items = bindings_vec.items
-        return if items.length < 5
+        return if parsed.items.length < 5
 
         acc_scope = make_scope(scope, :faccumulate)
-        acc_name = items[0]
-        acc_init = items[1]
-        counter = items[2]
-        walk_form(acc_init, scope)
-        items[3..]&.each { |form| walk_form(form, scope) }
-        bind_pattern(acc_name, acc_scope, :accumulator)
-        bind_pattern(counter, acc_scope, :for_counter)
-        body&.each { |form| walk_form(form, acc_scope) }
+        walk_form(parsed.initial, scope)
+        [parsed.start, parsed.finish, parsed.step].compact.each { |form| walk_form(form, scope) }
+        bind_pattern(parsed.acc_name, acc_scope, :accumulator)
+        bind_pattern(parsed.counter, acc_scope, :for_counter)
+        parsed.body.each { |form| walk_form(form, acc_scope) }
       end
 
       def walk_case_match(list, scope)
-        mode = list.head.name == 'match' ? :match : :case
-        subject = list.items[1]
-        arms = list.items[2..] || []
-        walk_form(subject, scope)
-        arms.each_slice(2) do |pattern, body|
+        mode = Compiler::Language.list_head_name(list) == 'match' ? :match : :case
+        parsed = Compiler::Language.parse_case_form(list)
+        walk_form(parsed.subject, scope)
+        parsed.arm_pairs.each do |pattern, body|
           arm_scope = make_scope(scope, :case_arm)
           walk_pattern(pattern, arm_scope, scope, mode)
           walk_form(body, arm_scope) if body
@@ -526,51 +459,39 @@ module Kapusta
       end
 
       def walk_try(list, scope)
-        body = list.items[1]
-        clauses = list.items[2..] || []
-        walk_form(body, scope)
-        clauses.each do |clause|
-          next unless clause.is_a?(List)
-
-          head = clause.head
-          next unless head.is_a?(Sym)
-
-          if head.name == 'catch'
-            walk_catch(clause, scope)
-          elsif head.name == 'finally'
-            clause.items[1..]&.each { |form| walk_form(form, scope) }
+        parsed = Compiler::Language.parse_try_form(list)
+        walk_form(parsed.body, scope)
+        parsed.clauses.each do |clause|
+          case clause
+          when Compiler::Language::CatchClause then walk_catch(clause, scope)
+          when Compiler::Language::FinallyClause
+            clause.body.each { |form| walk_form(form, scope) }
           end
         end
       end
 
       def walk_catch(clause, scope)
-        rest = clause.items[1..]
-        if rest[0].is_a?(Sym) && (rest[0].name.match?(/\A[A-Z]/) || rest[0].dotted?)
-          klass = rest[0]
-          bind_sym = rest[1]
-          body = rest[2..]
-          walk_form(klass, scope)
-        else
-          bind_sym = rest[0]
-          body = rest[1..]
-        end
+        walk_form(clause.klass, scope) if clause.klass
         catch_scope = make_scope(scope, :catch)
-        bind_pattern(bind_sym, catch_scope, :catch) if bind_sym.is_a?(Sym)
-        body&.each { |form| walk_form(form, catch_scope) }
+        bind_pattern(clause.bind_sym, catch_scope, :catch) if clause.bind_sym.is_a?(Sym)
+        clause.body.each { |form| walk_form(form, catch_scope) }
       end
 
       def walk_module_class(list, scope)
-        kind = list.head.name == 'module' ? :module : :class
-        name_sym = list.items[1]
-        body_start = 2
-        if kind == :class && list.items[2].is_a?(Vec)
-          list.items[2].items.each { |item| walk_form(item, scope) }
-          body_start = 3
+        if (module_form = Compiler::Language.parse_module_form(list))
+          kind = :module
+          name_sym = module_form.name
+          body = module_form.body
+        else
+          kind = :class
+          parsed = Compiler::Language.parse_class_form(list)
+          name_sym = parsed.name
+          parsed.supers&.items&.each { |item| walk_form(item, scope) }
+          body = parsed.body
         end
 
         add_constant_binding(name_sym, scope, kind) if name_sym.is_a?(Sym)
 
-        body = list.items[body_start..] || []
         body_scope = make_scope(scope, kind)
         if kind == :class
           inside_class { body.each { |form| walk_form(form, body_scope) } }
@@ -587,7 +508,7 @@ module Kapusta
         return if target_name.nil? || target_name.empty?
 
         target = scope.lookup(target_name)
-        return if target.nil? && Compiler::SPECIAL_FORMS.include?(sym.name)
+        return if target.nil? && Compiler::Language.special_form?(sym.name)
 
         add_reference(sym, scope, target)
       end
@@ -670,16 +591,13 @@ module Kapusta
       end
 
       def walk_pattern_list(list, scope, outer_scope, mode)
-        head = list.head
-        if head.is_a?(Sym) && head.name == 'where'
-          inner = list.items[1]
-          guards = list.items[2..]
-          walk_pattern(inner, scope, outer_scope, mode)
-          guards&.each { |g| walk_form(g, scope) }
-        elsif head.is_a?(Sym) && head.name == 'or'
-          list.items[1..]&.each { |alt| walk_pattern(alt, scope, outer_scope, mode) }
-        elsif head.is_a?(Sym) && head.name == '=' && list.items.length == 2
-          name_sym = list.items[1]
+        if (where = Compiler::Language.parse_where_pattern(list))
+          walk_pattern(where.inner, scope, outer_scope, mode)
+          where.guards.each { |guard| walk_form(guard, scope) }
+        elsif (or_pattern = Compiler::Language.parse_or_pattern(list))
+          or_pattern.alternatives.each { |alt| walk_pattern(alt, scope, outer_scope, mode) }
+        elsif (pin = Compiler::Language.parse_pin_pattern(list))
+          name_sym = pin.name
           if name_sym.is_a?(Sym) && (existing = outer_scope.lookup(name_sym.name))
             add_reference(name_sym, outer_scope, existing)
           end

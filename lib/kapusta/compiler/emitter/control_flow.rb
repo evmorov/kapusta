@@ -53,7 +53,7 @@ module Kapusta
         end
 
         def if_form?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'if'
+          Language.list_head?(form, 'if')
         end
 
         def emit_case(args, env, current_scope, mode)
@@ -78,28 +78,28 @@ module Kapusta
         def build_case_parts(args, env, current_scope, mode)
           emit_error!(:case_no_subject) if args.empty?
 
-          clauses = args[1..]
-          emit_error!(:case_no_patterns) if clauses.empty?
-          emit_error!(:case_odd_patterns) if clauses.length.odd?
+          parsed = Language.parse_case_args(args)
+          emit_error!(:case_no_patterns) if parsed.clauses.empty?
+          emit_error!(:case_odd_patterns) if parsed.clauses.length.odd?
 
-          value_code = emit_expr(args[0], env, current_scope)
-          if simple_case_subject?(args[0]) && simple_expression?(value_code)
-            body = emit_case_body(value_code, clauses, env, current_scope, mode)
+          value_code = emit_expr(parsed.subject, env, current_scope)
+          if simple_case_subject?(parsed.subject) && simple_expression?(value_code)
+            body = emit_case_body(value_code, parsed, env, current_scope, mode)
             emit_error!(:case_unsupported) unless body
             return [value_code, nil, body]
           end
 
           value_var = temp('case_value')
-          body = emit_case_body(value_var, clauses, env, current_scope, mode)
+          body = emit_case_body(value_var, parsed, env, current_scope, mode)
           emit_error!(:case_unsupported) unless body
           [value_code, value_var, body]
         end
 
-        def emit_case_body(value_var, clauses, env, current_scope, mode)
-          return try_emit_compat_case(value_var, clauses, env, current_scope, mode) if mruby3_target?
+        def emit_case_body(value_var, parsed, env, current_scope, mode)
+          return try_emit_compat_case(value_var, parsed, env, current_scope, mode) if mruby3_target?
 
-          try_emit_native_case(value_var, clauses, env, current_scope, mode) ||
-            try_emit_compat_case(value_var, clauses, env, current_scope, mode)
+          try_emit_native_case(value_var, parsed, env, current_scope, mode) ||
+            try_emit_compat_case(value_var, parsed, env, current_scope, mode)
         end
 
         def simple_case_subject?(form)
@@ -110,29 +110,28 @@ module Kapusta
           end
         end
 
-        def try_emit_native_case(value_var, clauses, env, current_scope, mode)
-          arms = collect_case_arms(clauses) do |pattern, body, where_guards|
+        def try_emit_native_case(value_var, parsed, env, current_scope, mode)
+          arms = collect_case_arms(parsed.complete_arms) do |pattern, body, where_guards|
             try_native_arm(pattern, body, where_guards, env, current_scope, mode)
           end
           return unless arms
 
-          arms << ['else', indent('nil')].join("\n") unless wildcard_last?(clauses)
+          arms << ['else', indent('nil')].join("\n") unless wildcard_last?(parsed.complete_arms)
           ["case #{value_var}", *arms, 'end'].join("\n")
         end
 
-        def collect_case_arms(clauses)
+        def collect_case_arms(arm_pairs)
           arms = []
           i = 0
-          while i < clauses.length
-            pattern = clauses[i]
-            body = clauses[i + 1]
+          while i < arm_pairs.length
+            pattern, body = arm_pairs[i]
             inner, where_guards = extract_pattern_and_guards(pattern)
-            sub_patterns = or_pattern?(inner) ? inner.items[1..] : [inner]
+            sub_patterns = Language.parse_or_pattern(inner)&.alternatives || [inner]
             sub_arms = sub_patterns.map { |sub| yield sub, body, where_guards }
             return if sub_arms.any?(&:nil?)
 
             arms.concat(sub_arms)
-            i += 2
+            i += 1
           end
           arms
         end
@@ -151,8 +150,8 @@ module Kapusta
           ["in #{plan[:pattern]}#{guard_clause}", indent(body_code)].join("\n")
         end
 
-        def try_emit_compat_case(value_var, clauses, env, current_scope, mode)
-          arms = collect_case_arms(clauses) do |pattern, body, where_guards|
+        def try_emit_compat_case(value_var, parsed, env, current_scope, mode)
+          arms = collect_case_arms(parsed.complete_arms) do |pattern, body, where_guards|
             try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
           end
           return unless arms
@@ -160,15 +159,16 @@ module Kapusta
           emit_compat_case_lines(arms)
         end
 
-        def wildcard_last?(clauses)
-          last_pattern = clauses[-2]
+        def wildcard_last?(arm_pairs)
+          last_pattern = arm_pairs.last&.first
           last_pattern.is_a?(Sym) && last_pattern.name == '_'
         end
 
         def extract_pattern_and_guards(pattern)
-          return [pattern, []] unless where_pattern?(pattern)
+          parsed = Language.parse_where_pattern(pattern)
+          return [pattern, []] unless parsed
 
-          [pattern.items[1], pattern.items[2..]]
+          [parsed.inner, parsed.guards]
         end
 
         def try_compat_arm(pattern, body, where_guards, value_var, env, current_scope, mode)
@@ -251,16 +251,18 @@ module Kapusta
         end
 
         def emit_for_statement(args, env, current_scope)
-          parsed = parse_counted_for_bindings(args[0].items, env, current_scope)
-          body_code, = emit_sequence(args[1..], parsed[:loop_env], current_scope,
+          loop_form = Language.parse_counted_for_args(args)
+          parsed = parse_counted_for_bindings(loop_form, env, current_scope)
+          body_code, = emit_sequence(loop_form.body, parsed[:loop_env], current_scope,
                                      allow_method_definitions: false,
                                      result: false)
           emit_counted_loop(**parsed, current_scope:, body_code:)
         end
 
         def emit_each_statement(args, env, current_scope)
-          emit_iteration(args[0], env, current_scope) do |iter_env|
-            emit_sequence(args[1..], iter_env, current_scope,
+          parsed = Language.parse_iteration_args(args)
+          emit_iteration(parsed.bindings, env, current_scope) do |iter_env|
+            emit_sequence(parsed.body, iter_env, current_scope,
                           allow_method_definitions: false,
                           result: false).first
           end

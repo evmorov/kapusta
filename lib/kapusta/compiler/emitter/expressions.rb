@@ -55,9 +55,9 @@ module Kapusta
 
         def emit_special(name, args, env, current_scope)
           case name
-          when 'fn', 'lambda', 'λ' then emit_fn(args, env, current_scope)
+          when *Language::FUNCTION_HEADS then emit_fn(args, env, current_scope)
           when 'let' then emit_let(args, env, current_scope)
-          when 'local', 'var' then emit_local_expr(args, env, current_scope)
+          when 'local', 'var' then emit_local_expr(name, args, env, current_scope)
           when 'global' then emit_global_expr(args, env, current_scope)
           when 'set' then emit_set_expr(args, env, current_scope)
           when 'if' then emit_if(args, env, current_scope)

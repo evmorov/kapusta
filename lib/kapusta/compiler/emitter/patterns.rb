@@ -23,7 +23,7 @@ module Kapusta
 
         def validate_binding_symbol!(sym)
           name = sym.name
-          emit_error!(:shadowed_special, name:) if Compiler::SPECIAL_FORMS.include?(name)
+          emit_error!(:shadowed_special, name:) if Language.special_form?(name)
           return unless sym.is_a?(MacroSym)
 
           emit_error!(:macro_unsafe_bind, name:)
@@ -256,7 +256,7 @@ module Kapusta
         def compile_compat_pin(pattern, value_code, env, mode:, allow_pins:, state:)
           raise PatternNotTranslatable unless allow_pins && mode == :case
 
-          name_sym = pattern.items[1]
+          name_sym = Language.parse_pin_pattern(pattern)&.name
           raise PatternNotTranslatable unless name_sym.is_a?(Sym)
 
           binding = env.lookup_if_defined(name_sym.name)
@@ -405,7 +405,7 @@ module Kapusta
         def compile_native_pin(pattern, env, mode:, allow_pins:)
           raise PatternNotTranslatable unless allow_pins && mode == :case
 
-          name_sym = pattern.items[1]
+          name_sym = Language.parse_pin_pattern(pattern)&.name
           raise PatternNotTranslatable unless name_sym.is_a?(Sym)
 
           binding = env.lookup_if_defined(name_sym.name)
@@ -418,7 +418,7 @@ module Kapusta
           initial_bound = state[:bound_names].dup
           initial_names = state[:binding_names].length
           initial_guards = state[:guards].length
-          variants = pattern.items[1..].map do |subpattern|
+          variants = Language.parse_or_pattern(pattern).alternatives.map do |subpattern|
             alt_state = {
               bound_names: initial_bound.dup,
               binding_names: state[:binding_names].dup,
@@ -446,25 +446,23 @@ module Kapusta
           when HashLit
             pattern.pairs.flat_map { |_key, value| pattern_names(value) }
           when List
-            where_pattern?(pattern) ? pattern_names(pattern.items[1]) : []
+            parsed = Language.parse_where_pattern(pattern)
+            parsed ? pattern_names(parsed.inner) : []
           else
             []
           end
         end
 
         def where_pattern?(pattern)
-          pattern.is_a?(List) && pattern.head.is_a?(Sym) && pattern.head.name == 'where'
+          !Language.parse_where_pattern(pattern).nil?
         end
 
         def pin_pattern?(pattern)
-          pattern.is_a?(List) &&
-            pattern.items.length == 2 &&
-            pattern.head.is_a?(Sym) &&
-            pattern.head.name == '='
+          !Language.parse_pin_pattern(pattern).nil?
         end
 
         def or_pattern?(pattern)
-          pattern.is_a?(List) && pattern.head.is_a?(Sym) && pattern.head.name == 'or'
+          !Language.parse_or_pattern(pattern).nil?
         end
 
         def nil_allowing_pattern_name?(name)

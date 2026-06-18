@@ -41,27 +41,27 @@ module Kapusta
 
         case head.name
         when 'when'
-          raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
+          parsed = Language.parse_conditional_body_args(items[1..])
+          raise compiler_error(:when_no_body, list, form: head.name) unless parsed.body?
 
-          cond = items[1]
-          body = wrap_do(items[2..])
-          Kapusta.copy_position(List.new([Sym.new('if'), cond, body]), list)
+          Kapusta.copy_position(List.new([Sym.new('if'), parsed.condition, wrap_do(parsed.body)]), list)
         when 'unless'
-          raise compiler_error(:when_no_body, list, form: head.name) if items[2..].empty?
+          parsed = Language.parse_conditional_body_args(items[1..])
+          raise compiler_error(:when_no_body, list, form: head.name) unless parsed.body?
 
-          cond = items[1]
-          body = wrap_do(items[2..])
-          Kapusta.copy_position(List.new([Sym.new('if'), List.new([Sym.new('not'), cond]), body]), list)
+          negated = List.new([Sym.new('not'), parsed.condition])
+          Kapusta.copy_position(List.new([Sym.new('if'), negated, wrap_do(parsed.body)]), list)
         when 'tset'
-          raise compiler_error(:tset_no_value, list) if items.length < 4
+          parsed = Language.parse_tset_args(items[1..])
+          raise compiler_error(:tset_no_value, list) unless parsed
 
           Kapusta.copy_position(
-            List.new([Sym.new('set'), List.new([Sym.new('.'), items[1], items[2]]), items[3]]),
+            List.new([Sym.new('set'), List.new([Sym.new('.'), parsed.table, parsed.key]), parsed.value]),
             list
           )
         when *LuaCompat::SPECIAL_FORMS
           normalize_lua_compat_form(head.name, items)
-        when '->', '->>', '-?>', '-?>>'
+        when *Language::THREAD_HEADS
           Kapusta.copy_position(normalize(thread(items[1..], head.name)), list)
         when 'doto'
           Kapusta.copy_position(normalize(doto(items[1..])), list)
@@ -85,8 +85,8 @@ module Kapusta
 
       def thread(forms, kind)
         value = forms.first
-        short = %w[-?> -?>>].include?(kind)
-        position = %w[-> -?>].include?(kind) ? :first : :last
+        short = Language.short_pipeline_head?(kind)
+        position = Language.thread_first_head?(kind) ? :first : :last
 
         return thread_short(forms, position) if short
 
@@ -124,9 +124,9 @@ module Kapusta
       def thread_step(memo, form, position)
         if form.is_a?(List)
           if position == :first
-            List.new([form.items[0], memo, *form.items[1..]])
+            prepend_call_arg(form, memo)
           else
-            List.new([*form.items, memo])
+            append_call_arg(form, memo)
           end
         else
           List.new([form, memo])
@@ -144,7 +144,7 @@ module Kapusta
         temp = gensym('doto')
         body = forms[1..].map do |form|
           if form.is_a?(List)
-            List.new([form.items[0], temp, *form.items[1..]])
+            prepend_call_arg(form, temp)
           else
             List.new([form, temp])
           end
@@ -156,6 +156,14 @@ module Kapusta
       def gensym(prefix)
         @gensym_index = (@gensym_index || 0) + 1
         GeneratedSym.new("#{prefix}_#{@gensym_index}", @gensym_index)
+      end
+
+      def prepend_call_arg(form, value)
+        List.new([form.head, value, *form.rest])
+      end
+
+      def append_call_arg(form, value)
+        List.new([*form.items, value])
       end
     end
   end

@@ -67,7 +67,7 @@ module Kapusta
         end
 
         def end_form?(form)
-          form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'end'
+          Language.end_form?(form)
         end
 
         def validate_end_form!(form)
@@ -75,7 +75,7 @@ module Kapusta
         end
 
         def validate_header_name!(form, head)
-          name_sym = head == 'module' ? form.items[1] : split_class_args(form.items[1..])[0]
+          name_sym = head == 'module' ? Language.parse_module_form(form).name : Language.parse_class_form(form).name
           return if constant_segments(name_sym)
 
           code = head == 'module' ? :invalid_module_name : :invalid_class_name
@@ -83,17 +83,16 @@ module Kapusta
         end
 
         def bodyless_header?(form)
-          return false unless form.is_a?(List) && !form.empty? && form.head.is_a?(Sym)
+          return false unless Language.header_form?(form)
 
           case form.head.name
           when 'module'
-            body = form.items[2..] || []
-            return true if body.empty?
+            parsed = Language.parse_module_form(form)
+            return true if parsed.body.empty?
 
-            body.length == 1 && bodyless_header?(body[0])
+            parsed.body.length == 1 && bodyless_header?(parsed.body[0])
           when 'class'
-            _, _, body = split_class_args(form.items[1..])
-            body.empty?
+            Language.parse_class_form(form).body.empty?
           else
             false
           end
@@ -103,24 +102,24 @@ module Kapusta
           head = form.head.name
           validate_header_name!(form, head)
           if head == 'module'
-            name_sym = form.items[1]
-            inner = form.items[2..] || []
-            if inner.length == 1 && bodyless_header?(inner[0])
-              inner_code, next_i = emit_bodyless_header(inner[0], forms, body_start, env)
-              [emit_direct_module_header(name_sym, inner_code) || emit_module_wrapper(name_sym, inner_code), next_i]
+            parsed = Language.parse_module_form(form)
+            if parsed.body.length == 1 && bodyless_header?(parsed.body[0])
+              inner_code, next_i = emit_bodyless_header(parsed.body[0], forms, body_start, env)
+              [emit_direct_module_header(parsed.name, inner_code) || emit_module_wrapper(parsed.name, inner_code),
+               next_i]
             else
               body, next_i = with_class_body do
                 emit_form_run(forms, body_start, env.child, :module, header_form: form)
               end
-              [emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body), next_i]
+              [emit_direct_module_header(parsed.name, body) || emit_module_wrapper(parsed.name, body), next_i]
             end
           else
-            name_sym, supers, = split_class_args(form.items[1..])
+            parsed = Language.parse_class_form(form)
             body, next_i = with_class_body do
               emit_form_run(forms, body_start, env.child, :class, header_form: form)
             end
-            code = emit_direct_class_header(name_sym, supers, body, env) ||
-                   emit_class_wrapper(name_sym, supers, env, body)
+            code = emit_direct_class_header(parsed.name, parsed.supers, body, env) ||
+                   emit_class_wrapper(parsed.name, parsed.supers, env, body)
             [code, next_i]
           end
         end
@@ -166,27 +165,26 @@ module Kapusta
         end
 
         def class_or_module_form?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) &&
-            %w[class module].include?(form.head.name)
+          Language.header_form?(form)
         end
 
         def emit_class_or_module_statement(form, env)
           args = form.rest
           if form.head.name == 'module'
-            name_sym = args[0]
+            parsed = Language.parse_module_args(args)
             body = with_class_body do
-              emit_sequence(args[1..], env.child, :module, allow_method_definitions: true,
-                                                           result: false).first
+              emit_sequence(parsed.body, env.child, :module, allow_method_definitions: true,
+                                                             result: false).first
             end
-            emit_direct_module_header(name_sym, body) || emit_module_wrapper(name_sym, body)
+            emit_direct_module_header(parsed.name, body) || emit_module_wrapper(parsed.name, body)
           else
-            name_sym, supers, body_forms = split_class_args(args)
+            parsed = Language.parse_class_args(args)
             body = with_class_body do
-              emit_sequence(body_forms, env.child, :class, allow_method_definitions: true,
-                                                           result: false).first
+              emit_sequence(parsed.body, env.child, :class, allow_method_definitions: true,
+                                                            result: false).first
             end
-            emit_direct_class_header(name_sym, supers, body, env) ||
-              emit_class_wrapper(name_sym, supers, env, body)
+            emit_direct_class_header(parsed.name, parsed.supers, body, env) ||
+              emit_class_wrapper(parsed.name, parsed.supers, env, body)
           end
         end
 
@@ -229,19 +227,15 @@ module Kapusta
         end
 
         def definition_form?(form)
-          return false unless form.is_a?(List) && !form.empty? && form.head.is_a?(Sym)
-
-          case form.head.name
+          case Language.list_head_name(form)
           when 'defn', 'class', 'module' then true
-          when 'fn', 'lambda', 'λ' then form.items[1].is_a?(Sym)
+          when *Language::FUNCTION_HEADS then Language.parse_function_form(form)&.named?
           else false
           end
         end
 
         def sequence_statement_form?(form)
-          return false unless form.is_a?(List) && form.head.is_a?(Sym)
-
-          %w[let while for each case match].include?(form.head.name)
+          Language.sequence_statement_form?(form)
         end
 
         def emit_sequence_statement_form(form, env, current_scope, result_needed:)
@@ -265,29 +259,19 @@ module Kapusta
         end
 
         def special_form?(name)
-          Compiler::SPECIAL_FORMS.include?(name)
-        end
-
-        def split_class_args(args)
-          name_sym = args[0]
-          if args[1].is_a?(Vec)
-            [name_sym, args[1], args[2..] || []]
-          else
-            [name_sym, nil, args[1..] || []]
-          end
+          Language.special_form?(name)
         end
 
         def named_function_form?(form)
-          form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) &&
-            %w[fn lambda λ].include?(form.head.name) && form.items[1].is_a?(Sym)
+          Language.parse_function_form(form)&.named?
         end
 
         def defn_form?(form)
-          form.is_a?(List) && !form.empty? && form.head.is_a?(Sym) && form.head.name == 'defn'
+          Language.defn_form?(form)
         end
 
         def lower_defn_to_fn(form)
-          name_sym = form.items[1]
+          name_sym = Language.parse_function_form(form, heads: Language::FUNCTION_DEFINITION_HEADS)&.name
           emit_error!(:fn_no_params) unless name_sym.is_a?(Sym)
 
           fn_sym = Sym.new('fn')
@@ -307,21 +291,23 @@ module Kapusta
         end
 
         def block_form?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) && %w[fn lambda λ hashfn].include?(form.head.name)
+          name = Language.list_head_name(form)
+          !name.nil? && (Language.function_head?(name) || name == 'hashfn')
         end
 
         def local_form?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) && %w[local var].include?(form.head.name)
+          Language.binding_form?(form)
         end
 
         def do_form?(form)
-          form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'do'
+          Language.do_form?(form)
         end
 
         def set_new_local_form?(form, env)
-          return false unless form.is_a?(List) && form.head.is_a?(Sym) && form.head.name == 'set'
+          parsed = Language.parse_set_form(form)
+          return false unless parsed
 
-          target = form.items[1]
+          target = parsed.target
           target.is_a?(Sym) && !target.dotted? && !env.defined?(target.name)
         end
 
@@ -397,23 +383,20 @@ module Kapusta
           binding
         end
 
-        def parse_counted_for_bindings(bindings, env, current_scope)
-          emit_error!(:counted_no_range) if bindings.length < 3
-          name_sym = bindings[0]
+        def parse_counted_for_bindings(parsed, env, current_scope)
+          emit_error!(:counted_no_range) if parsed.items.length < 3
+          name_sym = parsed.counter
           loop_env = env.child
           ruby_name = define_local(loop_env, name_sym.name)
-          start_code = emit_expr(bindings[1], env, current_scope)
-          finish_code = emit_expr(bindings[2], env, current_scope)
+          start_code = emit_expr(parsed.start, env, current_scope)
+          finish_code = emit_expr(parsed.finish, env, current_scope)
           step_code = '1'
           until_form = nil
-          i = 3
-          while i < bindings.length
-            if bindings[i].is_a?(Sym) && bindings[i].name == '&until'
-              until_form = bindings[i + 1]
-              i += 2
+          parsed.each_extra do |kind, form|
+            if kind == :until
+              until_form = form
             else
-              step_code = emit_expr(bindings[i], env, current_scope)
-              i += 1
+              step_code = emit_expr(form, env, current_scope)
             end
           end
           { ruby_name:, loop_env:, start_code:, finish_code:, step_code:, until_form: }

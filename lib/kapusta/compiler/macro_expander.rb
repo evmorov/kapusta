@@ -32,18 +32,16 @@ module Kapusta
       private
 
       def expand_top(form)
-        if form.is_a?(List) && form.head.is_a?(Sym)
-          case form.head.name
-          when 'macro'
-            register_macro_form(form.rest)
-            return []
-          when 'macros'
-            register_macros_form(form.rest)
-            return []
-          when 'import-macros'
-            handle_import_macros(form)
-            return []
-          end
+        case Language.list_head_name(form)
+        when 'macro'
+          register_macro_form(form.rest)
+          return []
+        when 'macros'
+          register_macros_form(form.rest)
+          return []
+        when 'import-macros'
+          handle_import_macros(form)
+          return []
         end
         [expand(form)]
       end
@@ -104,11 +102,11 @@ module Kapusta
       end
 
       def register_macro_form(args)
-        name_sym, params, *body = args
-        raise macro_error(:macro_name_must_be_symbol, name_sym) unless name_sym.is_a?(Sym)
-        raise macro_error(:macro_params_must_be_vector, params) unless params.is_a?(Vec)
+        parsed = Language.parse_macro_definition_args(args)
+        raise macro_error(:macro_name_must_be_symbol, parsed.name) unless parsed.name.is_a?(Sym)
+        raise macro_error(:macro_params_must_be_vector, parsed.params) unless parsed.params.is_a?(Vec)
 
-        register(name_sym.name, params, body)
+        register(parsed.name.name, parsed.params, parsed.body)
       end
 
       def register_macros_form(args)
@@ -116,11 +114,15 @@ module Kapusta
         raise macro_error(:macros_expects_hash, hash_lit) unless hash_lit.is_a?(HashLit)
 
         hash_lit.pairs.each do |key, value|
-          raise macro_error(:macros_entry_must_be_fn, value, form: value.inspect) unless fn_form?(value)
+          unless Language.function_head?(Language.list_head_name(value))
+            raise macro_error(:macros_entry_must_be_fn, value, form: value.inspect)
+          end
+
+          parsed = Language.parse_function_form(value)
 
           name = key.to_s
-          params = value.items[1]
-          body = value.items[2..]
+          params = parsed&.named? ? value.items[1] : (parsed&.params || value.items[1])
+          body = parsed&.body || value.items[2..]
           raise macro_error(:macros_entry_params_must_be_vector, params) unless params.is_a?(Vec)
 
           register(name, params, body)
@@ -128,26 +130,24 @@ module Kapusta
       end
 
       def fn_form?(value)
-        value.is_a?(List) && value.head.is_a?(Sym) && %w[fn lambda λ].include?(value.head.name)
+        Language.function_form?(value)
       end
 
       def handle_import_macros(form)
-        args = form.rest
-        destructure = args[0]
-        module_arg = args[1]
-        unless destructure.is_a?(HashLit) || destructure.is_a?(Sym)
+        parsed = Language.parse_import_macros_args(form.rest)
+        unless parsed.destructure.is_a?(HashLit) || parsed.destructure.is_a?(Sym)
           raise macro_error(:import_macros_destructure_invalid, form)
         end
-        unless module_arg.is_a?(Symbol) || module_arg.is_a?(String)
+        unless parsed.module_arg.is_a?(Symbol) || parsed.module_arg.is_a?(String)
           raise macro_error(:import_macros_module_invalid, form)
         end
 
-        module_label = MacroImporter.module_label(module_arg)
-        exports = macro_importer.load(module_arg, form)
-        if destructure.is_a?(HashLit)
-          register_imported_macros(destructure, exports, module_label, form)
+        module_label = MacroImporter.module_label(parsed.module_arg)
+        exports = macro_importer.load(parsed.module_arg, form)
+        if parsed.destructure.is_a?(HashLit)
+          register_imported_macros(parsed.destructure, exports, module_label, form)
         else
-          register_whole_module(destructure, exports)
+          register_whole_module(parsed.destructure, exports)
         end
       end
 

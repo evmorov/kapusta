@@ -8,8 +8,6 @@ module Kapusta
     INDENT = 2
     STDIN_PATH = '-'
 
-    PIPELINE_FORMS = %w[-> ->> -?> -?>> doto].freeze
-
     def self.format(source, path: nil)
       new([]).send(:format_source, source, path)
     end
@@ -266,7 +264,8 @@ module Kapusta
       raw_args = list_raw_rest(list)
 
       case head_name
-      when 'fn', 'defn', 'lambda', 'λ', 'macro' then render_fn(head_name, list, indent, top_level:)
+      when *Compiler::Language::FUNCTION_DEFINITION_HEADS, 'macro'
+        render_fn(head_name, list, indent, top_level:)
       when 'let' then render_let(list, indent)
       when 'do', 'finally' then render_prefix_body_form(head_name, [], raw_args, indent)
       when 'try' then render_try(list, indent)
@@ -285,7 +284,7 @@ module Kapusta
         else
           render_case(head_name, list_rest(list), indent)
         end
-      when *PIPELINE_FORMS then render_pipeline(head_name, raw_args, indent)
+      when *Compiler::Language::PIPELINE_HEADS then render_pipeline(head_name, raw_args, indent)
       else
         render_call(list, indent)
       end
@@ -294,7 +293,7 @@ module Kapusta
     def render_fn(head, list, indent, top_level: false)
       args = list_rest(list)
       raw_args = list_raw_rest(list)
-      prefix_length = args[0].is_a?(Sym) && args[1].is_a?(Vec) ? 2 : 1
+      prefix_length = Compiler::Language.parse_function_args(args)&.prefix_length || 1
       raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
       force = top_level || fn_body_has_quasi_list?(raw_body)
       render_prefix_body_form(head, raw_prefix, raw_body, indent, force_body_multiline: force)
@@ -312,8 +311,8 @@ module Kapusta
     def render_class(list, indent)
       args = list_rest(list)
       raw_args = list_raw_rest(list)
-      prefix = args[1].is_a?(Vec) ? args.take(2) : args.take(1)
-      raw_prefix, raw_body = split_raw_items(raw_args, prefix.length)
+      prefix_length = Compiler::Language.parse_class_args(args).prefix_length
+      raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
       render_prefix_body_form('class', raw_prefix, raw_body, indent)
     end
 
@@ -341,10 +340,10 @@ module Kapusta
     end
 
     def render_let(list, indent)
-      bindings = list_rest(list).first
+      parsed = Compiler::Language.parse_let_args(list_rest(list))
+      bindings = parsed.bindings
       raw_args = list_raw_rest(list)
       raw_prefix, raw_body = split_raw_items(raw_args, 1)
-      body = list_rest(list).drop(1)
       unless bindings.is_a?(Vec)
         return render_prefix_body_form('let', raw_prefix, raw_body, indent,
                                        layouts: [:pairwise])
@@ -358,7 +357,7 @@ module Kapusta
       rendered_bindings = render_let_bindings(bindings, indent)
       lines = rendered_bindings.lines(chomp: true)
       lines[0] = "(let #{lines[0]}"
-      body.each do |form|
+      parsed.body.each do |form|
         lines << indent_block(render(form, indent + INDENT), INDENT)
       end
       append_suffix(lines, ')')
@@ -484,12 +483,11 @@ module Kapusta
     end
 
     def render_case(head, args, indent)
-      subject = args.first
-      clauses = args.drop(1)
+      parsed = Compiler::Language.parse_case_args(args)
       lines = ['(case']
 
-      if subject
-        rendered_subject = render(subject, indent + INDENT)
+      if parsed.subject
+        rendered_subject = render(parsed.subject, indent + INDENT)
         if single_line?(rendered_subject) && fits?("(#{head} #{rendered_subject}", indent)
           lines[0] = "(#{head} #{rendered_subject}"
         else
@@ -498,7 +496,7 @@ module Kapusta
         end
       end
 
-      clauses.each_slice(2) do |pair|
+      parsed.arm_pairs.each do |pair|
         pattern, value = pair
         if pair.length == 2
           pair = render_pair(pattern, value, indent + INDENT)
@@ -809,11 +807,10 @@ module Kapusta
       return true unless head.is_a?(Sym)
 
       case head.name
-      when 'fn', 'lambda', 'λ', 'macro', 'when', 'unless', 'for', 'each', 'icollect', 'collect', 'fcollect',
-           'accumulate', 'faccumulate'
+      when *Compiler::Language::FLAT_BODY_HEADS
         !top_level
       else
-        !%w[let case match try catch finally do -> ->> -?> -?>> doto].include?(head.name)
+        !Compiler::Language.never_flat_head?(head.name)
       end
     end
 
@@ -826,8 +823,7 @@ module Kapusta
       return false unless head.is_a?(Sym)
 
       case head.name
-      when 'if', 'case', 'match', 'let', 'try', 'catch', 'finally', 'do', 'for', '->', '->>', '-?>', '-?>>', 'doto',
-           'fn', 'lambda', 'λ', 'macro'
+      when *Compiler::Language::MULTILINE_BODY_HEADS
         true
       else
         false
@@ -878,7 +874,7 @@ module Kapusta
 
       head = list_head(form)
       head.is_a?(Sym) &&
-        %w[fn lambda λ].include?(head.name)
+        Compiler::Language.function_head?(head.name)
     end
 
     def inline_three_arg_if?(args)

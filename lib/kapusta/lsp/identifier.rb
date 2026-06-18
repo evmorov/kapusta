@@ -15,7 +15,7 @@ module Kapusta
         return false if name.match?(/[#{Regexp.escape(DELIM_CHARS)}]/o)
         return false if name.match?(/\A-?\d/)
         return false if name.include?('.')
-        return false if Kapusta::Compiler::SPECIAL_FORMS.include?(name)
+        return false if Kapusta::Compiler::Language.special_form?(name)
 
         true
       end

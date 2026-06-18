@@ -80,18 +80,19 @@ module Kapusta
         end
 
         def emit_module_expr(args, env)
+          parsed = Language.parse_module_args(args)
           body = with_class_body do
-            emit_sequence(args[1..], env.child, :module, allow_method_definitions: true, result: false).first
+            emit_sequence(parsed.body, env.child, :module, allow_method_definitions: true, result: false).first
           end
-          emit_module_wrapper(args[0], body)
+          emit_module_wrapper(parsed.name, body)
         end
 
         def emit_class_expr(args, env)
-          name_sym, supers, body_forms = split_class_args(args)
+          parsed = Language.parse_class_args(args)
           body = with_class_body do
-            emit_sequence(body_forms, env.child, :class, allow_method_definitions: true, result: false).first
+            emit_sequence(parsed.body, env.child, :class, allow_method_definitions: true, result: false).first
           end
-          emit_class_wrapper(name_sym, supers, env,
+          emit_class_wrapper(parsed.name, parsed.supers, env,
                              body)
         end
 
@@ -158,51 +159,32 @@ module Kapusta
         end
 
         def emit_try(args, env, current_scope)
-          catches = []
-          finally_bodies = []
-          args[1..].each do |clause|
-            head = clause.head
-            if head.is_a?(Sym) && head.name == 'catch'
-              rest = clause.items[1..]
-              if rest[0].is_a?(Sym) && (rest[0].name.match?(/\A[A-Z]/) || rest[0].dotted?)
-                klass_form = rest[0]
-                bind_sym = rest[1]
-                body = rest[2..]
-              else
-                klass_form = nil
-                bind_sym = rest[0]
-                body = rest[1..]
-              end
-              catches << [klass_form, bind_sym, body]
-            elsif head.is_a?(Sym) && head.name == 'finally'
-              finally_bodies << clause.items[1..]
-            end
-          end
-
-          body_form = args[0]
+          parsed = Language.parse_try_args(args)
+          body_form = parsed.body
           body_code =
-            if body_form.is_a?(List) && body_form.head.is_a?(Sym) && body_form.head.name == 'do'
+            if Language.do_form?(body_form)
               emit_sequence(body_form.rest, env, current_scope, allow_method_definitions: false).first
             else
               emit_expr(body_form, env, current_scope)
             end
           lines = ['begin', indent(body_code)]
-          catches.each do |klass_form, bind_sym, body|
+          parsed.clauses.grep(Language::CatchClause).each do |clause|
             rescue_env = env.child
-            rescue_name = define_local(rescue_env, bind_sym.name)
-            body_code, = emit_sequence(body, rescue_env, current_scope, allow_method_definitions: false)
+            rescue_name = define_local(rescue_env, clause.bind_sym.name)
+            body_code, = emit_sequence(clause.body, rescue_env, current_scope, allow_method_definitions: false)
             rescue_line =
-              if klass_form
-                "rescue #{emit_expr(klass_form, env, current_scope)} => #{rescue_name}"
+              if clause.klass
+                "rescue #{emit_expr(clause.klass, env, current_scope)} => #{rescue_name}"
               else
                 "rescue StandardError => #{rescue_name}"
               end
             lines << rescue_line
             lines << indent(body_code)
           end
-          unless finally_bodies.empty?
-            ensure_code = finally_bodies.map do |body|
-              emit_sequence(body, env, current_scope, allow_method_definitions: false).first
+          finally_clauses = parsed.clauses.grep(Language::FinallyClause)
+          unless finally_clauses.empty?
+            ensure_code = finally_clauses.map do |clause|
+              emit_sequence(clause.body, env, current_scope, allow_method_definitions: false).first
             end.join("\n")
             lines << 'ensure'
             lines << indent(ensure_code)
@@ -407,14 +389,13 @@ module Kapusta
         end
 
         def emit_attached_block(block_form, env, current_scope)
-          return unless block_form.is_a?(List) && block_form.head.is_a?(Sym)
-          return unless %w[fn lambda λ].include?(block_form.head.name)
+          parsed = Language.parse_function_form(block_form)
+          return unless parsed&.anonymous?
 
-          pattern = block_form.items[1]
+          pattern = parsed.params
           return unless pattern.is_a?(Vec) && simple_parameter_pattern?(pattern)
 
-          body = block_form.items[2..]
-          params, body_code = build_simple_block_parts(pattern, body, env, current_scope)
+          params, body_code = build_simple_block_parts(pattern, parsed.body, env, current_scope)
           header = params.empty? ? 'do' : "do |#{params.join(', ')}|"
           [header, indent(body_code), 'end'].join("\n")
         end

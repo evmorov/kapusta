@@ -2,6 +2,7 @@
 
 require_relative 'error'
 require_relative 'compiler/lua_compat'
+require_relative 'compiler/language'
 require_relative 'compiler/normalizer'
 require_relative 'compiler/emitter'
 require_relative 'compiler/macro_expander'
@@ -9,30 +10,8 @@ require_relative 'compiler/macro_expander'
 module Kapusta
   module Compiler
     class Error < Kapusta::Error; end
-    CORE_SPECIAL_FORMS = %w[
-      fn defn lambda λ let local var global set if when unless case match
-      while for each do values
-      -> ->> -?> -?>> doto
-      icollect collect fcollect accumulate faccumulate
-      hashfn
-      . ?. :
-      ..
-      length
-      require
-      module class end
-      try catch finally
-      raise
-      ivar cvar gvar
-      ruby
-      tset
-      and or not
-      = not= < <= > >=
-      + - * / %
-      print
-      macro macros import-macros
-      quasi-sym quasi-list quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym
-    ].freeze
-    SPECIAL_FORMS = (CORE_SPECIAL_FORMS + LuaCompat::SPECIAL_FORMS).freeze
+    CORE_SPECIAL_FORMS = Language::CORE_SPECIAL_FORMS
+    SPECIAL_FORMS = Language::SPECIAL_FORMS
 
     def self.compile(source, path: '(kapusta)', target: nil)
       forms = Reader.read_all(source)
