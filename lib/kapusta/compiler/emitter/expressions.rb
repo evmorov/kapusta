@@ -50,7 +50,22 @@ module Kapusta
             emit_error!(:cannot_call_literal, value: head.inspect)
           end
 
+          if (method_call = method_call_with_receiver_expression(head, args))
+            return emit_colon(method_call, env, current_scope)
+          end
+
           emit_callable_call(emit_expr(head, env, current_scope), args, env, current_scope)
+        end
+
+        def method_call_with_receiver_expression(head, args)
+          return unless head.is_a?(List)
+          return unless head.items.length == 3
+          return unless head.head.is_a?(Sym) && head.head.name == ':'
+
+          method = head.items[2]
+          return unless method.is_a?(Symbol) || method.is_a?(String)
+
+          [head.items[1], method, *args]
         end
 
         def emit_special(name, args, env, current_scope)
