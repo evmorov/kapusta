@@ -6,7 +6,7 @@ module Kapusta
     MESSAGES = {
       accumulate_no_iterator: 'expected initial value and iterator binding table',
       auto_gensym_outside_quasiquote: 'auto-gensym %{name}# outside quasiquote',
-      bad_multisym: 'bad multisym: %{path}',
+      bad_multisym: 'bad multisym: %{path}; unresolved root %{segment}; %{suggestion}',
       bad_set_target: 'bad set target: %{target}',
       bad_shorthand: 'bad shorthand',
       bind_table_dots: 'unable to bind table ...',

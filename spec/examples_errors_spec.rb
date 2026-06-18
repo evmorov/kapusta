@@ -34,7 +34,9 @@ RSpec.describe 'examples-errors' do
 
   it 'bad-multisym.kap' do
     expect(run_error_example('bad-multisym.kap'))
-      .to eq("bad-multisym.kap:1:8: bad multisym: unbound.foo\n")
+      .to eq('bad-multisym.kap:1:8: bad multisym: unbound.foo; unresolved root unbound; ' \
+             'bind unbound first, use a capitalized constant path, ' \
+             "or call a method on an explicit receiver\n")
   end
 
   it 'bad-set-target.kap' do

@@ -453,10 +453,22 @@ module Kapusta
               const_path << segments[idx]
               idx += 1
             end
-            emit_error!(:bad_multisym, path: segments.join('.')) if const_path.empty?
+            emit_bad_multisym!(segments) if const_path.empty?
 
             [const_path.join('::'), segments[idx..]]
           end
+        end
+
+        def emit_bad_multisym!(segments)
+          root = segments[0]
+          emit_error!(:bad_multisym,
+                      path: segments.join('.'),
+                      segment: root,
+                      suggestion: bad_multisym_suggestion(root))
+        end
+
+        def bad_multisym_suggestion(root)
+          "bind #{root} first, use a capitalized constant path, or call a method on an explicit receiver"
         end
 
         def parenthesize(code)
