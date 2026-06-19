@@ -563,7 +563,7 @@ module Kapusta
           next
         elsif semantic_index.zero?
           hanging = append_first_call_arg(lines, arg, base, indent, semantic_length)
-        elsif append_inline_call_arg?(list, lines, arg, indent)
+        elsif append_packed_call_arg?(list, lines, arg, indent)
           nil
         elsif hanging && hang_subsequent_args
           lines << prefix_continuation(hanging, render(arg, indent + hanging.length))
@@ -597,61 +597,84 @@ module Kapusta
       hanging
     end
 
-    def append_inline_call_arg?(list, lines, arg, indent)
-      return false unless inline_call_arg?(list, arg)
+    def append_packed_call_arg?(list, lines, arg, indent)
+      return false unless packable_call_arg?(list, arg)
 
-      inline_call_arg_renders(list, arg, indent + lines.last.length + 1).each do |rendered|
-        first_line, *rest = rendered.lines(chomp: true)
-        candidate = "#{lines.last} #{first_line}"
-        next unless inline_arg_fits?(candidate, indent)
-
-        hanging = ' ' * (lines.last.length + 1)
-        lines[-1] = candidate
-        rest.each { |line| lines << "#{hanging}#{line}" }
+      packed = packed_call_arg(lines.last, list, arg, indent)
+      if packed
+        lines[-1] = packed.first
+        lines.concat(packed.drop(1))
         return true
       end
 
       false
     end
 
-    def inline_call_arg?(list, arg)
+    def packable_call_arg?(list, arg)
       return false if fn_form?(arg)
-      return true if arg.is_a?(Vec)
-      return true if arg.is_a?(HashLit) && inline_hash_call_arg?(list)
+      return true if packable_collection_call_arg?(list, arg)
 
       pack_call_args?(list) && flat_render(arg)
     end
 
-    def inline_call_arg_renders(list, arg, indent)
-      rendered = []
-      rendered << flat_vec_render(arg) if arg.is_a?(Vec)
-      rendered << flat_hash_render(arg) if arg.is_a?(HashLit)
-      rendered << flat_render(arg)
-      rendered << render(arg, indent) if arg.is_a?(Vec) || local_hash_call_arg?(list, arg)
-      rendered.compact.uniq
+    def packable_collection_call_arg?(list, arg)
+      return true if arg.is_a?(Vec)
+
+      arg.is_a?(HashLit) && packable_hash_call_arg?(list)
+    end
+
+    def packed_call_arg(current_line, list, arg, indent)
+      packable_call_arg_renderings(list, arg, indent + current_line.length + 1).each do |rendered|
+        first_line, *rest = rendered.lines(chomp: true)
+        candidate = "#{current_line} #{first_line}"
+        next unless inline_arg_fits?(candidate, indent)
+
+        hanging = ' ' * (current_line.length + 1)
+        return [candidate, *rest.map { |line| "#{hanging}#{line}" }]
+      end
+
+      nil
+    end
+
+    def packable_call_arg_renderings(list, arg, indent)
+      [
+        flat_collection_render(arg),
+        flat_render(arg),
+        multiline_packable_call_arg_rendering(list, arg, indent)
+      ].compact.uniq
+    end
+
+    def multiline_packable_call_arg_rendering(list, arg, indent)
+      return render(arg, indent) if arg.is_a?(Vec)
+      return render(arg, indent) if local_hash_call_arg?(list, arg)
+
+      nil
     end
 
     def local_hash_call_arg?(list, arg)
-      head = list_head(list)
-      arg.is_a?(HashLit) && head.is_a?(Sym) && head.name == 'local'
+      arg.is_a?(HashLit) && head_name(list) == 'local'
     end
 
-    def flat_vec_render(vec)
-      return if contains_comments?(vec.items)
+    def flat_collection_render(form)
+      case form
+      when Vec
+        flat_delimited_render(form.items, '[', ']') { |item| flat_render(item) }
+      when HashLit
+        return if contains_comments?(form.entries)
 
-      rendered = vec.items.map { |item| flat_render(item) }
-      return if rendered.any?(&:nil?)
-
-      "[#{rendered.join(' ')}]"
+        flat_delimited_render(form.pairs, '{', '}') { |key, value| flat_hash_pair(key, value) }
+      end
     end
 
-    def flat_hash_render(hash)
-      return if contains_comments?(hash.entries)
+    def flat_delimited_render(items, open, close)
+      return if contains_comments?(items)
 
-      rendered = hash.pairs.map { |key, value| flat_hash_pair(key, value) }
+      rendered = items.map do |item|
+        item.is_a?(Array) ? yield(*item) : yield(item)
+      end
       return if rendered.any?(&:nil?)
 
-      "{#{rendered.join(' ')}}"
+      "#{open}#{rendered.join(' ')}#{close}"
     end
 
     def hang_call_args?(list, base, indent)
@@ -660,21 +683,23 @@ module Kapusta
 
       flat = flat_call_render(list)
       return false unless flat
-      return true if hash_first_call_arg?(list) && !fits?(flat, indent)
-      return true if pack_call_args?(list) && !fits?(flat, indent)
-      return false unless operator_call?(list)
 
-      !fits?(flat, indent)
+      overflowing = !fits?(flat, indent)
+      return true if overflowing && hanging_overflow_call?(list)
+
+      operator_call?(list) && overflowing
     end
 
     def pack_call_args?(list)
-      head = list_head(list)
-      head.is_a?(Sym) && head.name.match?(/\A[a-z0-9_-][\w-]*\./)
+      head_name(list)&.match?(/\A[a-z0-9_-][\w-]*\./)
     end
 
-    def inline_hash_call_arg?(list)
-      head = list_head(list)
-      (head.is_a?(Sym) && head.name == 'local') || pack_call_args?(list)
+    def packable_hash_call_arg?(list)
+      head_name(list) == 'local' || pack_call_args?(list)
+    end
+
+    def hanging_overflow_call?(list)
+      hash_first_call_arg?(list) || pack_call_args?(list)
     end
 
     def hash_first_call_arg?(list)
@@ -682,8 +707,7 @@ module Kapusta
     end
 
     def set_function_value?(list)
-      head = list_head(list)
-      head.is_a?(Sym) && head.name == 'set' && fn_form?(list_rest(list)[1])
+      head_name(list) == 'set' && fn_form?(list_rest(list)[1])
     end
 
     def source_hangs_call_args?(list, base)
@@ -699,8 +723,7 @@ module Kapusta
     end
 
     def operator_call?(list)
-      head = list_head(list)
-      head.is_a?(Sym) && head.name.match?(/\A[^\w.]+\z/)
+      head_name(list)&.match?(/\A[^\w.]+\z/)
     end
 
     def flat_call_render(list)
@@ -714,8 +737,8 @@ module Kapusta
     end
 
     def flat_call_arg_render(arg)
-      return flat_vec_render(arg) if arg.is_a?(Vec)
-      return flat_hash_render(arg) if arg.is_a?(HashLit)
+      collection = flat_collection_render(arg)
+      return collection if collection
 
       flat_render(arg)
     end
@@ -1101,6 +1124,11 @@ module Kapusta
 
     def list_head(list)
       semantic_items(list.items).first
+    end
+
+    def head_name(list)
+      head = list_head(list)
+      head.name if head.is_a?(Sym)
     end
 
     def list_rest(list)
