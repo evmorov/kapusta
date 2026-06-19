@@ -42,6 +42,7 @@ module Kapusta
       import_macros_module_no_exports: 'import-macros: module %{module} has no export table',
       import_macros_module_not_found: 'import-macros: module %{module} not found',
       invalid_class_name: 'invalid class name: %{name}',
+      invalid_header_body_form: '%{scope} body form must be a declaration or known special form: %{name}',
       invalid_module_name: 'invalid module name: %{name}',
       let_no_body: 'expected body expression',
       let_odd_bindings: 'expected even number of name/value bindings',

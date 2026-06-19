@@ -111,6 +111,16 @@ RSpec.describe Kapusta::LSP do
     expect(responses.last.dig('params', 'diagnostics')).to be_empty
   end
 
+  it 'publishes diagnostics for an unknown class body form' do
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', "(class BankAccount)\n\n(n initialize [owner balance]\n  owner)\n\n(end)\n")
+    )
+
+    expect(responses.last.dig('params', 'diagnostics', 0, 'message'))
+      .to eq('class body form must be a declaration or known special form: n')
+  end
+
   it 'returns a TextEdit for formatting' do
     responses = run(
       frame_initialize,

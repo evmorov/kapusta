@@ -144,6 +144,8 @@ module Kapusta
             return [code, env] if code
           end
 
+          validate_header_body_form!(form, env, current_scope, allow_method_definitions:)
+
           if named_function_form?(form)
             emit_named_fn_assignment(form, env, current_scope)
           elsif local_form?(form)
@@ -162,6 +164,19 @@ module Kapusta
           else
             [emit_expr(form, env, current_scope), env]
           end
+        end
+
+        def validate_header_body_form!(form, env, current_scope, allow_method_definitions:)
+          return unless allow_method_definitions
+          return unless %i[module class].include?(current_scope)
+          return unless form.is_a?(List) && form.head.is_a?(Sym)
+
+          name = form.head.name
+          return if special_form?(name)
+          return if form.head.dotted?
+          return if env.lookup_if_defined(name)
+
+          emit_error!(:invalid_header_body_form, scope: current_scope, name:)
         end
 
         def class_or_module_form?(form)

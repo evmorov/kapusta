@@ -138,4 +138,17 @@ RSpec.describe Kapusta::CLI do
     expect(status.success?).to eq(true), stderr
     expect(stdout).to eq("kapusta #{Kapusta::VERSION}\n")
   end
+
+  it 'reports kapusta-ls lint diagnostics for an unknown class body form' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'broken.kap')
+      File.write(path, "(class BankAccount)\n\n(n initialize [owner balance]\n  owner)\n\n(end)\n")
+
+      stdout, stderr, status = Open3.capture3(RbConfig.ruby, File.expand_path('../exe/kapusta-ls', __dir__),
+                                              '--lint', path)
+
+      expect(status.success?).to eq(false), stdout
+      expect(stderr).to include('class body form must be a declaration or known special form: n')
+    end
+  end
 end
