@@ -3,12 +3,59 @@
 
 require_relative '../lib/kapusta/lsp'
 
+def check_paths(args)
+  paths = args.flat_map do |arg|
+    if File.directory?(arg)
+      Dir[File.join(arg, '**', '*.kap')]
+    else
+      arg
+    end
+  end.uniq.sort
+
+  if paths.empty?
+    warn 'kapusta-ls: no .kap files found'
+    return 1
+  end
+
+  failures = []
+  paths.each do |path|
+    Kapusta.compile(File.read(path), path:)
+  rescue Kapusta::Error => e
+    failures << e.formatted
+  rescue SystemCallError => e
+    failures << "#{path}: #{e.message}"
+  end
+
+  if failures.empty?
+    puts "kapusta-ls checked #{paths.length} files"
+    0
+  else
+    warn "#{failures.length} files reported kapusta-ls diagnostics:"
+    failures.each { |failure| warn "  #{failure}" }
+    1
+  end
+end
+
 case ARGV.first
 when '--version', '-v'
   puts "kapusta-ls #{Kapusta::VERSION}"
 when '--help', '-h'
-  puts 'usage: kapusta-ls           # speak LSP over stdio'
+  puts 'usage: kapusta-ls             # speak LSP over stdio'
+  puts '       kapusta-ls FILES...    # check files or directories'
+  puts '       kapusta-ls --lint FILES...'
   puts '       kapusta-ls --version'
-else
+when '--server'
   Kapusta::LSP.start
+when '--lint'
+  exit check_paths(ARGV[1..])
+else
+  if ARGV.empty?
+    Kapusta::LSP.start
+  elsif ARGV.first.start_with?('-')
+    warn "kapusta-ls: unknown option #{ARGV.first}"
+    warn 'usage: kapusta-ls [--lint] FILES...'
+    exit 1
+  else
+    exit check_paths(ARGV)
+  end
 end

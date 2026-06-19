@@ -10,6 +10,9 @@ bundle exec rubocop -A
 echo "== kapfmt =="
 for file in examples/*.kap; do ./exe/kapfmt --fix "$file"; done
 
+echo "== kapusta-ls =="
+./exe/kapusta-ls --lint examples
+
 echo "== fennel parity =="
 bin/fennel-parity
 
