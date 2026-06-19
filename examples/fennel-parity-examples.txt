@@ -1,7 +1,7 @@
 ackermann
 anonymous-greeter
-array-sign
 arrange-coins
+array-sign
 case-vs-match
 classify-wallet
 climbing-stairs
@@ -16,6 +16,7 @@ falling-drops
 fib
 fizzbuzz
 gcd
+good-pairs
 hashfn
 leap-year
 macros-dbg
@@ -29,6 +30,7 @@ macros-unless
 macros-when-let
 match
 max-achievable
+maximum-subarray
 min-max
 nested-nil-pattern
 non-constant-local
@@ -37,6 +39,7 @@ packet-router
 points
 power-of-three
 primes
+range-width
 safe-lookup
 shapes
 squares

@@ -42,8 +42,8 @@ module Kapusta
 
         def try_emit_native_pattern_bind(pattern, value_code, env)
           case pattern
-          when Vec
-            try_emit_native_vec_bind(pattern, value_code, env)
+          when Vec, List
+            try_emit_native_seq_bind(pattern, value_code, env)
           when HashLit
             try_emit_native_hash_bind(pattern, value_code, env)
           end
@@ -51,7 +51,7 @@ module Kapusta
           nil
         end
 
-        def try_emit_native_vec_bind(pattern, value_code, env)
+        def try_emit_native_seq_bind(pattern, value_code, env)
           validate_destructure_pattern!(pattern)
           parts = []
           deferred = []

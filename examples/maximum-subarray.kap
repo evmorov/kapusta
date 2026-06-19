@@ -1,11 +1,27 @@
+(fn max-subarray-step [current best n]
+  (let [extended (+ current n)
+        next-current (if (> extended n) extended n)
+        next-best (if (> next-current best) next-current best)]
+    (values next-current next-best)))
+
+(fn max-subarray-state [nums]
+  (var current 0)
+  (var best 0)
+  (var initialized? false)
+  (each [_ n (ipairs nums)]
+    (if initialized?
+        (let [(next-current next-best) (max-subarray-step current best n)]
+          (set current next-current)
+          (set best next-best))
+        (do
+          (set current n)
+          (set best n)
+          (set initialized? true))))
+  (values current best))
+
 (fn max-subarray [nums]
-  (var best (. nums 0))
-  (var curr (. nums 0))
-  (for [i 1 (- (length nums) 1)]
-    (let [n (. nums i)]
-      (set curr (if (> (+ curr n) n) (+ curr n) n))
-      (when (> curr best) (set best curr))))
-  best)
+  (let [(_current best) (max-subarray-state nums)]
+    best))
 
 (print (max-subarray [-2 1 -3 4 -1 2 1 -5 4]))
 (print (max-subarray [1]))

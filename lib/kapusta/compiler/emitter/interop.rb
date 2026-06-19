@@ -292,7 +292,7 @@ module Kapusta
         end
 
         def emit_self_method_binding_call(binding, args, env, current_scope)
-          positional = args.map { |arg| emit_expr(arg, env, current_scope) }
+          positional = emit_call_args(args, env, current_scope)
           emit_direct_self_method_call(binding.ruby_name, positional)
         end
 
@@ -376,12 +376,27 @@ module Kapusta
 
           if !remaining.empty? && remaining.last.is_a?(HashLit) && remaining.last.all_sym_keys?
             kwargs = emit_expr(remaining.last, env, current_scope)
-            positional = remaining[0...-1].map { |arg| emit_expr(arg, env, current_scope) }
+            positional = emit_call_args(remaining[0...-1], env, current_scope)
           else
             kwargs = nil
-            positional = remaining.map { |arg| emit_expr(arg, env, current_scope) }
+            positional = emit_call_args(remaining, env, current_scope)
           end
           [positional, kwargs, block_form]
+        end
+
+        def emit_call_args(args, env, current_scope)
+          args.map.with_index do |arg, index|
+            code = emit_expr(arg, env, current_scope)
+            index == args.length - 1 && multi_value_call_arg?(arg, env) ? "*#{code}" : code
+          end
+        end
+
+        def multi_value_call_arg?(arg, env)
+          return true if Language.list_head?(arg, 'values')
+          return false unless arg.is_a?(List) && arg.head.is_a?(Sym)
+
+          binding = env.lookup_if_defined(arg.head.name)
+          callable_method_binding?(binding) && binding.multi_return
         end
 
         def emit_block_proc(block_form, env, current_scope)

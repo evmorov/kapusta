@@ -32,6 +32,7 @@ falling-drops
 fib
 fizzbuzz
 gcd
+good-pairs
 greet
 happy-number
 hashfn
@@ -56,8 +57,8 @@ maximum-subarray
 min-max
 minimum-start-value
 module-header
-nested-nil-pattern
 move-zeroes
+nested-nil-pattern
 number-of-1-bits
 number-of-steps
 or-patterns
@@ -70,6 +71,7 @@ points
 power-of-three
 primes
 raindrops
+range-width
 recent-counter
 record
 reverse-integer

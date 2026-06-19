@@ -337,6 +337,10 @@ RSpec.describe 'examples' do
     expect(run_example('gcd.kap')).to eq("12\n6\n")
   end
 
+  it 'good-pairs.kap' do
+    expect(run_example('good-pairs.kap')).to eq("4\n6\n0\n")
+  end
+
   it 'greet.kap' do
     expect(run_example('greet.kap', argv: ['Ada'])).to eq(<<~OUT)
       "Hello, Ada!"
@@ -419,6 +423,14 @@ RSpec.describe 'examples' do
   it 'raindrops.kap' do
     expect(run_example('raindrops.kap')).to eq(<<~OUT)
       "PlingPlang"
+    OUT
+  end
+
+  it 'range-width.kap' do
+    expect(run_example('range-width.kap')).to eq(<<~OUT)
+      8
+      0
+      11
     OUT
   end
 

@@ -1,0 +1,18 @@
+(fn add-good-pairs [pairs counts n]
+  (let [prev (or (. counts n) 0)
+        next-pairs (+ pairs prev)]
+    (tset counts n (+ prev 1))
+    (values next-pairs counts)))
+
+(fn num-identical-pairs [nums]
+  (var pairs 0)
+  (var counts {})
+  (each [_ n (ipairs nums)]
+    (let [(next-pairs next-counts) (add-good-pairs pairs counts n)]
+      (set pairs next-pairs)
+      (set counts next-counts)))
+  pairs)
+
+(print (num-identical-pairs [1 2 3 1 1 3]))
+(print (num-identical-pairs [1 1 1 1]))
+(print (num-identical-pairs [1 2 3]))

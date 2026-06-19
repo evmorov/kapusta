@@ -1,15 +1,40 @@
-def max_subarray(nums)
-  best = nums[0]
-  curr = nums[0]
-  1.step(nums.length - 1) do |i|
-    n = nums[i]
-    curr = if (curr + n) > n
-      curr + n
-    else
-      n
-    end
-    best = curr if curr > best
+def max_subarray_step(current, best, n)
+  extended = current + n
+  next_current = if extended > n
+    extended
+  else
+    n
   end
+  next_best = if next_current > best
+    next_current
+  else
+    best
+  end
+  [next_current, next_best]
+end
+
+def max_subarray_state(nums)
+  current = 0
+  best = 0
+  initialized_q = false
+  nums.each do |n|
+    if initialized_q
+      lambda do
+        next_current, next_best = max_subarray_step(current, best, n)
+        current = next_current
+        best = next_best
+      end.call
+    else
+      current = n
+      best = n
+      initialized_q = true
+    end
+  end
+  [current, best]
+end
+
+def max_subarray(nums)
+  _current, best = max_subarray_state(nums)
   best
 end
 

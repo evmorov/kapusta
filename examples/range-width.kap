@@ -1,0 +1,14 @@
+(fn range-width [lo hi]
+  (- hi lo))
+
+(fn min-max-range [nums]
+  (var lo 1000000)
+  (var hi -1000000)
+  (each [_ n (ipairs nums)]
+    (when (< n lo) (set lo n))
+    (when (> n hi) (set hi n)))
+  (range-width (values lo hi)))
+
+(print (min-max-range [4 2 9 1 7]))
+(print (min-max-range [10 10 10]))
+(print (min-max-range [-3 8 0 5]))

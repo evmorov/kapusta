@@ -509,7 +509,7 @@ module Kapusta
           return if pattern.name == '_'
 
           add_binding(pattern, scope, kind)
-        when Vec
+        when Vec, List
           bind_vec_pattern(pattern, scope, kind)
         when HashLit
           bind_hash_pattern(pattern, scope, kind)

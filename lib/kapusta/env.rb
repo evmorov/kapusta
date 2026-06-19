@@ -2,8 +2,8 @@
 
 module Kapusta
   class Env
-    MethodBinding = Struct.new(:ruby_name)
-    SelfMethodBinding = Struct.new(:ruby_name)
+    MethodBinding = Struct.new(:ruby_name, :multi_return)
+    SelfMethodBinding = Struct.new(:ruby_name, :multi_return)
 
     def initialize(parent = nil)
       @parent = parent

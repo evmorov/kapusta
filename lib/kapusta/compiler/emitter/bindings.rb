@@ -90,7 +90,8 @@ module Kapusta
           ruby_name = Kapusta.kebab_to_snake(name_sym.name)
           return unless direct_method_name?(ruby_name)
 
-          env.define(name_sym.name, Env::SelfMethodBinding.new(ruby_name))
+          parsed = Language.parse_function_form(form)
+          env.define(name_sym.name, Env::SelfMethodBinding.new(ruby_name, multi_return_body?(parsed.body)))
         end
 
         def emit_toplevel_method_definition(form, env)
@@ -105,9 +106,13 @@ module Kapusta
           return [nil, env] unless ruby_name
           return [nil, env] if captures_outer_binding?(body, env, pattern_names(pattern))
 
-          env.define(name_sym.name, Env::MethodBinding.new(ruby_name))
+          env.define(name_sym.name, Env::MethodBinding.new(ruby_name, multi_return_body?(body)))
           definition = emit_direct_method_definition(name_sym, pattern, body, env)
           [definition, env]
+        end
+
+        def multi_return_body?(body)
+          Language.list_head?(body.last, 'values')
         end
 
         def emit_named_fn_assignment(form, env, current_scope)
@@ -329,7 +334,7 @@ module Kapusta
         end
 
         def check_destructure_value!(pattern, value_form)
-          return unless pattern.is_a?(Vec) || pattern.is_a?(HashLit)
+          return unless pattern.is_a?(Vec) || pattern.is_a?(List) || pattern.is_a?(HashLit)
 
           case value_form
           when String, Numeric, Symbol, true, false
@@ -347,7 +352,7 @@ module Kapusta
           case pattern
           when Sym
             yield pattern unless pattern.name == '_'
-          when Vec
+          when Vec, List
             pattern.items.each do |item|
               next if item.is_a?(Sym) && ['&', '...'].include?(item.name)
 
