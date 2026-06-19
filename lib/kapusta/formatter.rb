@@ -59,7 +59,26 @@ module Kapusta
     private
 
     def validate_kapusta_source(source, path)
+      return validate_macro_module_source(source, path) if macro_module_path?(path)
+
       Kapusta::Compiler.compile(source, path:)
+    end
+
+    def validate_macro_module_source(source, path)
+      forms = Reader.read_all(source)
+      raise Error, 'macro module has no export table' unless forms.last.is_a?(HashLit)
+
+      processed = forms.map do |form|
+        Compiler::MacroLowerer.lower_module_form(form, error_class: Error)
+      end
+      wrapper = List.new([List.new([Sym.new('fn'), Vec.new([]), *processed])])
+      Compiler.compile_forms([wrapper], path:)
+    rescue Kapusta::Error => e
+      raise e.with_defaults(path:)
+    end
+
+    def macro_module_path?(path)
+      path && File.extname(path) == '.kapm'
     end
 
     def parse_args(argv)
@@ -198,7 +217,11 @@ module Kapusta
       rendered = render(inner, indent + prefix.length, force_expand:)
       lines = rendered.lines(chomp: true)
       pad = ' ' * prefix.length
-      lines.each_with_index.map { |line, i| i.zero? ? "#{prefix}#{line}" : "#{pad}#{line}" }.join("\n")
+      lines.each_with_index.map do |line, i|
+        next '' if line.empty?
+
+        i.zero? ? "#{prefix}#{line}" : "#{pad}#{line}"
+      end.join("\n")
     end
 
     def flat_render(form)
@@ -479,7 +502,7 @@ module Kapusta
     def prefix_continuation(prefix, rendered)
       first_line, *rest = rendered.lines(chomp: true)
       pad = ' ' * prefix.length
-      ["#{prefix}#{first_line}", *rest.map { |line| "#{pad}#{line}" }].join("\n")
+      ["#{prefix}#{first_line}", *rest.map { |line| line.empty? ? '' : "#{pad}#{line}" }].join("\n")
     end
 
     def render_case(head, args, indent)
@@ -1066,7 +1089,11 @@ module Kapusta
 
     def indent_block(text, amount)
       prefix = ' ' * amount
-      text.lines.map { |line| "#{prefix}#{line}" }.join
+      text.lines.map { |line| line.strip.empty? ? blank_line_for(line) : "#{prefix}#{line}" }.join
+    end
+
+    def blank_line_for(line)
+      line.end_with?("\n") ? "\n" : ''
     end
 
     def append_suffix(lines, suffix)
@@ -1136,7 +1163,7 @@ module Kapusta
     end
 
     def list_raw_rest(list)
-      index = list.items.index { |item| !comment?(item) }
+      index = list.items.index { |item| !non_semantic?(item) }
       return list.items if index.nil?
 
       list.items[(index + 1)..] || []
@@ -1147,7 +1174,7 @@ module Kapusta
       seen = 0
 
       while split_index < items.length && seen < semantic_count
-        seen += 1 unless comment?(items[split_index])
+        seen += 1 unless non_semantic?(items[split_index])
         split_index += 1
       end
 

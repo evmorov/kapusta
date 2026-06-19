@@ -98,6 +98,29 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'checks kapm macro modules with quasiquoted function templates' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kapm')
+      File.write(path, <<~KAP)
+        (fn defcommand [name args runtime-args body1 & body]
+          `(fn ,name
+             ,args
+
+             (fn ,runtime-args
+               ,body1
+               ,(unpack body))))
+
+        {: defcommand}
+      KAP
+
+      error_output = capture_stderr do
+        expect(described_class.new(['--check', path]).run).to eq(0)
+      end
+
+      expect(error_output).to eq('')
+    end
+  end
+
   it 'reads stdin when the input path is -' do
     output = with_stdin("(let [name (or (. ARGV 0) \"world\")](puts (.. \"Hello, \" name \"!\")))\n") do
       capture_stdout do
