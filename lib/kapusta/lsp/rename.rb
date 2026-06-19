@@ -130,7 +130,7 @@ module Kapusta
         end
 
         if binding
-          return constant_target(walker, binding, seg) if %i[module class].include?(binding.kind)
+          return constant_target(walker, binding, seg) if Compiler::Language.header_scope?(binding.kind)
 
           return local_target(walker, binding, seg)
         end
@@ -138,7 +138,7 @@ module Kapusta
         if reference
           target = reference.target
           if target
-            return constant_target(walker, target, seg, sym:) if %i[module class].include?(target.kind)
+            return constant_target(walker, target, seg, sym:) if Compiler::Language.header_scope?(target.kind)
 
             return local_target(walker, target, seg, sym:)
           end

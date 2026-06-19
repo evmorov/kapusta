@@ -88,7 +88,7 @@ module Kapusta
             return i + 1
           end
 
-          if bodyless_header?(form)
+          if Compiler::Language.bodyless_header?(form)
             i = walk_bodyless_header(form, forms, i + 1, scope)
             next
           end
@@ -140,27 +140,13 @@ module Kapusta
         Scope.new(@scope_seq, parent, {}, kind)
       end
 
-      def bodyless_header?(form)
-        return false unless Compiler::Language.header_form?(form)
-
-        case form.head.name
-        when 'module'
-          parsed = Compiler::Language.parse_module_form(form)
-          parsed.body.empty? || (parsed.body.length == 1 && bodyless_header?(parsed.body[0]))
-        when 'class'
-          Compiler::Language.parse_class_form(form).body.empty?
-        else
-          false
-        end
-      end
-
       def walk_bodyless_header(form, forms, body_start, scope)
         case form.head.name
         when 'module'
           parsed = Compiler::Language.parse_module_form(form)
           binding = parsed.name.is_a?(Sym) ? add_constant_binding(parsed.name, scope, :module) : nil
           inside_module_or_class do
-            if parsed.body.length == 1 && bodyless_header?(parsed.body[0])
+            if parsed.body.length == 1 && Compiler::Language.bodyless_header?(parsed.body[0])
               walk_bodyless_header(parsed.body[0], forms, body_start, scope)
             else
               body_scope = make_scope(scope, :module)

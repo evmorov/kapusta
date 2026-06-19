@@ -50,7 +50,7 @@ module Kapusta
               return [join_definition_aware(entries, current_scope), i + 1]
             end
 
-            if bodyless_header?(form)
+            if Language.bodyless_header?(form)
               header_code, i = emit_bodyless_header(form, forms, i + 1, env)
               entries << [form, header_code]
               next
@@ -82,28 +82,12 @@ module Kapusta
           emit_error!(code, name: name_sym.respond_to?(:name) ? name_sym.name : name_sym.inspect)
         end
 
-        def bodyless_header?(form)
-          return false unless Language.header_form?(form)
-
-          case form.head.name
-          when 'module'
-            parsed = Language.parse_module_form(form)
-            return true if parsed.body.empty?
-
-            parsed.body.length == 1 && bodyless_header?(parsed.body[0])
-          when 'class'
-            Language.parse_class_form(form).body.empty?
-          else
-            false
-          end
-        end
-
         def emit_bodyless_header(form, forms, body_start, env)
           head = form.head.name
           validate_header_name!(form, head)
           if head == 'module'
             parsed = Language.parse_module_form(form)
-            if parsed.body.length == 1 && bodyless_header?(parsed.body[0])
+            if parsed.body.length == 1 && Language.bodyless_header?(parsed.body[0])
               inner_code, next_i = emit_bodyless_header(parsed.body[0], forms, body_start, env)
               [emit_direct_module_header(parsed.name, inner_code) || emit_module_wrapper(parsed.name, inner_code),
                next_i]
@@ -132,14 +116,14 @@ module Kapusta
         end
 
         def lower_defn_in_sequence(form, current_scope)
-          emit_error!(:defn_outside_header) unless %i[module class].include?(current_scope)
+          emit_error!(:defn_outside_header) unless Language.header_scope?(current_scope)
           lower_defn_to_fn(form)
         end
 
         def emit_form_body(form, env, current_scope, allow_method_definitions:, result_needed:)
           if allow_method_definitions &&
              method_definition_form?(form) &&
-             %i[toplevel module class].include?(current_scope)
+             Language.definition_scope?(current_scope)
             code, env = emit_definition_form(form, env, current_scope)
             return [code, env] if code
           end
@@ -168,7 +152,7 @@ module Kapusta
 
         def validate_header_body_form!(form, env, current_scope, allow_method_definitions:)
           return unless allow_method_definitions
-          return unless %i[module class].include?(current_scope)
+          return unless Language.header_scope?(current_scope)
           return unless form.is_a?(List) && form.head.is_a?(Sym)
 
           name = form.head.name
@@ -236,7 +220,7 @@ module Kapusta
         end
 
         def blank_between_definitions?(prev_form, curr_form, current_scope)
-          return false unless %i[toplevel module class].include?(current_scope)
+          return false unless Language.definition_scope?(current_scope)
 
           definition_form?(prev_form) || definition_form?(curr_form)
         end

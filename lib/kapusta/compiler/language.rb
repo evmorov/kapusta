@@ -121,6 +121,8 @@ module Kapusta
       MACRO_FUNCTION_HEADS = (FUNCTION_HEADS + %w[macro]).freeze
       BINDING_HEADS = %w[local var].freeze
       HEADER_HEADS = %w[class module].freeze
+      HEADER_SCOPES = %i[module class].freeze
+      DEFINITION_SCOPES = ([:toplevel] + HEADER_SCOPES).freeze
       THREAD_HEADS = %w[-> ->> -?> -?>>].freeze
       PIPELINE_HEADS = (THREAD_HEADS + %w[doto]).freeze
       SHORT_PIPELINE_HEADS = %w[-?> -?>>].freeze
@@ -215,6 +217,10 @@ module Kapusta
 
       def header_head?(name) = HEADER_HEADS.include?(name)
 
+      def header_scope?(scope) = HEADER_SCOPES.include?(scope)
+
+      def definition_scope?(scope) = DEFINITION_SCOPES.include?(scope)
+
       def pipeline_head?(name) = PIPELINE_HEADS.include?(name)
 
       def short_pipeline_head?(name) = SHORT_PIPELINE_HEADS.include?(name)
@@ -230,6 +236,20 @@ module Kapusta
       def never_flat_head?(name) = NEVER_FLAT_HEADS.include?(name)
 
       def quasi_head?(name) = QUASI_HEADS.include?(name)
+
+      def bodyless_header?(form)
+        return false unless header_form?(form)
+
+        case form.head.name
+        when 'module'
+          parsed = parse_module_form(form)
+          parsed.body.empty? || (parsed.body.length == 1 && bodyless_header?(parsed.body[0]))
+        when 'class'
+          parse_class_form(form).body.empty?
+        else
+          false
+        end
+      end
 
       def function_form?(form, heads: FUNCTION_HEADS)
         !parse_function_form(form, heads:).nil?

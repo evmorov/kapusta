@@ -65,7 +65,7 @@ module Kapusta
         result = []
         @entries.each do |uri, entry|
           entry.walker.bindings.each do |b|
-            next unless %i[module class].include?(b.kind)
+            next unless Compiler::Language.header_scope?(b.kind)
 
             segs = b.sym.dotted? ? b.sym.segments : [b.sym.name]
             result << [uri, b] if segs == prefix
@@ -104,7 +104,7 @@ module Kapusta
       def constant_definition_with_prefix?(prefix, except_prefix: nil)
         @entries.any? do |_uri, entry|
           entry.walker.bindings.any? do |b|
-            next false unless %i[module class].include?(b.kind)
+            next false unless Compiler::Language.header_scope?(b.kind)
             next false if except_prefix && matches_prefix?(b.sym, except_prefix)
 
             matches_prefix?(b.sym, prefix)
@@ -147,7 +147,7 @@ module Kapusta
         @entries.each do |uri, entry|
           occs = []
           entry.walker.bindings.each do |b|
-            next unless %i[module class].include?(b.kind)
+            next unless Compiler::Language.header_scope?(b.kind)
 
             occs << b if matches_prefix?(b.sym, prefix)
           end
