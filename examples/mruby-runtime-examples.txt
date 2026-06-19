@@ -54,6 +54,7 @@ match
 max-achievable
 maximum-subarray
 min-max
+minimum-start-value
 module-header
 nested-nil-pattern
 move-zeroes

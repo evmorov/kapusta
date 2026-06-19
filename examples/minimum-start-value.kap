@@ -1,0 +1,19 @@
+(fn minimum-start-value [nums]
+  (var prefix 0)
+  (var lowest 0)
+  (each [_ n (ipairs nums)]
+    (set prefix (+ prefix n))
+    (when (< prefix lowest) (set lowest prefix)))
+  (values (+ 1 (- lowest)) prefix))
+
+(let [[start total] (minimum-start-value [-3 2 -3 4 2])]
+  (print start)
+  (print total))
+
+(let [[start total] (minimum-start-value [1 2])]
+  (print start)
+  (print total))
+
+(let [[start total] (minimum-start-value [1 -2 -3])]
+  (print start)
+  (print total))

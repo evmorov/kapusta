@@ -375,6 +375,17 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'minimum-start-value.kap' do
+    expect(run_example('minimum-start-value.kap')).to eq(<<~OUT)
+      5
+      2
+      1
+      3
+      5
+      -4
+    OUT
+  end
+
   it 'module-header.kap' do
     expect(run_example('module-header.kap')).to eq(<<~OUT)
       "Hello, Ada!"
