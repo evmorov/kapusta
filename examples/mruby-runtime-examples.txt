@@ -19,6 +19,7 @@ climbing-stairs
 contains-duplicate
 convert-temperature
 count-effects
+count-items-matching-rule
 counter
 destructure
 divisibility-stats
@@ -39,6 +40,7 @@ hashfn
 hit-counter
 kwargs
 leap-year
+left-right-difference
 length-of-last-word
 macros-dbg
 macros-import
@@ -77,6 +79,7 @@ record
 reverse-integer
 roman-to-integer
 ruby-eval
+running-sum
 safe-lookup
 scopes
 shapes

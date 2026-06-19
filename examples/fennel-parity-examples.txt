@@ -7,6 +7,7 @@ classify-wallet
 climbing-stairs
 convert-temperature
 count-effects
+count-items-matching-rule
 destructure
 divisibility-stats
 equal-sums
@@ -19,6 +20,7 @@ gcd
 good-pairs
 hashfn
 leap-year
+left-right-difference
 macros-dbg
 macros-import
 macros-import-helpers
@@ -40,6 +42,7 @@ points
 power-of-three
 primes
 range-width
+running-sum
 safe-lookup
 shapes
 squares

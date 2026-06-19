@@ -553,7 +553,7 @@ module Kapusta
       lines = [base]
       args = list_raw_rest(list)
       semantic_length = semantic_items(args).length
-      hang_subsequent_args = hang_call_args?(list, indent)
+      hang_subsequent_args = hang_call_args?(list, base, indent)
 
       semantic_index = 0
       hanging = nil
@@ -563,10 +563,10 @@ module Kapusta
           next
         elsif semantic_index.zero?
           hanging = append_first_call_arg(lines, arg, base, indent, semantic_length)
+        elsif append_inline_call_arg?(list, lines, arg, indent)
+          nil
         elsif hanging && hang_subsequent_args
           lines << prefix_continuation(hanging, render(arg, indent + hanging.length))
-        elsif append_inline_call_arg?(lines, arg, indent)
-          nil
         else
           lines << indent_block(render(arg, indent + INDENT), INDENT)
         end
@@ -597,24 +597,72 @@ module Kapusta
       hanging
     end
 
-    def append_inline_call_arg?(lines, arg, indent)
-      return false unless arg.is_a?(Vec)
+    def append_inline_call_arg?(list, lines, arg, indent)
+      return false unless inline_call_arg?(list, arg)
 
-      rendered = render(arg, indent + lines.last.length + 1)
-      return false unless single_line?(rendered)
+      inline_call_arg_renders(arg, indent + lines.last.length + 1).each do |rendered|
+        first_line, *rest = rendered.lines(chomp: true)
+        candidate = "#{lines.last} #{first_line}"
+        next unless fits?(candidate, indent)
 
-      candidate = "#{lines.last} #{rendered}"
-      return false unless fits?(candidate, indent)
+        hanging = ' ' * (lines.last.length + 1)
+        lines[-1] = candidate
+        rest.each { |line| lines << "#{hanging}#{line}" }
+        return true
+      end
 
-      lines[-1] = candidate
-      true
+      false
     end
 
-    def hang_call_args?(list, indent)
+    def inline_call_arg?(list, arg)
+      arg.is_a?(Vec) ||
+        (arg.is_a?(HashLit) && list_head(list).is_a?(Sym) && list_head(list).name == 'local')
+    end
+
+    def inline_call_arg_renders(arg, indent)
+      rendered = []
+      rendered << flat_vec_render(arg) if arg.is_a?(Vec)
+      rendered << flat_hash_render(arg) if arg.is_a?(HashLit)
+      rendered << render(arg, indent)
+      rendered.compact.uniq
+    end
+
+    def flat_vec_render(vec)
+      return if contains_comments?(vec.items)
+
+      rendered = vec.items.map { |item| flat_render(item) }
+      return if rendered.any?(&:nil?)
+
+      "[#{rendered.join(' ')}]"
+    end
+
+    def flat_hash_render(hash)
+      return if contains_comments?(hash.entries)
+
+      rendered = hash.pairs.map { |key, value| flat_hash_pair(key, value) }
+      return if rendered.any?(&:nil?)
+
+      "{#{rendered.join(' ')}}"
+    end
+
+    def hang_call_args?(list, base, indent)
+      return true if source_hangs_call_args?(list, base)
       return false unless operator_call?(list)
 
       flat = flat_call_render(list)
       flat && !fits?(flat, indent)
+    end
+
+    def source_hangs_call_args?(list, base)
+      return false unless list.respond_to?(:column) && list.column
+
+      args = list_rest(list)
+      return false if args.length < 2
+
+      expected_column = list.column + base.length + 1
+      args.drop(1).all? do |arg|
+        arg.respond_to?(:column) && arg.column == expected_column
+      end
     end
 
     def operator_call?(list)
@@ -637,6 +685,9 @@ module Kapusta
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(vec, top_level:, layout:)
 
       return render_pairwise_vec(vec, indent) if layout == :pairwise && !contains_comments?(vec.items)
+      if multiline_in_source?(vec) && multiline_vec_items_on_separate_lines?(vec) && !contains_comments?(vec.items)
+        return render_multiline_vec(vec, indent)
+      end
       return render_filled_vec(vec, indent) if !contains_comments?(vec.items) && !vec.items.empty?
 
       lines = ['[']
@@ -644,6 +695,31 @@ module Kapusta
         lines << indent_block(render(item, indent + INDENT), INDENT)
       end
       append_suffix(lines, ']')
+    end
+
+    def render_multiline_vec(vec, indent)
+      return '[]' if vec.items.empty?
+
+      lines = []
+      vec.items.each_with_index do |item, idx|
+        prefix = idx.zero? ? '[' : ' '
+        rendered_lines = render(item, indent + 1).lines.map(&:chomp)
+        lines << "#{prefix}#{rendered_lines.first}"
+        pad = ' ' * prefix.length
+        rendered_lines.drop(1).each { |line| lines << "#{pad}#{line}" }
+      end
+      lines[-1] = "#{lines[-1]}]"
+      lines.join("\n")
+    end
+
+    def multiline_vec_items_on_separate_lines?(vec)
+      items = semantic_items(vec.items)
+      return false if items.length < 2
+
+      lines = items.filter_map { |item| item.line if item.respond_to?(:line) }
+      return true if lines.length < 2
+
+      lines.uniq.length == lines.length
     end
 
     def render_filled_vec(vec, indent)

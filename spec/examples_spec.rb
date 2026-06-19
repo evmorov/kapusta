@@ -226,6 +226,10 @@ RSpec.describe 'examples' do
     expect(run_example('count-effects.kap')).to eq("1\n2\n")
   end
 
+  it 'count-items-matching-rule.kap' do
+    expect(run_example('count-items-matching-rule.kap')).to eq("2\n1\n1\n")
+  end
+
   it 'max-achievable.kap' do
     expect(run_example('max-achievable.kap')).to eq("6\n7\n10\n")
   end
@@ -368,6 +372,10 @@ RSpec.describe 'examples' do
     expect(run_example('leap-year.kap')).to eq("true\n")
   end
 
+  it 'left-right-difference.kap' do
+    expect(run_example('left-right-difference.kap')).to eq("true\n")
+  end
+
   it 'length-of-last-word.kap' do
     expect(run_example('length-of-last-word.kap')).to eq("5\n4\n6\n")
   end
@@ -455,6 +463,10 @@ RSpec.describe 'examples' do
     expect(run_example('ruby-eval.kap')).to eq(<<~OUT)
       "10-20-30"
     OUT
+  end
+
+  it 'running-sum.kap' do
+    expect(run_example('running-sum.kap')).to eq("true\ntrue\ntrue\n")
   end
 
   it 'kwargs.kap' do

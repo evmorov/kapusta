@@ -291,6 +291,26 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'keeps short local hash values on the local line' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local rule-keys
+          {"type" :type
+           "color" :color
+           "name" :name})
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local rule-keys {"type" :type "color" :color "name" :name})
+      KAP
+    end
+  end
+
   it 'preserves nil-valued let bindings before function bindings' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')

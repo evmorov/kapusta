@@ -1,0 +1,18 @@
+(local rule-keys {"type" :type
+                  "color" :color
+                  "name" :name
+                  "rating" :rating
+                  "category" :category
+                  "owner" :owner})
+
+(fn count-matches [items rule-key rule-value]
+  (let [key (. rule-keys rule-key)]
+    (accumulate [count 0 _ item (ipairs items)]
+      (if (= (. item key) rule-value) (+ count 1) count))))
+
+(let [items [{:type "phone" :color "blue" :name "pixel"}
+             {:type "computer" :color "silver" :name "lenovo"}
+             {:type "phone" :color "gold" :name "iphone"}]]
+  (print (count-matches items "type" "phone"))
+  (print (count-matches items "color" "silver"))
+  (print (count-matches items "name" "pixel")))

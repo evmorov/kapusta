@@ -10,16 +10,23 @@ def join(sep, xs)
   s
 end
 
-def range_label(lo, hi)
-  if lo == hi
-    lo.to_s
+range_boundary__string = nil
+range_boundary__string = proc do |n|
+  n.to_s
+end
+
+range_label = nil
+range_label = proc do |range_start, range_end|
+  if range_start == range_end
+    range_boundary__string.call(range_start)
   else
-    join("", [lo.to_s, "->", hi.to_s])
+    join("", [range_boundary__string.call(range_start), "->", range_boundary__string.call(range_end)])
   end
 end
 
-def append_range(out, lo, hi)
-  label = range_label(lo, hi)
+append_range = nil
+append_range = proc do |out, lo, hi|
+  label = range_label.call(lo, hi)
   parts = [out, if out == ""
     ""
   else
@@ -28,7 +35,8 @@ def append_range(out, lo, hi)
   join("", parts)
 end
 
-def summary_ranges(nums)
+summary_ranges = nil
+summary_ranges = proc do |nums|
   started_q = false
   start = 0
   prev = 0
@@ -38,7 +46,7 @@ def summary_ranges(nums)
       if n == (prev + 1)
         prev = n
       else
-        out = append_range(out, start, prev)
+        out = append_range.call(out, start, prev)
         start = n
         prev = n
       end
@@ -49,12 +57,12 @@ def summary_ranges(nums)
     end
   end
   if started_q
-    append_range(out, start, prev)
+    append_range.call(out, start, prev)
   else
     out
   end
 end
 
-p summary_ranges([0, 1, 2, 4, 5, 7])
-p summary_ranges([0, 2, 3, 4, 6, 8, 9])
-p("empty=" + summary_ranges([]).to_s)
+p summary_ranges.call([0, 1, 2, 4, 5, 7])
+p summary_ranges.call([0, 2, 3, 4, 6, 8, 9])
+p("empty=" + summary_ranges.call([]).to_s)

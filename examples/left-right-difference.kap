@@ -1,0 +1,60 @@
+(fn same-list? [a b]
+  (var ok (= (length a) (length b)))
+  (each [i value (ipairs a)]
+    (when (not (= value (. b i)))
+      (set ok false)))
+  ok)
+
+(fn abs [n]
+  (if (< n 0) (- n) n))
+
+(fn left-right-difference [nums]
+  (let [total (accumulate [sum 0 _ n (ipairs nums)] (+ sum n))]
+    (var left 0)
+    (icollect [_ n (ipairs nums)]
+      (do
+        (let [right (- total left n)
+              diff (abs (- left right))]
+          (set left (+ left n))
+          diff)))))
+
+(print (same-list? [209
+                    206
+                    201
+                    194
+                    185
+                    174
+                    161
+                    146
+                    129
+                    110
+                    89
+                    66
+                    41
+                    14
+                    15
+                    46
+                    79
+                    114
+                    151
+                    190]
+                   (left-right-difference [1
+                                           2
+                                           3
+                                           4
+                                           5
+                                           6
+                                           7
+                                           8
+                                           9
+                                           10
+                                           11
+                                           12
+                                           13
+                                           14
+                                           15
+                                           16
+                                           17
+                                           18
+                                           19
+                                           20])))

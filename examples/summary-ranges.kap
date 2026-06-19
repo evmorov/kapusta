@@ -6,10 +6,15 @@
         (set s (.. s sep x))))
   s)
 
-(fn range-label [lo hi]
-  (if (= lo hi)
-      (.. lo)
-      (join "" [(.. lo) "->" (.. hi)])))
+(fn range-boundary->string [n]
+  (.. n))
+
+(fn range-label [range-start range-end]
+  (if (= range-start range-end)
+      (range-boundary->string range-start)
+      (join "" [(range-boundary->string range-start)
+                "->"
+                (range-boundary->string range-end)])))
 
 (fn append-range [out lo hi]
   (let [label (range-label lo hi)
