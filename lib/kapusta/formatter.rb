@@ -568,7 +568,7 @@ module Kapusta
       append_suffix(lines, ')')
     end
 
-    def render_call(list, indent)
+    def render_call(list, indent, force_hang: false)
       head = flat_render(list_head(list))
       raise Error, "cannot format form head: #{list_head(list).inspect}" unless head
 
@@ -576,7 +576,7 @@ module Kapusta
       lines = [base]
       args = list_raw_rest(list)
       semantic_length = semantic_items(args).length
-      hang_subsequent_args = hang_call_args?(list, base, indent)
+      hang_subsequent_args = force_hang || hang_call_args?(list, base, indent)
 
       semantic_index = 0
       hanging = nil
@@ -749,6 +749,11 @@ module Kapusta
       head_name(list)&.match?(/\A[^\w.]+\z/)
     end
 
+    def ordinary_call_form?(list)
+      name = head_name(list)
+      name && !Compiler::Language::SPECIAL_FORMS.include?(name)
+    end
+
     def flat_call_render(list)
       head = flat_render(list_head(list))
       return unless head
@@ -771,7 +776,7 @@ module Kapusta
       return flat if !force_expand && flat && fits?(flat, indent) && allow_flat?(vec, top_level:, layout:)
 
       return render_pairwise_vec(vec, indent) if layout == :pairwise && !contains_comments?(vec.items)
-      if multiline_in_source?(vec) && multiline_vec_items_on_separate_lines?(vec) && !contains_comments?(vec.items)
+      if multiline_in_source?(vec) && multiline_vec_items_should_separate?(vec) && !contains_comments?(vec.items)
         return render_multiline_vec(vec, indent)
       end
       return render_filled_vec(vec, indent) if !contains_comments?(vec.items) && !vec.items.empty?
@@ -789,13 +794,27 @@ module Kapusta
       lines = []
       vec.items.each_with_index do |item, idx|
         prefix = idx.zero? ? '[' : ' '
-        rendered_lines = render(item, indent + 1).lines.map(&:chomp)
+        rendered_lines = render_multiline_vec_item(item, indent + 1).lines.map(&:chomp)
         lines << "#{prefix}#{rendered_lines.first}"
         pad = ' ' * prefix.length
         rendered_lines.drop(1).each { |line| lines << "#{pad}#{line}" }
       end
       lines[-1] = "#{lines[-1]}]"
       lines.join("\n")
+    end
+
+    def render_multiline_vec_item(item, indent)
+      return render_call(item, indent, force_hang: true) if hanging_multiline_vec_call_item?(item)
+
+      render(item, indent)
+    end
+
+    def hanging_multiline_vec_call_item?(item)
+      item.is_a?(List) && multiline_in_source?(item) && ordinary_call_form?(item)
+    end
+
+    def multiline_vec_items_should_separate?(vec)
+      multiline_vec_items_on_separate_lines?(vec) || semantic_items(vec.items).all? { |item| collection?(item) }
     end
 
     def multiline_vec_items_on_separate_lines?(vec)

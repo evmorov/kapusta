@@ -436,6 +436,64 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'separates compound items in multiline vectors' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local tree {})
+
+        (fn entry [status path]
+          [status path])
+
+        (fn check [expected actual]
+          [expected actual])
+
+        (fn test-tree []
+          (let [rows (tree.rows [(entry "A" "script/shorthand_branch.sh") (entry "M"
+                                                                            "spec/lib/epoxy/version_branch_validation_spec.rb")
+                                 (entry "M" "spec/lib/direct_spec.rb") (entry "M"
+                                                                         "spec/lib/tasks/helpers/commit_validator_spec.rb")])]
+            (check [{:type :folder :depth 0 :name "script/" :path "script"}
+                    {:type :file :depth 1 :name "shorthand_branch.sh" :entry-index 1}
+                    {:type :folder :depth 1 :name "epoxy/" :path "spec/lib/epoxy"} {:type :file
+                                                                                    :depth 2
+                                                                                    :name "version_branch_validation_spec.rb"
+                                                                                    :entry-index 2}]
+              rows)))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local tree {})
+
+        (fn entry [status path]
+          [status path])
+
+        (fn check [expected actual]
+          [expected actual])
+
+        (fn test-tree []
+          (let [rows (tree.rows [(entry "A" "script/shorthand_branch.sh")
+                                 (entry "M"
+                                        "spec/lib/epoxy/version_branch_validation_spec.rb")
+                                 (entry "M" "spec/lib/direct_spec.rb")
+                                 (entry "M"
+                                        "spec/lib/tasks/helpers/commit_validator_spec.rb")])]
+            (check [{:type :folder :depth 0 :name "script/" :path "script"}
+                    {:type :file :depth 1 :name "shorthand_branch.sh" :entry-index 1}
+                    {:type :folder :depth 1 :name "epoxy/" :path "spec/lib/epoxy"}
+                    {:type :file
+                     :depth 2
+                     :name "version_branch_validation_spec.rb"
+                     :entry-index 2}]
+              rows)))
+      KAP
+    end
+  end
+
   it 'hangs function values in set forms' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')
