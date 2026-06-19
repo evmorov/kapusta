@@ -311,6 +311,31 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'hangs hash-first call arguments under the first argument' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local check (fn [expected actual] (= expected actual)))
+        (local scroll-state (fn [lines visible offset] [lines visible offset]))
+
+        (check {:preview-offset 0 :preview-total 3 :preview-visible 5}
+          (scroll-state ["a" "b" "c"] 5 10))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local check (fn [expected actual] (= expected actual)))
+        (local scroll-state (fn [lines visible offset] [lines visible offset]))
+
+        (check {:preview-offset 0 :preview-total 3 :preview-visible 5}
+               (scroll-state ["a" "b" "c"] 5 10))
+      KAP
+    end
+  end
+
   it 'preserves nil-valued let bindings before function bindings' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')

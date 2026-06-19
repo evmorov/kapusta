@@ -647,10 +647,17 @@ module Kapusta
 
     def hang_call_args?(list, base, indent)
       return true if source_hangs_call_args?(list, base)
-      return false unless operator_call?(list)
 
       flat = flat_call_render(list)
-      flat && !fits?(flat, indent)
+      return false unless flat
+      return true if hash_first_call_arg?(list) && !fits?(flat, indent)
+      return false unless operator_call?(list)
+
+      !fits?(flat, indent)
+    end
+
+    def hash_first_call_arg?(list)
+      list_rest(list).first.is_a?(HashLit)
     end
 
     def source_hangs_call_args?(list, base)
