@@ -6,11 +6,15 @@ module Kapusta
       private
 
       def fits?(text, indent)
-        !text.include?("\n") && indent + text.length <= MAX_WIDTH
+        fits_within?(text, indent, MAX_WIDTH)
       end
 
       def inline_arg_fits?(text, indent)
-        !text.include?("\n") && indent + text.length < MAX_WIDTH
+        fits_within?(text, indent, MAX_WIDTH - 1)
+      end
+
+      def fits_within?(text, indent, width)
+        !text.include?("\n") && indent + text.length <= width
       end
 
       def single_line?(text)
