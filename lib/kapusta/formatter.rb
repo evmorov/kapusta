@@ -1,129 +1,32 @@
 # frozen_string_literal: true
 
 require_relative '../kapusta'
+require_relative 'formatter/ast_helpers'
+require_relative 'formatter/cli'
+require_relative 'formatter/line_helpers'
+require_relative 'formatter/validator'
 
 module Kapusta
   class Formatter
     MAX_WIDTH = 80
     INDENT = 2
     STDIN_PATH = '-'
+    BODY_ONLY_HEADS = %w[do finally].freeze
+    SINGLE_PREFIX_BODY_HEADS = %w[
+      while when unless for each icollect collect fcollect accumulate faccumulate module
+    ].freeze
+    CASE_HEADS = %w[case match].freeze
+    private_constant :BODY_ONLY_HEADS, :SINGLE_PREFIX_BODY_HEADS, :CASE_HEADS
+    include ASTHelpers
+    include CLI
+    include LineHelpers
+    include Validator
 
     def self.format(source, path: nil)
       new([]).send(:format_source, source, path)
     end
 
-    def initialize(argv)
-      @mode = :stdout
-      @files = []
-      @version = false
-      parse_args(argv)
-    end
-
-    def run
-      if @version
-        puts "kapfmt #{Kapusta::VERSION}"
-        return 0
-      end
-
-      validate_args!
-
-      formatted = @files.map do |path|
-        original = read_source(path)
-        validate_kapusta_source(original, path)
-        [path, original, format_source(original, path)]
-      end
-
-      case @mode
-      when :stdout
-        $stdout.write(formatted.first[2])
-      when :fix
-        formatted.each do |path, _original, rewritten|
-          raise Error, 'Cannot use --fix with stdin (-).' if stdin_path?(path)
-
-          File.write(path, rewritten)
-        end
-      when :check
-        dirty = formatted.reject { |_path, original, rewritten| original == rewritten }
-        dirty.each do |path, _original, _rewritten|
-          warn "Not formatted: #{path}"
-        end
-        return 1 unless dirty.empty?
-      end
-
-      0
-    rescue Kapusta::Error => e
-      warn e.formatted
-      1
-    end
-
     private
-
-    def validate_kapusta_source(source, path)
-      return validate_macro_module_source(source, path) if macro_module_path?(path)
-
-      Kapusta::Compiler.compile(source, path:)
-    end
-
-    def validate_macro_module_source(source, path)
-      forms = Reader.read_all(source)
-      raise Error, 'macro module has no export table' unless forms.last.is_a?(HashLit)
-
-      processed = forms.map do |form|
-        Compiler::MacroLowerer.lower_module_form(form, error_class: Error)
-      end
-      wrapper = List.new([List.new([Sym.new('fn'), Vec.new([]), *processed])])
-      Compiler.compile_forms([wrapper], path:)
-    rescue Kapusta::Error => e
-      raise e.with_defaults(path:)
-    end
-
-    def macro_module_path?(path)
-      path && File.extname(path) == '.kapm'
-    end
-
-    def parse_args(argv)
-      argv.each do |arg|
-        case arg
-        when '--fix'
-          ensure_mode!(:fix)
-        when '--check'
-          ensure_mode!(:check)
-        when '--version', '-v'
-          @version = true
-        when '--help', '-h'
-          print_help
-          exit 0
-        else
-          @files << arg
-        end
-      end
-    end
-
-    def ensure_mode!(mode)
-      raise Error, 'Use at most one of --fix or --check.' if @mode != :stdout && @mode != mode
-
-      @mode = mode
-    end
-
-    def validate_args!
-      raise Error, 'Usage: kapfmt [--fix] [--check] FILENAME...' if @files.empty?
-      raise Error, 'stdin (-) may only be specified once.' if @files.count { |path| stdin_path?(path) } > 1
-      raise Error, 'Cannot use --fix with stdin (-).' if @mode == :fix && @files.any? { |path| stdin_path?(path) }
-
-      return unless @mode == :stdout && @files.length != 1
-
-      raise Error, 'Without --fix or --check, kapfmt accepts exactly one file.'
-    end
-
-    def read_source(path)
-      return File.read(path) unless stdin_path?(path)
-
-      @stdin_read ||= false
-      raise Error, 'stdin (-) may only be specified once.' if @stdin_read
-
-      @stdin_read = true
-      $stdin.read
-    end
 
     def format_source(source, path = nil)
       forms = Reader.read_all(source, preserve_comments: true)
@@ -140,10 +43,6 @@ module Kapusta
       raise e.with_defaults(path:)
     rescue StandardError => e
       raise Error.new(e.message, path:)
-    end
-
-    def separator_for(_previous, _current)
-      "\n"
     end
 
     def top_level_entries(forms)
@@ -175,18 +74,6 @@ module Kapusta
       parts = entry[:comments].map { |comment| render(comment, 0) }
       parts << render(entry[:form], 0, top_level: true) if entry[:form]
       parts.join("\n")
-    end
-
-    def comment?(form)
-      form.is_a?(Comment)
-    end
-
-    def blank_line?(form)
-      form.is_a?(BlankLine)
-    end
-
-    def non_semantic?(form)
-      comment?(form) || blank_line?(form)
     end
 
     def render(form, indent, layout: nil, top_level: false, force_expand: false)
@@ -233,33 +120,11 @@ module Kapusta
       when Sym
         form.name
       when Vec
-        return if contains_comments?(form.items)
-        return if multiline_in_source?(form)
-
-        rendered = form.items.map { |item| flat_render(item) }
-        return if rendered.any?(&:nil?)
-
-        "[#{rendered.join(' ')}]"
+        flat_render_vec(form)
       when HashLit
-        return if contains_comments?(form.entries)
-        return if multiline_in_source?(form)
-
-        rendered = form.pairs.map { |key, value| flat_hash_pair(key, value) }
-        return if rendered.any?(&:nil?)
-
-        "{#{rendered.join(' ')}}"
+        flat_render_hash(form)
       when List
-        return render_sigil(form) if form.sigil
-        return if contains_comments?(form.items)
-        return "##{flat_render(semantic_items(form.items)[1])}" if hashfn_literal?(form)
-        return if multiline_in_source?(form)
-        return if let_with_multiple_bindings?(form)
-        return if let_with_nested_binding_value?(form)
-
-        rendered = form.items.map { |item| flat_render(item) }
-        return if rendered.any?(&:nil?)
-
-        "(#{rendered.join(' ')})"
+        flat_render_list(form)
       when Quasiquote
         inner = flat_render(form.form)
         inner ? "`#{inner}" : nil
@@ -276,41 +141,71 @@ module Kapusta
       end
     end
 
+    def flat_render_vec(vec)
+      return if contains_comments?(vec.items)
+      return if multiline_in_source?(vec)
+
+      flat_delimited_render(vec.items, '[', ']') { |item| flat_render(item) }
+    end
+
+    def flat_render_hash(hash)
+      return if contains_comments?(hash.entries)
+      return if multiline_in_source?(hash)
+
+      flat_delimited_render(hash.pairs, '{', '}') { |key, value| flat_hash_pair(key, value) }
+    end
+
+    def flat_render_list(list)
+      return render_sigil(list) if list.sigil
+      return if contains_comments?(list.items)
+      return flat_render_hashfn(list) if hashfn_literal?(list)
+      return if multiline_in_source?(list)
+      return if let_with_multiple_bindings?(list)
+      return if let_with_nested_binding_value?(list)
+
+      flat_delimited_render(list.items, '(', ')') { |item| flat_render(item) }
+    end
+
+    def flat_render_hashfn(list)
+      rendered = flat_render(semantic_items(list.items)[1])
+      "##{rendered}" if rendered
+    end
+
     def render_list(list, indent, top_level: false)
       return '()' if list.items.empty?
       return "##{render(semantic_items(list.items)[1], indent, top_level:)}" if hashfn_literal?(list)
 
-      head = list_head(list)
-      return render_generic_list(list, indent) unless head
+      return render_generic_list(list, indent) unless list_head(list)
 
-      head_name = head.is_a?(Sym) ? head.name : nil
+      name = head_name(list)
       raw_args = list_raw_rest(list)
 
-      case head_name
+      case name
       when *Compiler::Language::FUNCTION_DEFINITION_HEADS, 'macro'
-        render_fn(head_name, list, indent, top_level:)
+        render_fn(name, list, indent, top_level:)
       when 'let' then render_let(list, indent)
-      when 'do', 'finally' then render_prefix_body_form(head_name, [], raw_args, indent)
+      when *BODY_ONLY_HEADS then render_prefix_body_form(name, [], raw_args, indent)
       when 'try' then render_try(list, indent)
-      when 'while', 'when', 'unless', 'for', 'each', 'icollect', 'collect', 'fcollect', 'accumulate', 'faccumulate'
-        raw_prefix, raw_body = split_raw_items(raw_args, 1)
-        render_prefix_body_form(head_name, raw_prefix, raw_body, indent)
-      when 'module'
-        raw_prefix, raw_body = split_raw_items(raw_args, 1)
-        render_prefix_body_form('module', raw_prefix, raw_body, indent)
+      when *SINGLE_PREFIX_BODY_HEADS then render_single_prefix_body_form(name, raw_args, indent)
       when 'class' then render_class(list, indent)
       when 'catch' then render_catch(list, indent)
       when 'if' then render_if(list, indent)
-      when 'case', 'match'
-        if contains_comments?(raw_args)
-          render_sequential_head_form(head_name, raw_args, indent)
-        else
-          render_case(head_name, list_rest(list), indent)
-        end
-      when *Compiler::Language::PIPELINE_HEADS then render_pipeline(head_name, raw_args, indent)
+      when *CASE_HEADS then render_case_or_match(name, list, raw_args, indent)
+      when *Compiler::Language::PIPELINE_HEADS then render_pipeline(name, raw_args, indent)
       else
         render_call(list, indent)
       end
+    end
+
+    def render_single_prefix_body_form(head, raw_args, indent)
+      raw_prefix, raw_body = split_raw_items(raw_args, 1)
+      render_prefix_body_form(head, raw_prefix, raw_body, indent)
+    end
+
+    def render_case_or_match(head, list, raw_args, indent)
+      return render_sequential_head_form(head, raw_args, indent) if contains_comments?(raw_args)
+
+      render_case(head, list_rest(list), indent)
     end
 
     def render_fn(head, list, indent, top_level: false)
@@ -428,24 +323,28 @@ module Kapusta
       end
 
       body_forms.each do |form|
-        if blank_line?(form)
-          lines << ''
-          next
-        end
-        if comment?(form)
-          lines << indent_block(render(form, indent + INDENT), INDENT)
-          next
-        end
-
-        body = render(
-          form,
-          indent + INDENT,
-          force_expand: force_body_multiline && force_multiline_body?(form)
-        )
-        lines << indent_block(body, INDENT)
+        append_body_form(lines, form, indent, force_body_multiline:)
       end
 
       append_suffix(lines, ')')
+    end
+
+    def append_body_form(lines, form, indent, force_body_multiline: false)
+      if blank_line?(form)
+        lines << ''
+        return
+      end
+      if comment?(form)
+        lines << indent_block(render(form, indent + INDENT), INDENT)
+        return
+      end
+
+      body = render(
+        form,
+        indent + INDENT,
+        force_expand: force_body_multiline && force_multiline_body?(form)
+      )
+      lines << indent_block(body, INDENT)
     end
 
     def render_if(list, indent)
@@ -453,27 +352,21 @@ module Kapusta
       return render_sequential_head_form('if', list_raw_rest(list), indent) if contains_comments?(list_raw_rest(list))
 
       lines = []
-      hanging = ' ' * '(if '.length
+      hanging = if_hanging
 
       if args.length == 3
         flat = flat_render(list)
         return flat if inline_three_arg_if?(args) && flat && fits?(flat, indent)
 
-        lines << "(if #{render(args[0], indent + '(if '.length)}"
-        lines << prefix_continuation(hanging, render(args[1], indent + '(if '.length))
-        lines << prefix_continuation(hanging, render(args[2], indent + '(if '.length))
+        append_if_form(lines, args[0], indent, '(if ')
+        append_if_form(lines, args[1], indent, hanging)
+        append_if_form(lines, args[2], indent, hanging)
         return append_suffix(lines, ')')
       end
 
       index = 0
       if args.length >= 2
-        first_pair = render_pair(args[0], args[1], indent + '(if '.length)
-        if first_pair
-          lines << "(if #{first_pair}"
-        else
-          lines << "(if #{render(args[0], indent + '(if '.length)}"
-          lines << prefix_continuation(hanging, render(args[1], indent + '(if '.length))
-        end
+        append_if_pair(lines, args[0], args[1], indent, '(if ')
         index = 2
       else
         lines << '(if'
@@ -482,16 +375,10 @@ module Kapusta
       while index < args.length
         remaining = args.length - index
         if remaining >= 2
-          pair = render_pair(args[index], args[index + 1], indent + '(if '.length)
-          if pair
-            lines << "#{hanging}#{pair}"
-          else
-            lines << prefix_continuation(hanging, render(args[index], indent + '(if '.length))
-            lines << prefix_continuation(hanging, render(args[index + 1], indent + '(if '.length))
-          end
+          append_if_pair(lines, args[index], args[index + 1], indent, hanging)
           index += 2
         else
-          lines << prefix_continuation(hanging, render(args[index], indent + '(if '.length))
+          append_if_form(lines, args[index], indent, hanging)
           index += 1
         end
       end
@@ -499,10 +386,36 @@ module Kapusta
       append_suffix(lines, ')')
     end
 
+    def append_if_pair(lines, condition, branch, indent, prefix)
+      pair = render_pair(condition, branch, if_value_indent(indent))
+      if pair
+        lines << "#{prefix}#{pair}"
+      else
+        append_if_form(lines, condition, indent, prefix)
+        append_if_form(lines, branch, indent, if_hanging)
+      end
+    end
+
+    def append_if_form(lines, form, indent, prefix)
+      lines << prefix_continuation(prefix, render(form, if_value_indent(indent)))
+    end
+
+    def if_value_indent(indent)
+      indent + '(if '.length
+    end
+
+    def if_hanging
+      ' ' * '(if '.length
+    end
+
     def prefix_continuation(prefix, rendered)
-      first_line, *rest = rendered.lines(chomp: true)
+      prefix_lines(prefix, rendered.lines(chomp: true)).join("\n")
+    end
+
+    def prefix_lines(prefix, lines)
+      first_line, *rest = lines
       pad = ' ' * prefix.length
-      ["#{prefix}#{first_line}", *rest.map { |line| line.empty? ? '' : "#{pad}#{line}" }].join("\n")
+      ["#{prefix}#{first_line}", *rest.map { |line| line.empty? ? '' : "#{pad}#{line}" }]
     end
 
     def render_case(head, args, indent)
@@ -519,22 +432,25 @@ module Kapusta
         end
       end
 
-      parsed.arm_pairs.each do |pair|
-        pattern, value = pair
-        if pair.length == 2
-          pair = render_pair(pattern, value, indent + INDENT)
-          if pair
-            lines << indent_block(pair, INDENT)
-          else
-            lines << indent_block(render(pattern, indent + INDENT), INDENT)
-            lines << indent_block(render(value, indent + INDENT), INDENT)
-          end
-        else
-          lines << indent_block(render(pattern, indent + INDENT), INDENT)
-        end
-      end
+      parsed.arm_pairs.each { |arm| append_case_arm(lines, arm, indent) }
 
       append_suffix(lines, ')')
+    end
+
+    def append_case_arm(lines, arm, indent)
+      pattern, value = arm
+      unless arm.length == 2
+        lines << indent_block(render(pattern, indent + INDENT), INDENT)
+        return
+      end
+
+      rendered_pair = render_pair(pattern, value, indent + INDENT)
+      if rendered_pair
+        lines << indent_block(rendered_pair, INDENT)
+      else
+        lines << indent_block(render(pattern, indent + INDENT), INDENT)
+        lines << indent_block(render(value, indent + INDENT), INDENT)
+      end
     end
 
     def render_pipeline(head, args, indent)
@@ -794,10 +710,7 @@ module Kapusta
       lines = []
       vec.items.each_with_index do |item, idx|
         prefix = idx.zero? ? '[' : ' '
-        rendered_lines = render_multiline_vec_item(item, indent + 1).lines.map(&:chomp)
-        lines << "#{prefix}#{rendered_lines.first}"
-        pad = ' ' * prefix.length
-        rendered_lines.drop(1).each { |line| lines << "#{pad}#{line}" }
+        lines.concat(prefix_lines(prefix, render_multiline_vec_item(item, indent + 1).lines.map(&:chomp)))
       end
       lines[-1] = "#{lines[-1]}]"
       lines.join("\n")
@@ -1027,10 +940,6 @@ module Kapusta
       end
     end
 
-    def multiline_in_source?(form)
-      form.respond_to?(:multiline_source) && form.multiline_source
-    end
-
     def let_with_multiple_bindings?(form)
       head = list_head(form)
       return false unless head.is_a?(Sym) && head.name == 'let'
@@ -1051,19 +960,6 @@ module Kapusta
       semantic_items(bindings.items).each_slice(2).any? do |_pattern, value|
         value && contains_collection?(value)
       end
-    end
-
-    def contains_collection?(form)
-      case form
-      when List then semantic_items(form.items).any? { |item| collection?(item) }
-      when Vec then form.items.any? { |item| collection?(item) }
-      when HashLit then form.pairs.any? { |k, v| collection?(k) || collection?(v) }
-      else false
-      end
-    end
-
-    def collection?(form)
-      form.is_a?(List) || form.is_a?(Vec) || form.is_a?(HashLit)
     end
 
     def fn_form?(form)
@@ -1088,41 +984,6 @@ module Kapusta
       else
         false
       end
-    end
-
-    def stdin_path?(path)
-      path == STDIN_PATH
-    end
-
-    def fits?(text, indent)
-      !text.include?("\n") && indent + text.length <= MAX_WIDTH
-    end
-
-    def inline_arg_fits?(text, indent)
-      !text.include?("\n") && indent + text.length < MAX_WIDTH
-    end
-
-    def single_line?(text)
-      !text.include?("\n")
-    end
-
-    def indent_block(text, amount)
-      prefix = ' ' * amount
-      text.lines.map { |line| line.strip.empty? ? blank_line_for(line) : "#{prefix}#{line}" }.join
-    end
-
-    def blank_line_for(line)
-      line.end_with?("\n") ? "\n" : ''
-    end
-
-    def append_suffix(lines, suffix)
-      updated = lines.dup
-      if updated[-1].lstrip.start_with?(';')
-        updated << suffix
-      else
-        updated[-1] = "#{updated[-1]}#{suffix}"
-      end
-      updated.join("\n")
     end
 
     def render_generic_list(list, indent)
@@ -1158,52 +1019,6 @@ module Kapusta
       end
 
       append_suffix(lines, ')')
-    end
-
-    def contains_comments?(items)
-      items.any? { |item| non_semantic?(item) }
-    end
-
-    def semantic_items(items)
-      items.reject { |item| non_semantic?(item) }
-    end
-
-    def list_head(list)
-      semantic_items(list.items).first
-    end
-
-    def head_name(list)
-      head = list_head(list)
-      head.name if head.is_a?(Sym)
-    end
-
-    def list_rest(list)
-      semantic_items(list.items).drop(1)
-    end
-
-    def list_raw_rest(list)
-      index = list.items.index { |item| !non_semantic?(item) }
-      return list.items if index.nil?
-
-      list.items[(index + 1)..] || []
-    end
-
-    def split_raw_items(items, semantic_count)
-      split_index = 0
-      seen = 0
-
-      while split_index < items.length && seen < semantic_count
-        seen += 1 unless non_semantic?(items[split_index])
-        split_index += 1
-      end
-
-      [items.take(split_index), items.drop(split_index)]
-    end
-
-    def print_help
-      puts 'Usage: kapfmt [--fix] [--check] FILENAME...'
-      puts
-      puts 'Formats Kapusta source using the built-in Kapusta reader and pretty-printer.'
     end
 
     class Error < Kapusta::Error; end
