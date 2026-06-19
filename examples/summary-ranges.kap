@@ -1,0 +1,40 @@
+(fn join [sep xs]
+  (var s "")
+  (each [_ x (ipairs xs)]
+    (if (= s "")
+        (set s (.. x))
+        (set s (.. s sep x))))
+  s)
+
+(fn range-label [lo hi]
+  (if (= lo hi)
+      (.. lo)
+      (join "" [(.. lo) "->" (.. hi)])))
+
+(fn append-range [out lo hi]
+  (let [label (range-label lo hi)
+        parts [out (if (= out "") "" "|") label]]
+    (join "" parts)))
+
+(fn summary-ranges [nums]
+  (var started? false)
+  (var start 0)
+  (var prev 0)
+  (var out "")
+  (each [_ n (ipairs nums)]
+    (if started?
+        (if (= n (+ prev 1))
+            (set prev n)
+            (do
+              (set out (append-range out start prev))
+              (set start n)
+              (set prev n)))
+        (do
+          (set started? true)
+          (set start n)
+          (set prev n))))
+  (if started? (append-range out start prev) out))
+
+(print (summary-ranges [0 1 2 4 5 7]))
+(print (summary-ranges [0 2 3 4 6 8 9]))
+(print (.. "empty=" (summary-ranges [])))

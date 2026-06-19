@@ -271,6 +271,26 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'keeps short vector call arguments on the call line' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (fn range-label [lo hi]
+          (join ""
+            [(.. lo) "->" (.. hi)]))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (fn range-label [lo hi]
+          (join "" [(.. lo) "->" (.. hi)]))
+      KAP
+    end
+  end
+
   it 'preserves nil-valued let bindings before function bindings' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')

@@ -566,6 +566,14 @@ RSpec.describe 'examples' do
     expect(run_example('sum.kap')).to eq("100\n")
   end
 
+  it 'summary-ranges.kap' do
+    expect(run_example('summary-ranges.kap')).to eq(<<~OUT)
+      "0->2|4->5|7"
+      "0|2->4|6|8->9"
+      "empty="
+    OUT
+  end
+
   it 'tset.kap' do
     person = { name: 'Ada', city: 'Amsterdam' }
     expect(run_example('tset.kap')).to eq("#{person.inspect}\n#{'Amsterdam'.inspect}\n")

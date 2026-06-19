@@ -565,6 +565,8 @@ module Kapusta
           hanging = append_first_call_arg(lines, arg, base, indent, semantic_length)
         elsif hanging && hang_subsequent_args
           lines << prefix_continuation(hanging, render(arg, indent + hanging.length))
+        elsif append_inline_call_arg?(lines, arg, indent)
+          nil
         else
           lines << indent_block(render(arg, indent + INDENT), INDENT)
         end
@@ -593,6 +595,19 @@ module Kapusta
       lines[0] = candidate
       rest.each { |line| lines << "#{hanging}#{line}" }
       hanging
+    end
+
+    def append_inline_call_arg?(lines, arg, indent)
+      return false unless arg.is_a?(Vec)
+
+      rendered = render(arg, indent + lines.last.length + 1)
+      return false unless single_line?(rendered)
+
+      candidate = "#{lines.last} #{rendered}"
+      return false unless fits?(candidate, indent)
+
+      lines[-1] = candidate
+      true
     end
 
     def hang_call_args?(list, indent)

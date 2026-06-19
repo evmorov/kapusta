@@ -86,6 +86,7 @@ squares
 stack
 subtract-product-sum
 sum
+summary-ranges
 thread-styles
 threading
 tic-tac-toe
