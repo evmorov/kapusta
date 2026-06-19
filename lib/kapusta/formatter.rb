@@ -600,10 +600,10 @@ module Kapusta
     def append_inline_call_arg?(list, lines, arg, indent)
       return false unless inline_call_arg?(list, arg)
 
-      inline_call_arg_renders(arg, indent + lines.last.length + 1).each do |rendered|
+      inline_call_arg_renders(list, arg, indent + lines.last.length + 1).each do |rendered|
         first_line, *rest = rendered.lines(chomp: true)
         candidate = "#{lines.last} #{first_line}"
-        next unless fits?(candidate, indent)
+        next unless inline_arg_fits?(candidate, indent)
 
         hanging = ' ' * (lines.last.length + 1)
         lines[-1] = candidate
@@ -615,16 +615,25 @@ module Kapusta
     end
 
     def inline_call_arg?(list, arg)
-      arg.is_a?(Vec) ||
-        (arg.is_a?(HashLit) && list_head(list).is_a?(Sym) && list_head(list).name == 'local')
+      return false if fn_form?(arg)
+      return true if arg.is_a?(Vec)
+      return true if arg.is_a?(HashLit) && inline_hash_call_arg?(list)
+
+      pack_call_args?(list) && flat_render(arg)
     end
 
-    def inline_call_arg_renders(arg, indent)
+    def inline_call_arg_renders(list, arg, indent)
       rendered = []
       rendered << flat_vec_render(arg) if arg.is_a?(Vec)
       rendered << flat_hash_render(arg) if arg.is_a?(HashLit)
-      rendered << render(arg, indent)
+      rendered << flat_render(arg)
+      rendered << render(arg, indent) if arg.is_a?(Vec) || local_hash_call_arg?(list, arg)
       rendered.compact.uniq
+    end
+
+    def local_hash_call_arg?(list, arg)
+      head = list_head(list)
+      arg.is_a?(HashLit) && head.is_a?(Sym) && head.name == 'local'
     end
 
     def flat_vec_render(vec)
@@ -647,17 +656,34 @@ module Kapusta
 
     def hang_call_args?(list, base, indent)
       return true if source_hangs_call_args?(list, base)
+      return true if set_function_value?(list)
 
       flat = flat_call_render(list)
       return false unless flat
       return true if hash_first_call_arg?(list) && !fits?(flat, indent)
+      return true if pack_call_args?(list) && !fits?(flat, indent)
       return false unless operator_call?(list)
 
       !fits?(flat, indent)
     end
 
+    def pack_call_args?(list)
+      head = list_head(list)
+      head.is_a?(Sym) && head.name.match?(/\A[a-z0-9_-][\w-]*\./)
+    end
+
+    def inline_hash_call_arg?(list)
+      head = list_head(list)
+      (head.is_a?(Sym) && head.name == 'local') || pack_call_args?(list)
+    end
+
     def hash_first_call_arg?(list)
       list_rest(list).first.is_a?(HashLit)
+    end
+
+    def set_function_value?(list)
+      head = list_head(list)
+      head.is_a?(Sym) && head.name == 'set' && fn_form?(list_rest(list)[1])
     end
 
     def source_hangs_call_args?(list, base)
@@ -681,10 +707,17 @@ module Kapusta
       head = flat_render(list_head(list))
       return unless head
 
-      rendered_args = semantic_items(list_raw_rest(list)).map { |arg| flat_render(arg) }
+      rendered_args = semantic_items(list_raw_rest(list)).map { |arg| flat_call_arg_render(arg) }
       return if rendered_args.any?(&:nil?)
 
       "(#{[head, *rendered_args].join(' ')})"
+    end
+
+    def flat_call_arg_render(arg)
+      return flat_vec_render(arg) if arg.is_a?(Vec)
+      return flat_hash_render(arg) if arg.is_a?(HashLit)
+
+      flat_render(arg)
     end
 
     def render_vec(vec, indent, layout: nil, top_level: false, force_expand: false)
@@ -784,16 +817,16 @@ module Kapusta
     def render_let_bindings(bindings, indent)
       return render(bindings, indent + '(let '.length, force_expand: true) if contains_comments?(bindings.items)
 
-      hanging = render_hanging_pairwise_vec(bindings)
+      hanging = render_hanging_pairwise_vec(bindings, indent)
       hanging || render(bindings, indent + '(let '.length, layout: :pairwise)
     end
 
-    def render_hanging_pairwise_vec(vec)
+    def render_hanging_pairwise_vec(vec, indent)
       pairs = vec.items.each_slice(2).to_a
       return unless pairs.all? { |pair| pair.length == 2 }
 
       rendered_pairs = pairs.map do |left, right|
-        render_binding_pair(left, right)
+        render_binding_pair(left, right, indent)
       end
       return if rendered_pairs.any?(&:nil?)
 
@@ -868,14 +901,15 @@ module Kapusta
       fits?(pair, indent) ? pair : nil
     end
 
-    def render_binding_pair(left, right)
+    def render_binding_pair(left, right, indent)
       left_rendered = flat_render(left)
       return unless left_rendered
 
-      right_rendered = render(right, '(let ['.length + left_rendered.length + 1)
+      right_indent = indent + '(let ['.length + left_rendered.length + 1
+      right_rendered = render(right, right_indent)
       first_line, *rest = right_rendered.lines(chomp: true)
       pair = "#{left_rendered} #{first_line}"
-      return unless pair.length <= MAX_WIDTH
+      return unless fits?(pair, indent + '(let ['.length)
 
       return pair if rest.empty?
 
@@ -997,6 +1031,10 @@ module Kapusta
 
     def fits?(text, indent)
       !text.include?("\n") && indent + text.length <= MAX_WIDTH
+    end
+
+    def inline_arg_fits?(text, indent)
+      !text.include?("\n") && indent + text.length < MAX_WIDTH
     end
 
     def single_line?(text)

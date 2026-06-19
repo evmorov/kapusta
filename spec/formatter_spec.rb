@@ -336,6 +336,106 @@ RSpec.describe Kapusta::Formatter do
     end
   end
 
+  it 'packs overflowing call arguments before hanging the rest' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local preview {})
+        (local state {})
+
+        (preview.apply-horizontal-scroll-limit state ["abcdefghijklmnopqrstuvwxyz"] 20 true)
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local preview {})
+        (local state {})
+
+        (preview.apply-horizontal-scroll-limit state ["abcdefghijklmnopqrstuvwxyz"] 20
+                                               true)
+      KAP
+    end
+  end
+
+  it 'wraps long call values in let bindings with hanging arguments' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local entries [])
+        (local update {})
+
+        (let [state (update.init "HEAD" entries {:version 1 :reviews {}} "scope-long" "src-long-name")]
+          state)
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local entries [])
+        (local update {})
+
+        (let [state (update.init "HEAD" entries {:version 1 :reviews {}} "scope-long"
+                                 "src-long-name")]
+          state)
+      KAP
+    end
+  end
+
+  it 'keeps multiline hash call arguments hanging in let bindings' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local preview-key {})
+
+        (let [old-key (preview-key.for-entry "HEAD" {:status "M" :kind "M" :path "old.rb" :reviewed false})]
+          old-key)
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local preview-key {})
+
+        (let [old-key (preview-key.for-entry "HEAD"
+                                             {:status "M"
+                                              :kind "M"
+                                              :path "old.rb"
+                                              :reviewed false})]
+          old-key)
+      KAP
+    end
+  end
+
+  it 'hangs function values in set forms' do
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, 'sample.kap')
+      File.write(path, <<~KAP)
+        (local loader {})
+        (set loader.preview-output
+          (fn [...]
+            (error "scroll should not load preview lines")))
+      KAP
+
+      output = capture_stdout do
+        expect(described_class.new([path]).run).to eq(0)
+      end
+
+      expect(output).to eq(<<~KAP)
+        (local loader {})
+        (set loader.preview-output
+             (fn [...]
+               (error "scroll should not load preview lines")))
+      KAP
+    end
+  end
+
   it 'preserves nil-valued let bindings before function bindings' do
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'sample.kap')
