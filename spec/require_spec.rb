@@ -129,6 +129,100 @@ RSpec.describe 'Kapusta require' do
     end
   end
 
+  it 'compiles class instances created after relative requires' do
+    Dir.mktmpdir('kapusta-require-class-instance') do |dir|
+      app_dir = File.join(dir, 'app')
+      platform_dir = File.join(dir, 'platform')
+      FileUtils.mkdir_p([app_dir, platform_dir])
+
+      File.write(File.join(platform_dir, 'browser.kap'), <<~KAP)
+        (class RequireClassInstance.Browser)
+
+        (fn open [url]
+          url)
+
+        (end)
+      KAP
+
+      commands_path = File.join(app_dir, 'commands.kap')
+      File.write(commands_path, <<~KAP)
+        (class App.Commands)
+
+        (fn open [url]
+          (let [browser (do (require "../platform/browser") (RequireClassInstance.Browser.new))]
+            (browser.open url)))
+
+        (end)
+      KAP
+
+      expect(Kapusta.compile(File.read(commands_path), path: commands_path)).to eq(<<~RUBY)
+        module App
+          class Commands
+            def open(url)
+              browser = begin
+                require_relative "../platform/browser"
+                RequireClassInstance::Browser.new
+              end
+              browser.open(url)
+            end
+          end
+        end
+      RUBY
+    end
+  end
+
+  it 'keeps class instances isolated when required modules repeat local names' do
+    Dir.mktmpdir('kapusta-require-class-instance-isolation') do |dir|
+      app_dir = File.join(dir, 'app')
+      platform_dir = File.join(dir, 'platform')
+      FileUtils.mkdir_p([app_dir, platform_dir])
+
+      File.write(File.join(platform_dir, 'browser.kap'), <<~KAP)
+        (class RequireClassInstance.Browser)
+
+        (fn initialize [name]
+          (set @name name))
+
+        (fn open [url]
+          (.. @name ":" url))
+
+        (end)
+      KAP
+
+      File.write(File.join(app_dir, 'inner.kap'), <<~KAP)
+        (module App.Inner)
+
+        (defn open [url]
+          (let [browser (do (require "../platform/browser")
+                          (RequireClassInstance.Browser.new "inner-browser"))]
+            (browser.open (.. "inner:" url))))
+
+        (end)
+      KAP
+
+      File.write(File.join(app_dir, 'outer.kap'), <<~KAP)
+        (module App.Outer)
+
+        (require "./inner")
+
+        (defn open [url]
+          (let [browser (do (require "../platform/browser")
+                          (RequireClassInstance.Browser.new "outer-browser"))]
+            (.. (browser.open (.. "outer:" url)) "|" (App.Inner.open url))))
+
+        (end)
+      KAP
+
+      main_path = File.join(dir, 'main.kap')
+      File.write(main_path, <<~KAP)
+        (require :app.outer)
+        (App.Outer.open "x")
+      KAP
+
+      expect(Kapusta.dofile(main_path)).to eq('outer-browser:outer:x|inner-browser:inner:x')
+    end
+  end
+
   it 'delegates relative requires to Ruby for .rb files' do
     Dir.mktmpdir('kapusta-require-local-ruby') do |dir|
       mod_name = "KapustaRequireRelativeRubyFeature#{rand(1_000_000)}"
