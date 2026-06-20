@@ -8,7 +8,9 @@ echo "== rubocop -A =="
 bundle exec rubocop -A
 
 echo "== kapfmt =="
-for file in examples/*.kap; do ./exe/kapfmt --fix "$file"; done
+while IFS= read -r file; do
+  ./exe/kapfmt --fix "$file"
+done < <(find examples -type f -name '*.kap' | sort)
 
 echo "== kapusta-ls =="
 ./exe/kapusta-ls --lint examples

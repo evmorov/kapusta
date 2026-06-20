@@ -1,0 +1,8 @@
+(require-relative "./require-relative-args")
+(require_relative "./require-relative-args")
+
+(let [parsed (RequireRelativeArgs.parse ["serve" "--port" "3000"])
+      options (. parsed :options)]
+  (print (. parsed :command))
+  (print (options.join " "))
+  (print (RequireRelativeArgs.usage)))

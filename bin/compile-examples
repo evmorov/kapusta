@@ -63,7 +63,10 @@ fi
 mkdir -p "$TARGET_DIR"
 
 shopt -s nullglob
-kap_files=("$SOURCE_DIR"/*.kap)
+kap_files=()
+while IFS= read -r kap_file; do
+  kap_files+=("$kap_file")
+done < <(find "$SOURCE_DIR" -type f -name '*.kap' | sort)
 
 if ((${#kap_files[@]} == 0)); then
   printf 'No .kap files found in %s\n' "$SOURCE_DIR" >&2
@@ -71,9 +74,11 @@ if ((${#kap_files[@]} == 0)); then
 fi
 
 for kap_file in "${kap_files[@]}"; do
-  name="$(basename "$kap_file" .kap)"
+  relative_name="${kap_file#"$SOURCE_DIR"/}"
+  name="${relative_name%.kap}"
   ruby_file="$TARGET_DIR/$name.rb"
   mruby_file="$TARGET_DIR/$name-mruby.rb"
+  mkdir -p "$(dirname "$ruby_file")"
 
   "$ROOT_DIR/exe/kapusta" --compile "$kap_file" > "$ruby_file"
   printf 'Compiled %s -> %s\n' "$kap_file" "$ruby_file"

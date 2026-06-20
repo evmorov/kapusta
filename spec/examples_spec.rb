@@ -743,6 +743,20 @@ RSpec.describe 'examples' do
     expect(run_example('macros-import-whole.kap')).to eq("7\n")
   end
 
+  it 'require-relative.kap' do
+    expect(run_example('require-relative.kap')).to eq(<<~OUT)
+      "serve"
+      "--port 3000"
+      "usage: kapusta <command> [options]"
+    OUT
+  end
+
+  it 'require-module.kap' do
+    expect(run_example('require-module.kap')).to eq(<<~OUT)
+      "deploy -> production"
+    OUT
+  end
+
   it 'parking-system.kap' do
     expect(run_example('parking-system.kap')).to eq("true\ntrue\nfalse\nfalse\n")
   end

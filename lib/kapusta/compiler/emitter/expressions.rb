@@ -96,6 +96,7 @@ module Kapusta
           when '..' then emit_concat(args, env, current_scope)
           when 'length' then "#{parenthesize(emit_expr(args[0], env, current_scope))}.length"
           when 'require' then emit_require(args[0], env, current_scope)
+          when 'require_relative', 'require-relative' then emit_require_relative(args[0], env, current_scope)
           when 'module' then emit_module_expr(args, env)
           when 'class' then emit_class_expr(args, env)
           when 'end' then emit_error!(:end_outside_header)

@@ -56,6 +56,13 @@ module Kapusta
         end
 
         def emit_require(arg, env, current_scope)
+          if arg.is_a?(Symbol)
+            feature = arg.to_s.tr('.', '/')
+            return "require_relative #{feature.inspect}" if kapusta_feature_source?(feature)
+
+            return "require #{feature.inspect}"
+          end
+
           literal = require_path_literal(arg)
           if literal&.match?(%r{\A\.\.?/})
             cleaned = literal.delete_suffix('.kap').sub(%r{\A\./}, '')
@@ -69,6 +76,23 @@ module Kapusta
               "(#{emit_expr(arg, env, current_scope)}).to_s"
             end
           "require #{path_code}"
+        end
+
+        def emit_require_relative(arg, env, current_scope)
+          literal = require_path_literal(arg)
+          path_code =
+            if literal
+              literal.inspect
+            else
+              "(#{emit_expr(arg, env, current_scope)}).to_s"
+            end
+          "require_relative #{path_code}"
+        end
+
+        def kapusta_feature_source?(feature)
+          return false if @path.nil? || @path.start_with?('(')
+
+          File.file?(File.expand_path("#{feature}.kap", File.dirname(File.expand_path(@path))))
         end
 
         def require_path_literal(arg)

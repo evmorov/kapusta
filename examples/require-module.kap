@@ -1,0 +1,4 @@
+(require :app.args)
+
+(let [parsed (App.Args.parse ["deploy" "production"])]
+  (print (App.Args.format-command parsed)))

@@ -11,6 +11,8 @@ require_relative 'kapusta/compiler'
 
 module Kapusta
   @loaded_kapusta_features = {}
+  LOADING_KAPUSTA_FEATURE = Object.new
+  private_constant :LOADING_KAPUSTA_FEATURE
 
   def self.eval(source, path: '(eval)', **_opts)
     install!
@@ -29,11 +31,14 @@ module Kapusta
 
   def self.require(feature, relative_to: nil)
     install!
-    feature = feature.to_s
+    feature = require_feature_name(feature)
     local_path = resolve_require_path(feature, relative_to:)
 
     return require_kapusta_file(local_path) if local_path&.end_with?('.kap')
     return Kernel.require(local_path) if local_path
+
+    kap_path = resolve_load_path_kapusta_feature(feature, relative_to:)
+    return require_kapusta_file(kap_path) if kap_path
 
     Kernel.require(feature)
   end
@@ -99,19 +104,47 @@ module Kapusta
     candidates.find { |candidate| File.file?(candidate) }
   end
 
+  def self.require_feature_name(feature)
+    feature.is_a?(Symbol) ? feature.to_s.tr('.', '/') : feature.to_s
+  end
+
+  def self.resolve_load_path_kapusta_feature(feature, relative_to:)
+    return if local_feature?(feature)
+
+    load_paths = [require_base_dir(relative_to), *$LOAD_PATH].uniq
+    load_paths.each do |load_path|
+      candidate = existing_kapusta_feature_path(File.expand_path(feature, load_path))
+      return candidate if candidate
+    end
+    nil
+  end
+
+  def self.existing_kapusta_feature_path(path)
+    candidates = File.extname(path).empty? ? ["#{path}.kap"] : [path]
+    candidates.find { |candidate| File.file?(candidate) && candidate.end_with?('.kap') }
+  end
+
   def self.require_kapusta_file(path)
     expanded = File.realpath(path)
-    return false if @loaded_kapusta_features[expanded]
+    if @loaded_kapusta_features.key?(expanded)
+      cached = @loaded_kapusta_features[expanded]
+      return false if cached.equal?(LOADING_KAPUSTA_FEATURE)
 
-    @loaded_kapusta_features[expanded] = true
-    dofile(expanded)
+      return cached
+    end
+
+    @loaded_kapusta_features[expanded] = LOADING_KAPUSTA_FEATURE
+    value = dofile(expanded)
+    @loaded_kapusta_features[expanded] = value
     $LOADED_FEATURES << expanded unless $LOADED_FEATURES.include?(expanded)
-    true
+    value
   rescue StandardError, ScriptError
     @loaded_kapusta_features.delete(expanded) if expanded
     raise
   end
 
   private_class_method :resolve_require_path, :local_feature?, :require_base_dir,
-                       :existing_feature_path, :require_kapusta_file, :resolve_kap_relative
+                       :existing_feature_path, :require_feature_name,
+                       :resolve_load_path_kapusta_feature, :existing_kapusta_feature_path,
+                       :require_kapusta_file, :resolve_kap_relative
 end
