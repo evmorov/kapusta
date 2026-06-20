@@ -263,6 +263,14 @@ module Kapusta
           binding_codes = []
           parsed.binding_pairs.each do |pattern, value_form|
             check_destructure_value!(pattern, value_form)
+            if (constant_code = kapusta_require_module_constant(value_form)) && pattern.is_a?(Sym)
+              require_code = emit_expr(value_form, child_env, current_scope)
+              bind_code, child_env = emit_constant_require_bind(pattern, require_code, constant_code, child_env)
+              mark_mutability(child_env, pattern.name, mutable: false)
+              binding_codes << bind_code
+              next
+            end
+
             value_code = emit_expr(value_form, child_env, current_scope)
             bind_code, child_env = emit_pattern_bind(pattern, value_code, child_env)
             mark_required_module_pattern_binding(child_env, pattern, value_form)
@@ -301,10 +309,17 @@ module Kapusta
 
           target = parsed.target
           value_form = parsed.value
-          value_code = emit_expr(value_form, env, current_scope)
 
           if target.is_a?(Sym)
             validate_binding_symbol!(target)
+            if parsed.head == 'local' && (constant_code = kapusta_require_module_constant(value_form))
+              require_code = emit_expr(value_form, env, current_scope)
+              bind_code, env = emit_constant_require_bind(target, require_code, constant_code, env)
+              mark_mutability(env, target.name, mutable: false)
+              return ["#{bind_code}\nnil", env]
+            end
+
+            value_code = emit_expr(value_form, env, current_scope)
             if allow_constant && parsed.head == 'local' &&
                constant_value?(value_form) &&
                (constant_name = constant_name_for(target.name))
@@ -320,9 +335,18 @@ module Kapusta
             mark_mutability(env, target.name, mutable: parsed.mutable?)
             ["#{ruby_name} = #{value_code}\nnil", env]
           else
+            value_code = emit_expr(value_form, env, current_scope)
             bind_code, env = emit_pattern_bind(target, value_code, env)
             [join_code(bind_code, 'nil'), env]
           end
+        end
+
+        def emit_constant_require_bind(target, require_code, constant_code, env)
+          validate_binding_symbol!(target)
+          return [require_code, env] if target.name == '_'
+
+          ruby_name = define_local(env, target.name)
+          ["#{require_code}\n#{ruby_name} = #{constant_code}", env]
         end
 
         def constant_name_for(source_name)

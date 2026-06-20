@@ -113,14 +113,17 @@ Kapusta source always uses `require`.
 
 ```fennel
 (require :app.args)
-(require "./args")
+(local messages (require :app.messages))
+(require "./config")
 ```
 
 Compiled Ruby uses the Ruby form that fits:
 
 ```ruby
 require "app/args"
-require_relative "args"
+require "app/messages"
+messages = App::Messages
+require_relative "config"
 ```
 
 ## Comparison with Fennel

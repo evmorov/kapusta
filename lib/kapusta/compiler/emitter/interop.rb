@@ -89,27 +89,77 @@ module Kapusta
         end
 
         def kapusta_require_source?(arg)
-          return kapusta_feature_source?(arg.to_s.tr('.', '/')) if arg.is_a?(Symbol)
+          !kapusta_require_source_path(arg).nil?
+        end
+
+        def kapusta_require_module_constant(form)
+          return unless form.is_a?(List)
+          return unless form.head.is_a?(Sym) && form.head.name == 'require'
+          return unless form.rest.length == 1
+
+          path = kapusta_require_source_path(form.rest[0])
+          return unless path
+
+          header = Reader.read_all(File.read(path)).first
+          return unless Language.header_form?(header)
+
+          segments = header_constant_segments(header)
+          segments&.join('::')
+        rescue Errno::ENOENT, Kapusta::Error
+          nil
+        end
+
+        def kapusta_require_source_path(arg)
+          return kapusta_feature_source_path(arg.to_s.tr('.', '/')) if arg.is_a?(Symbol)
 
           literal = require_path_literal(arg)
-          return false unless literal&.match?(%r{\A\.\.?/})
+          return unless literal&.match?(%r{\A\.\.?/})
 
-          kapusta_local_source?(literal)
+          kapusta_local_source_path(literal)
         end
 
         def kapusta_feature_source?(feature)
-          return false if @path.nil? || @path.start_with?('(')
+          !kapusta_feature_source_path(feature).nil?
+        end
 
-          File.file?(File.expand_path("#{feature}.kap", File.dirname(File.expand_path(@path))))
+        def kapusta_feature_source_path(feature)
+          return if @path.nil? || @path.start_with?('(')
+
+          path = File.expand_path("#{feature}.kap", File.dirname(File.expand_path(@path)))
+          path if File.file?(path)
         end
 
         def kapusta_local_source?(feature)
-          return false if @path.nil? || @path.start_with?('(')
+          !kapusta_local_source_path(feature).nil?
+        end
+
+        def kapusta_local_source_path(feature)
+          return if @path.nil? || @path.start_with?('(')
 
           base = File.dirname(File.expand_path(@path))
           path = File.absolute_path?(feature) ? feature : File.expand_path(feature, base)
           candidates = File.extname(path).empty? ? ["#{path}.kap"] : [path]
-          candidates.any? { |candidate| File.file?(candidate) && candidate.end_with?('.kap') }
+          candidates.find { |candidate| File.file?(candidate) && candidate.end_with?('.kap') }
+        end
+
+        def header_constant_segments(header)
+          parsed =
+            if header.head.name == 'module'
+              Language.parse_module_form(header)
+            else
+              Language.parse_class_form(header)
+            end
+          segments = constant_segments(parsed.name)
+          return unless segments
+
+          if header.head.name == 'module' &&
+             parsed.body.length == 1 &&
+             Language.bodyless_header?(parsed.body[0])
+            inner_segments = header_constant_segments(parsed.body[0])
+            return [*segments, *inner_segments] if inner_segments
+          end
+
+          segments
         end
 
         def require_path_literal(arg)

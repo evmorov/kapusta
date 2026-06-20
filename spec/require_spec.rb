@@ -57,6 +57,78 @@ RSpec.describe 'Kapusta require' do
     end
   end
 
+  it 'compiles local aliases for .kap module requires to plain Ruby require and constant assignment' do
+    Dir.mktmpdir('kapusta-require-module-local-alias') do |dir|
+      app_dir = File.join(dir, 'app')
+      FileUtils.mkdir_p(app_dir)
+      File.write(File.join(app_dir, 'search.kap'), <<~KAP)
+        (module App.Search)
+
+        (defn active? [state]
+          true)
+
+        (end)
+      KAP
+      main_path = File.join(dir, 'main.kap')
+      File.write(main_path, <<~KAP)
+        (local search (require :app.search))
+        (search.active? {})
+      KAP
+
+      expect(Kapusta.compile(File.read(main_path), path: main_path)).to eq(<<~RUBY)
+        require_relative "app/search"
+        search = App::Search
+        search.active?({})
+      RUBY
+    end
+  end
+
+  it 'keeps nested module require aliases isolated when names repeat' do
+    Dir.mktmpdir('kapusta-require-module-nested-alias') do |dir|
+      app_dir = File.join(dir, 'app')
+      FileUtils.mkdir_p(app_dir)
+
+      File.write(File.join(app_dir, 'base.kap'), <<~KAP)
+        (module App.Base)
+
+        (defn value []
+          "base")
+
+        (end)
+      KAP
+
+      File.write(File.join(app_dir, 'inner.kap'), <<~KAP)
+        (module App.Inner)
+
+        (local mod (require "./base"))
+
+        (defn value []
+          (.. "inner:" (mod.value)))
+
+        (end)
+      KAP
+
+      File.write(File.join(app_dir, 'outer.kap'), <<~KAP)
+        (module App.Outer)
+
+        (local mod (require "./inner"))
+
+        (defn value []
+          (.. "outer:" (mod.value)))
+
+        (end)
+      KAP
+
+      main_path = File.join(dir, 'main.kap')
+      File.write(main_path, <<~KAP)
+        (local mod (require :app.outer))
+        (mod.value)
+      KAP
+
+      expect(Kapusta.dofile(main_path)).to eq('outer:inner:base')
+    end
+  end
+
   it 'delegates relative requires to Ruby for .rb files' do
     Dir.mktmpdir('kapusta-require-local-ruby') do |dir|
       mod_name = "KapustaRequireRelativeRubyFeature#{rand(1_000_000)}"

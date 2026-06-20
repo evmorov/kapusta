@@ -761,6 +761,12 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'require-module-local.kap' do
+    expect(run_example('require-module-local.kap')).to eq(<<~OUT)
+      "deploy -> production"
+    OUT
+  end
+
   it 'parking-system.kap' do
     expect(run_example('parking-system.kap')).to eq("true\ntrue\nfalse\nfalse\n")
   end
