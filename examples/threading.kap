@@ -5,7 +5,7 @@
   (.. left value right))
 
 (fn fetch-name [user]
-  (?. user :profile :name))
+  (?: user :profile :name))
 
 (let [thread-last (->> "Ada"
                        (append " Lovelace")
@@ -20,9 +20,9 @@
                          (append "!")
                          (wrap "<" ">"))
       thread-first (-?> "kapusta"
-                        (: :upcase)
-                        (: :reverse))
+                        (. :upcase)
+                        (. :reverse))
       missing-first (-?> nil
-                         (: :upcase)
-                         (: :reverse))]
+                         (. :upcase)
+                         (. :reverse))]
   (print thread-last maybe-name missing-name thread-first missing-first))

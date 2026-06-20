@@ -1,2 +1,2 @@
-(let [xs (doto [] (: :push 1) (: :push 2) (: :push 3))]
-  (print (xs.join ", ")))
+(let [xs (doto [] (. :push 1) (. :push 2) (. :push 3))]
+  (print (. xs :join ", ")))

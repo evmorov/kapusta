@@ -1,7 +1,7 @@
 (fn require-score [s]
   (if (= s "oops")
       (raise (ArgumentError.new "not a number"))
-      (: s :to-i)))
+      s.to-i))
 
 (fn parse-score [s]
   (try (require-score s)

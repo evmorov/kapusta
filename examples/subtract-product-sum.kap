@@ -6,7 +6,7 @@
     (let [d (% x 10)]
       (set product (* product d))
       (set sum (+ sum d))
-      (set x (: (/ x 10) :floor))))
+      (set x (. (/ x 10) :floor))))
   (- product sum))
 
 (print (subtract-product-sum 234))

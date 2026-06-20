@@ -1,4 +1,4 @@
 (let [person {:name "Ada"}]
   (tset person :city "Amsterdam")
   (print person)
-  (print (. person :city)))
+  (print person:city))

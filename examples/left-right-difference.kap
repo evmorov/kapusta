@@ -1,7 +1,7 @@
 (fn same-list? [a b]
   (var ok (= (length a) (length b)))
   (each [i value (ipairs a)]
-    (when (not (= value (. b i)))
+    (when (not (= value (: b i)))
       (set ok false)))
   ok)
 

@@ -47,6 +47,14 @@ module Kapusta
     def segments
       @name.split('.')
     end
+
+    def colonized?
+      @name != ':' && !@name.start_with?(':') && @name.include?(':')
+    end
+
+    def colon_segments
+      @name.split(':')
+    end
   end
 
   class GeneratedSym < Sym

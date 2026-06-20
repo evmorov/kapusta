@@ -4,13 +4,13 @@
   (while (> x 0)
     (let [d (% x 10)]
       (set total (+ total (* d d)))
-      (set x (: (/ x 10) :floor))))
+      (set x (. (/ x 10) :floor))))
   total)
 
 (fn happy? [n]
   (let [seen {}]
     (var x n)
-    (while (and (not= x 1) (not (seen.key? x)))
+    (while (and (not= x 1) (not (. seen :key? x)))
       (tset seen x true)
       (set x (sum-of-squares x)))
     (= x 1)))

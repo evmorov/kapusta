@@ -1,2 +1,2 @@
-(let [name (or (. ARGV 0) "world")]
+(let [name (or (: ARGV 0) "world")]
   (print (.. "Hello, " name "!")))

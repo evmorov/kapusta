@@ -5,7 +5,7 @@
   (var steps 0)
   (while (not= x target)
     (if (= 0 (% x 2))
-        (set x (: (/ x 2) :floor))
+        (set x (. (/ x 2) :floor))
         (set x (- x 1)))
     (set steps (+ steps 1)))
   steps)

@@ -6,9 +6,9 @@
                   "owner" :owner})
 
 (fn count-matches [items rule-key rule-value]
-  (let [key (. rule-keys rule-key)]
+  (let [key (: rule-keys rule-key)]
     (accumulate [count 0 _ item (ipairs items)]
-      (if (= (. item key) rule-value) (+ count 1) count))))
+      (if (= (: item key) rule-value) (+ count 1) count))))
 
 (let [items [{:type "phone" :color "blue" :name "pixel"}
              {:type "computer" :color "silver" :name "lenovo"}

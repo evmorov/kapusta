@@ -3,8 +3,8 @@
   (var hi (- (length xs) 1))
   (var answer nil)
   (while (and (<= lo hi) (= answer nil))
-    (let [mid (: (/ (+ lo hi) 2) :floor)
-          guess (. xs mid)]
+    (let [mid (. (/ (+ lo hi) 2) :floor)
+          guess (: xs mid)]
       (if (= guess target) (set answer mid)
           (< guess target) (set lo (+ mid 1))
           (set hi (- mid 1)))))

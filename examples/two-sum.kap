@@ -4,7 +4,7 @@
   (while (and (< i (length xs)) (= answer nil))
     (var j (+ i 1))
     (while (and (< j (length xs)) (= answer nil))
-      (when (= (+ (. xs i) (. xs j)) target) (set answer [i j]))
+      (when (= (+ (: xs i) (: xs j)) target) (set answer [i j]))
       (set j (+ j 1)))
     (set i (+ i 1)))
   answer)

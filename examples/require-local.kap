@@ -1,7 +1,7 @@
 (require "./require-local-args")
 
 (let [parsed (RequireLocalArgs.parse ["serve" "--port" "3000"])
-      options (. parsed :options)]
-  (print (. parsed :command))
+      options parsed:options]
+  (print parsed:command)
   (print (options.join " "))
   (print (RequireLocalArgs.usage)))

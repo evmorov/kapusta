@@ -171,7 +171,13 @@ module Kapusta
       end
 
       def matches_prefix?(sym, prefix)
-        segs = sym.dotted? ? sym.segments : [sym.name]
+        segs = if sym.dotted?
+                 sym.segments
+               elsif sym.colonized?
+                 sym.colon_segments
+               else
+                 [sym.name]
+               end
         return false if segs.length < prefix.length
 
         segs[0...prefix.length] == prefix
@@ -194,7 +200,13 @@ module Kapusta
       end
 
       def first_segment_capitalized?(sym)
-        first = sym.dotted? ? sym.segments.first : sym.name
+        first = if sym.dotted?
+                  sym.segments.first
+                elsif sym.colonized?
+                  sym.colon_segments.first
+                else
+                  sym.name
+                end
         first.match?(/\A[A-Z]/)
       end
 

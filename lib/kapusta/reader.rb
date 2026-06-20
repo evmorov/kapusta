@@ -286,7 +286,7 @@ module Kapusta
         break unless token.start_with?('.') && token.length > 1
 
         token[1..].split('.').each do |name|
-          current = List.new([Sym.new(':'), current, Kapusta.kebab_to_snake(name).to_sym])
+          current = List.new([Sym.new('.'), current, Kapusta.kebab_to_snake(name).to_sym])
         end
       end
 
@@ -345,7 +345,9 @@ module Kapusta
         raise reader_error(:bad_shorthand, source_position) unless value.is_a?(Sym)
 
         key = Kapusta.kebab_to_snake(value.name).to_sym
-        [key, value]
+        pair = [key, value]
+        pair.define_singleton_method(:shorthand?) { true }
+        pair
       else
         [item, value]
       end

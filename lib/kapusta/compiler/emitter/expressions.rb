@@ -37,6 +37,7 @@ module Kapusta
           args = list.rest
           if head.is_a?(Sym)
             return emit_special(head.name, args, env, current_scope) if special_form?(head.name)
+            return emit_multihash_call(head, args, env, current_scope) if head.colonized?
             return emit_multisym_call(head, args, env, current_scope) if head.dotted?
             if (binding = env.lookup_if_defined(head.name))
               return emit_bound_call(binding, args, env, current_scope)
@@ -51,7 +52,7 @@ module Kapusta
           end
 
           if (method_call = method_call_with_receiver_expression(head, args))
-            return emit_colon(method_call, env, current_scope)
+            return emit_method_call(method_call, env, current_scope)
           end
 
           emit_callable_call(emit_expr(head, env, current_scope), args, env, current_scope)
@@ -60,7 +61,7 @@ module Kapusta
         def method_call_with_receiver_expression(head, args)
           return unless head.is_a?(List)
           return unless head.items.length == 3
-          return unless head.head.is_a?(Sym) && head.head.name == ':'
+          return unless head.head.is_a?(Sym) && head.head.name == '.'
 
           method = head.items[2]
           return unless method.is_a?(Symbol) || method.is_a?(String)
@@ -90,9 +91,9 @@ module Kapusta
           when 'accumulate' then emit_accumulate(args, env, current_scope)
           when 'faccumulate' then emit_faccumulate(args, env, current_scope)
           when 'hashfn' then emit_hashfn(args, env, current_scope)
-          when '.' then emit_lookup(args, env, current_scope)
-          when '?.' then emit_safe_lookup(args, env, current_scope)
-          when ':' then emit_colon(args, env, current_scope)
+          when '.' then emit_method_call(args, env, current_scope)
+          when '?:' then emit_safe_lookup(args, env, current_scope)
+          when ':' then emit_lookup(args, env, current_scope)
           when '..' then emit_concat(args, env, current_scope)
           when 'length' then "#{parenthesize(emit_expr(args[0], env, current_scope))}.length"
           when 'require' then emit_require(args[0], env, current_scope)

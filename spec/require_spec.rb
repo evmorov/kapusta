@@ -25,8 +25,8 @@ RSpec.describe 'Kapusta require' do
         (local args (require "./args"))
         (local again (require "./args"))
 
-        [((. args :parse) ["alpha" "beta"])
-         ((. again :parse) ["gamma"])]
+        [((: args :parse) ["alpha" "beta"])
+         ((: again :parse) ["gamma"])]
       KAP
 
       result = Dir.chdir(other_dir) do

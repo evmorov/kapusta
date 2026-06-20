@@ -1,15 +1,15 @@
 (fn arrange-coins [n]
   (let [rows (faccumulate [acc {:sum 0 :rows 0} i 1 n]
-               (let [new-sum (+ (. acc :sum) i)]
+               (let [new-sum (+ acc:sum i)]
                  (if (<= new-sum n)
                      {:sum new-sum :rows i}
                      acc)))
         used (faccumulate [acc {:sum 0 :rows 0} i 1 n]
-               (let [new-sum (+ (. acc :sum) i)]
+               (let [new-sum (+ acc:sum i)]
                  (if (<= new-sum n)
                      {:sum new-sum :rows i}
                      acc)))]
-    [(. rows :rows) (. used :sum)]))
+    [rows:rows used:sum]))
 
 (let [[r u] (arrange-coins 0)]
   (print r)

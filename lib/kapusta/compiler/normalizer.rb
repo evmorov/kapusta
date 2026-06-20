@@ -56,7 +56,7 @@ module Kapusta
           raise compiler_error(:tset_no_value, list) unless parsed
 
           Kapusta.copy_position(
-            List.new([Sym.new('set'), List.new([Sym.new('.'), parsed.table, parsed.key]), parsed.value]),
+            List.new([Sym.new('set'), List.new([Sym.new(':'), parsed.table, parsed.key]), parsed.value]),
             list
           )
         when *LuaCompat::SPECIAL_FORMS
@@ -150,7 +150,7 @@ module Kapusta
           end
         end
         fn = List.new([Sym.new('fn'), Vec.new([temp]), *body])
-        List.new([Sym.new(':'), value, :tap, fn])
+        List.new([Sym.new('.'), value, :tap, fn])
       end
 
       def gensym(prefix)

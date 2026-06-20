@@ -599,6 +599,10 @@ RSpec.describe 'examples' do
     expect(run_example('two-sum-hash.kap')).to eq("[0, 1]\n[1, 2]\nnil\n")
   end
 
+  it 'underground-system.kap' do
+    expect(run_example('underground-system.kap')).to eq("11\n14\n")
+  end
+
   it 'bst-iterator.kap' do
     expect(run_example('bst-iterator.kap')).to eq(<<~OUT)
       3

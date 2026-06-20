@@ -7,7 +7,7 @@ module Kapusta
         private
 
         def emit_lookup(args, env, current_scope)
-          emit_error!(:dot_no_args) if args.empty?
+          emit_error!(:dot_no_args) if args.length < 2
 
           object_code = emit_expr(args[0], env, current_scope)
           keys = args[1..].map { |arg| emit_expr(arg, env, current_scope) }
@@ -27,10 +27,12 @@ module Kapusta
         BINARY_OPERATOR_METHODS = %w[<=> ** << >> & | ^ === =~].freeze
         private_constant :BINARY_OPERATOR_METHODS
 
-        def emit_colon(args, env, current_scope)
+        def emit_method_call(args, env, current_scope)
+          emit_error!(:dot_no_args) if args.empty?
+
           receiver = emit_expr(args[0], env, current_scope)
           method_form = args[1]
-          positional, kwargs, block_form = split_call_args(args[2..], env, current_scope)
+          positional, kwargs, block_form = split_call_args(args[2..] || [], env, current_scope)
           literal_name = method_form if method_form.is_a?(Symbol) || method_form.is_a?(String)
           if literal_name && binary_operator_call?(literal_name.to_s, positional, kwargs, block_form)
             return emit_binary_operator_call(receiver, literal_name.to_s, positional[0])
@@ -366,6 +368,11 @@ module Kapusta
           end
         end
 
+        def emit_multihash_call(head, args, env, current_scope)
+          lookup_code = emit_multihash_value(head, env)
+          emit_callable_call(lookup_code, args, env, current_scope)
+        end
+
         def emit_method_path(base_code, segments)
           segments.reduce(base_code) do |acc, segment|
             snake = Kapusta.kebab_to_snake(segment)
@@ -478,6 +485,7 @@ module Kapusta
           end
 
           emit_error!(:unexpected_vararg) if name == '...'
+          return emit_multihash_value(sym, env) if sym.colonized?
           return emit_multisym_value(sym, env) if sym.dotted?
           return 'ARGV' if name == 'ARGV'
           return name if name.match?(/\A[A-Z]/)
@@ -503,6 +511,11 @@ module Kapusta
           emit_method_path(base_code, segments)
         end
 
+        def emit_multihash_value(sym, env)
+          base_code, segments = multihash_base(sym.colon_segments, env)
+          emit_hash_lookup_path(base_code, segments)
+        end
+
         def required_module_lookup_code(segments, env)
           return if segments.length < 2
 
@@ -516,6 +529,21 @@ module Kapusta
           receiver = simple_expression?(base_code) ? base_code : parenthesize(base_code)
           segments.reduce(receiver) do |acc, segment|
             "#{acc}[#{Kapusta.kebab_to_snake(segment).to_sym.inspect}]"
+          end
+        end
+
+        def multihash_base(segments, env)
+          first = segments[0]
+          if first == 'self'
+            ['self', segments[1..]]
+          elsif (binding = env.lookup_if_defined(first))
+            [binding_value_code(binding), segments[1..]]
+          elsif first == 'ARGV'
+            ['ARGV', segments[1..]]
+          elsif first.match?(/\A[A-Z]/)
+            [first, segments[1..]]
+          else
+            emit_error!(:undefined_symbol, name: first)
           end
         end
 

@@ -1,5 +1,5 @@
 (fn add-good-pairs [pairs counts n]
-  (let [prev (or (. counts n) 0)
+  (let [prev (or (: counts n) 0)
         next-pairs (+ pairs prev)]
     (tset counts n (+ prev 1))
     (values next-pairs counts)))

@@ -2,8 +2,7 @@ def count_by_kind(effects)
   quits = 0
   moves = 0
   effects.each do |effect|
-    kap_case_value_1 = effect[:kind]
-    case kap_case_value_1
+    case effect[:kind]
     in :quit
       quits += 1
     in :move

@@ -147,7 +147,7 @@ module Kapusta
         -> ->> -?> -?>> doto
         icollect collect fcollect accumulate faccumulate
         hashfn
-        . ?. :
+        . ?: :
         ..
         length
         require
@@ -353,7 +353,7 @@ module Kapusta
       end
 
       def parse_dot_target(form)
-        return unless list_head?(form, '.')
+        return unless list_head?(form, ':')
 
         DotTarget.new(object: form.items[1], keys: form.items[2..] || [])
       end

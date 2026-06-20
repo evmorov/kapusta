@@ -1,12 +1,12 @@
 (fn parse-int [s]
-  (: Kernel :Integer s))
+  (. Kernel :Integer s))
 
 (let [[ok value] (pcall parse-int "12")
       [bad-ok error] (pcall parse-int "oops")
-      [handled-ok handled] (xpcall parse-int (fn [e] (e.message)) "oops")]
+      [handled-ok handled] (xpcall parse-int (fn [e] (. e :message)) "oops")]
   (print ok)
   (print value)
   (print bad-ok)
-  (print (error.class))
+  (print (. error :class))
   (print handled-ok)
   (print handled))

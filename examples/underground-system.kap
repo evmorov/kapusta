@@ -1,0 +1,39 @@
+(fn underground-system []
+  (let [active []
+        routes {:leyton-waterloo {:total 0 :count 0}
+                :paradise-cambridge {:total 0 :count 0}}
+        route-stat (fn [start end]
+                     (case [start end]
+                       ["Leyton" "Waterloo"] routes:leyton-waterloo
+                       ["Paradise" "Cambridge"] routes:paradise-cambridge))
+        find-trip (fn [id]
+                    (var found nil)
+                    (each [_ trip (ipairs active)]
+                      (when (= trip:id id)
+                        (set found trip)))
+                    found)
+        ops {:check-in (fn [id station time]
+                         (active.push {: id : station : time}))
+             :check-out (fn [id station time]
+                          (let [trip (find-trip id)
+                                start trip:station
+                                duration (- time trip:time)
+                                stat (route-stat start station)]
+                            (tset stat :total (+ stat:total duration))
+                            (tset stat :count (+ stat:count 1))))
+             :average-time (fn [start end]
+                             (let [stat (route-stat start end)]
+                               (/ stat:total stat:count)))}]
+    {:active active :ops ops :routes routes}))
+
+(local system (underground-system))
+
+(system:ops:check-in 45 "Leyton" 3)
+(system:ops:check-in 32 "Paradise" 8)
+(system:ops:check-in 27 "Leyton" 10)
+(system:ops:check-out 45 "Waterloo" 15)
+(system:ops:check-out 27 "Waterloo" 20)
+(system:ops:check-out 32 "Cambridge" 22)
+
+(print (system:ops:average-time "Leyton" "Waterloo"))
+(print (system:ops:average-time "Paradise" "Cambridge"))

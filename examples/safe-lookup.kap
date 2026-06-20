@@ -1,6 +1,6 @@
 (let [user {:profile {:name "Ada"}}
       missing {}
-      name (?. user :profile :name)
-      missing-name (?. missing :profile :name)]
+      name (?: user :profile :name)
+      missing-name (?: missing :profile :name)]
   (print name)
   (print missing-name))

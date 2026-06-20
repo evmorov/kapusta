@@ -1,6 +1,6 @@
 (fn manhattan [edge]
   (let [{:from [x1 y1] :to [x2 y2]} edge]
-    (+ (: (- x1 x2) :abs) (: (- y1 y2) :abs))))
+    (+ (. (- x1 x2) :abs) (. (- y1 y2) :abs))))
 
 (fn total-distance [edges]
   (accumulate [total 0 _ edge (ipairs edges)]

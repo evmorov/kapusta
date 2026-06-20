@@ -1,7 +1,7 @@
 (module RequireLocalArgs)
 
 (defn parse [argv]
-  {:command (. argv 0) :options (argv.drop 1)})
+  {:command (: argv 0) :options (. argv :drop 1)})
 
 (defn usage []
   "usage: kapusta <command> [options]")

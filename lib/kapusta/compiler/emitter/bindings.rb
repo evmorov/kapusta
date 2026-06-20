@@ -440,7 +440,15 @@ module Kapusta
         def emit_set_target(target, value_code, env, current_scope)
           case target
           when Sym
-            if target.dotted?
+            if target.colonized?
+              base_code, segments = multihash_base(target.colon_segments, env)
+              receiver = simple_expression?(base_code) ? base_code : parenthesize(base_code)
+              prefix = segments[0...-1].map do |segment|
+                "[#{Kapusta.kebab_to_snake(segment).to_sym.inspect}]"
+              end.join
+              key = Kapusta.kebab_to_snake(segments.last).to_sym.inspect
+              emit_assignment("#{receiver}#{prefix}[#{key}]", value_code)
+            elsif target.dotted?
               base_code, segments = multisym_base(target.segments, env)
               receiver = emit_method_path(base_code, segments[0...-1])
               last = segments.last

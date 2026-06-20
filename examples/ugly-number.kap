@@ -1,5 +1,5 @@
 (macro floor-div [a b]
-  `(: (/ ,a ,b) :floor))
+  `(. (/ ,a ,b) :floor))
 
 (macro divide-out! [v d]
   `(while (= 0 (% ,v ,d))

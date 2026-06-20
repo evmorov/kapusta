@@ -152,7 +152,7 @@ module Kapusta
       return if contains_comments?(hash.entries)
       return if multiline_in_source?(hash)
 
-      flat_delimited_render(hash.pairs, '{', '}') { |key, value| flat_hash_pair(key, value) }
+      flat_hash_render(hash.pairs)
     end
 
     def flat_render_list(list)
@@ -601,7 +601,7 @@ module Kapusta
       when HashLit
         return if contains_comments?(form.entries)
 
-        flat_delimited_render(form.pairs, '{', '}') { |key, value| flat_hash_pair(key, value) }
+        flat_hash_render(form.pairs)
       end
     end
 
@@ -614,6 +614,13 @@ module Kapusta
       return if rendered.any?(&:nil?)
 
       "#{open}#{rendered.join(' ')}#{close}"
+    end
+
+    def flat_hash_render(pairs)
+      rendered = pairs.map { |pair| flat_hash_pair(pair) }
+      return if rendered.any?(&:nil?)
+
+      "{#{rendered.join(' ')}}"
     end
 
     def hang_call_args?(list, base, indent)
@@ -832,7 +839,7 @@ module Kapusta
 
         key, value = entry
         first_pair = output_lines.empty?
-        if hash_shorthand?(key, value)
+        if hash_pair_shorthand?(entry)
           output_lines << "#{first_pair ? '{' : ' '}: #{value.name}"
           next
         end
@@ -852,8 +859,9 @@ module Kapusta
       output_lines.join("\n")
     end
 
-    def flat_hash_pair(key, value)
-      return ": #{value.name}" if hash_shorthand?(key, value)
+    def flat_hash_pair(pair)
+      key, value = pair
+      return ": #{value.name}" if hash_pair_shorthand?(pair)
 
       rendered_value = flat_render(value)
       return unless rendered_value
@@ -895,8 +903,8 @@ module Kapusta
       ([pair] + rest.map { |line| "#{continuation}#{line}" }).join("\n")
     end
 
-    def hash_shorthand?(key, value)
-      key.is_a?(Symbol) && value.is_a?(Sym) && key == Kapusta.kebab_to_snake(value.name).to_sym
+    def hash_pair_shorthand?(pair)
+      pair.respond_to?(:shorthand?) && pair.shorthand?
     end
 
     def hashfn_literal?(form)

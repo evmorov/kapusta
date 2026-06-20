@@ -3,7 +3,7 @@
   ; Filter first so later stages stay focused.
   (-> words
       ; Keep the shorter words before transforming them.
-      (: :select (fn [w] (< (length w) 5)))
-      (: :map (fn [w] (w.upcase)))
-      (: :sort)
-      (: :each (fn [w] (print w)))))
+      (. :select (fn [w] (< (length w) 5)))
+      (. :map (fn [w] (. w :upcase)))
+      (. :sort)
+      (. :each (fn [w] (print w)))))

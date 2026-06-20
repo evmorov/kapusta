@@ -2,7 +2,7 @@
   (var quits 0)
   (var moves 0)
   (each [_ effect (ipairs effects)]
-    (case (. effect :kind)
+    (case effect:kind
       :quit (set quits (+ quits 1))
       :move (set moves (+ moves 1))
       _ nil))

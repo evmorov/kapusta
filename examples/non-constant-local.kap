@@ -8,4 +8,4 @@
 (print (regular-fn 5))
 (print (lambda-fn 5))
 (print (length vec-binding))
-(print (. hash-binding :a))
+(print hash-binding:a)

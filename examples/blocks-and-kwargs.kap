@@ -8,12 +8,12 @@
       (File.open path
         "w"
         {:encoding "UTF-8"}
-        (fn [io] (: io :write "Ada\nLin\n")))
+        (fn [io] (io.write "Ada\nLin\n")))
       (File.open path
         "r"
         {:encoding "UTF-8"}
         (fn [io]
-          (let [content (: io :read)]
+          (let [content (io.read)]
             (print (content.strip))
             (print (length (content.lines)))))))
     (finally

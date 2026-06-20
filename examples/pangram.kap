@@ -1,10 +1,10 @@
 (fn pangram? [s]
   (= 26
     (length (-> s
-                (: :downcase)
-                (: :gsub (ruby "/[^a-z]/") "")
-                (: :chars)
-                (: :uniq)))))
+                (. :downcase)
+                (. :gsub (ruby "/[^a-z]/") "")
+                (. :chars)
+                (. :uniq)))))
 
 (print (pangram? "The quick brown fox jumps over the lazy dog"))
 (print (pangram? "Hello, world"))

@@ -490,7 +490,13 @@ module Kapusta
         return if hashfn_synthetic?(sym.name)
         return if sym.is_a?(MacroSym) || sym.is_a?(AutoGensym)
 
-        target_name = sym.dotted? ? sym.segments.first : sym.name
+        target_name = if sym.dotted?
+                        sym.segments.first
+                      elsif sym.colonized?
+                        sym.colon_segments.first
+                      else
+                        sym.name
+                      end
         return if target_name.nil? || target_name.empty?
 
         target = scope.lookup(target_name)

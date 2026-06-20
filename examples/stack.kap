@@ -7,32 +7,32 @@
 (fn push [x]
   (let [xs (ivar xs)
         mins (ivar mins)
-        current-min (if (mins.empty?) x (< x (. mins -1)) x (. mins -1))]
-    (xs.push x)
-    (mins.push current-min))
+        current-min (if (. mins :empty?) x (< x (: mins -1)) x (: mins -1))]
+    (. xs :push x)
+    (. mins :push current-min))
   self)
 
 (fn pop []
   (let [mins (ivar mins)]
-    (mins.pop))
+    (. mins :pop))
   (let [xs (ivar xs)]
-    (xs.pop)))
+    (. xs :pop)))
 
 (fn top []
-  (. (ivar xs) -1))
+  (: (ivar xs) -1))
 
 (fn get-min []
-  (. (ivar mins) -1))
+  (: (ivar mins) -1))
 
 (end)
 
 (let [s (MinStack.new)]
-  (s.push -2)
-  (s.push 0)
-  (s.push -3)
-  (print (s.get-min))
-  (s.pop)
-  (print (s.top))
-  (print (s.get-min)))
+  (. s :push -2)
+  (. s :push 0)
+  (. s :push -3)
+  (print (. s :get-min))
+  (. s :pop)
+  (print (. s :top))
+  (print (. s :get-min)))
 
 (print (= MinStack.superclass Object))

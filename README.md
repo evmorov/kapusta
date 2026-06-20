@@ -92,6 +92,37 @@ p ack(2, 3)
 p ack(3, 3)
 ```
 
+## Calls and lookup
+
+Hash lookup uses `:`.
+
+```fennel
+user:name
+(: user :name)
+(?: user :profile :name) ; safe lookup
+```
+
+Method calls use `.`.
+
+```fennel
+user.name
+(. user :name)
+```
+
+Kapusta source always uses `require`.
+
+```fennel
+(require :app.args)
+(require "./args")
+```
+
+Compiled Ruby uses the Ruby form that fits:
+
+```ruby
+require "app/args"
+require_relative "args"
+```
+
 ## Comparison with Fennel
 
 Kapusta keeps most core Fennel forms. The main differences come from Ruby's runtime and object model.
@@ -100,7 +131,7 @@ Kapusta keeps most core Fennel forms. The main differences come from Ruby's runt
 |---------------------------------------|-----------------------------------------------------|
 | Lua stdlib                            | Ruby stdlib                                         |
 | `:foo` is a Lua string                | `:foo` is a Ruby symbol                             |
-| `(. xs 1)` is the first element       | `(. xs 0)` is the first element                     |
+| `(. xs 1)` is the first element       | `(: xs 0)` is the first element                     |
 | `string.format`, `table.insert`, etc. | use Ruby methods and stdlib instead                 |
 | `(print x)` is Lua's `print` (bare)   | `(print x)` is Ruby's `p` (inspect-style)           |
 | `(.. "x: " nil)` errors at runtime    | `(.. "x: " nil)` produces `"x: "` (Ruby `nil.to_s`) |
@@ -115,7 +146,7 @@ Kapusta-specific additions:
 - `try` / `catch` / `finally` plus `raise` for exceptions
 - `(ruby "...")` raw host escape hatch
 - pass Ruby keyword arguments by ending a call with a symbol-keyed hash: `(File.open path "r" {:encoding "UTF-8"})`
-- pass a Ruby block by ending a call with a `(fn ...)` or `#(...)` literal: `(File.open path "r" (fn [io] (: io :read)))`
+- pass a Ruby block by ending a call with a `(fn ...)` or `#(...)` literal: `(File.open path "r" (fn [io] io.read))`
 
 ## Format
 

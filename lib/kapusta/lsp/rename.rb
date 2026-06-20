@@ -64,7 +64,7 @@ module Kapusta
         return if synthetic?(sym)
 
         seg = segment_at_column(sym, col)
-        return unless seg && seg[:index] != :on_dot
+        return unless seg && seg[:index] != :on_delimiter
 
         binding = walker.bindings.find { |b| b.sym.equal?(sym) }
         reference = walker.references.find { |r| r.sym.equal?(sym) }
@@ -98,7 +98,7 @@ module Kapusta
       end
 
       def segment_at_column(sym, col)
-        unless sym.dotted?
+        unless path_sym?(sym)
           start_col = sym.column
           end_col = sym.column + sym.name.length
           return unless col.between?(start_col, end_col)
@@ -107,14 +107,14 @@ module Kapusta
         end
 
         pos = sym.column
-        segments = sym.segments
+        segments = path_segments(sym)
         segments.each_with_index do |seg, k|
           seg_start = pos
           seg_end = pos + seg.length
           return { index: k, start: seg_start, end: seg_end } if col >= seg_start && col < seg_end
 
           if k < segments.length - 1
-            return { index: :on_dot, start: seg_end, end: seg_end + 1 } if col == seg_end
+            return { index: :on_delimiter, start: seg_end, end: seg_end + 1 } if col == seg_end
           elsif col == seg_end
             return { index: k, start: seg_start, end: seg_end }
           end
@@ -124,6 +124,8 @@ module Kapusta
       end
 
       def classify(walker, sym, binding, reference, seg)
+        return if sym.colonized? && seg[:index].positive?
+
         if sym.dotted? && seg[:index].positive?
           segment_text = sym.segments[seg[:index]]
           return if segment_text.match?(/\A[a-z]/)
@@ -144,11 +146,11 @@ module Kapusta
           end
         end
 
-        first_seg = sym.dotted? ? sym.segments.first : sym.name
+        first_seg = path_sym?(sym) ? path_segments(sym).first : sym.name
         if first_seg.match?(/\A[A-Z]/)
           Target.new(
             kind: :free_constant, sym:, name: sym.name,
-            segment_index: seg[:index], segment_prefix: (sym.dotted? ? sym.segments[0..seg[:index]] : [sym.name]),
+            segment_index: seg[:index], segment_prefix: (sym.dotted? ? sym.segments[0..seg[:index]] : [first_seg]),
             seg_start: seg[:start], seg_end: seg[:end], walker:
           )
         else
@@ -392,9 +394,9 @@ module Kapusta
       end
 
       def segment_range(sym, segment_index)
-        return [sym.column, sym.column + sym.name.length] unless sym.dotted?
+        return [sym.column, sym.column + sym.name.length] unless path_sym?(sym)
 
-        segments = sym.segments
+        segments = path_segments(sym)
         prior = segments[0...segment_index].sum { |s| s.length + 1 }
         start_col = sym.column + prior
         [start_col, start_col + segments[segment_index].length]
@@ -415,7 +417,7 @@ module Kapusta
 
       def text_edit_first_segment(occurrence, new_name)
         sym = occurrence.sym
-        return text_edit_full(occurrence, new_name) unless sym.is_a?(Sym) && sym.dotted?
+        return text_edit_full(occurrence, new_name) unless sym.is_a?(Sym) && path_sym?(sym)
 
         seg_start, seg_end = segment_range(sym, 0)
         {
@@ -429,6 +431,14 @@ module Kapusta
 
       def error(message)
         { error: { code: RESPONSE_REQUEST_FAILED, message: } }
+      end
+
+      def path_sym?(sym)
+        sym.dotted? || sym.colonized?
+      end
+
+      def path_segments(sym)
+        sym.dotted? ? sym.segments : sym.colon_segments
       end
     end
   end

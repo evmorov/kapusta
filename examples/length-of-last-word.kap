@@ -1,9 +1,9 @@
 (fn length-of-last-word [s]
   (-> s
-      (: :strip)
-      (: :split)
-      (. -1)
-      (: :length)))
+      (. :strip)
+      (. :split)
+      (: -1)
+      (. :length)))
 
 (print (length-of-last-word "Hello World"))
 (print (length-of-last-word "   fly me   to   the moon  "))

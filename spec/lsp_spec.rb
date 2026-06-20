@@ -133,6 +133,18 @@ RSpec.describe Kapusta::LSP do
     expect(edits.first).to include('range', 'newText')
   end
 
+  it 'formats through the LSP without collapsing full hash pairs into shorthand' do
+    text = "(let [active [] id 7]\n{:active active : id})\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_formatting(uri: 'file:///x.kap')
+    )
+    edits = result_for(responses)['result']
+
+    expect(edits.first['newText']).to include('{:active active : id}')
+  end
+
   it 'rejects requests sent before initialize' do
     responses = run(
       frame(jsonrpc: '2.0', id: 1, method: 'textDocument/formatting',
@@ -153,6 +165,35 @@ RSpec.describe Kapusta::LSP do
 
     expect(changes.length).to eq(1)
     expect(changes.first['edits'].map { |e| e['newText'] }).to eq(%w[y y y])
+  end
+
+  it 'renames only the base binding in a colon hash lookup shorthand' do
+    text = "(let [user {:name \"Ada\"}]\n  (print user:name))\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_rename(uri: 'file:///x.kap', **cursor_at(text, 'user:name'), new_name: 'person')
+    )
+    edits = result_for(responses)['result']['documentChanges'].first['edits']
+
+    expect(edits.map { |e| e['newText'] }).to eq(%w[person person])
+    expect(edits.map { |e| [e['range']['start']['line'], e['range']['start']['character']] })
+      .to contain_exactly([0, 6], [1, 9])
+  end
+
+  it 'does not offer rename on a colon hash key segment' do
+    text = "(let [user {:name \"Ada\"}]\n  (print user:name))\n"
+    key_index = text.index('user:name') + 'user:'.length
+    prefix = text[0...key_index]
+    last_nl = prefix.rindex("\n")
+    position = { line: prefix.count("\n"), character: last_nl ? key_index - last_nl - 1 : key_index }
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_prepare_rename(uri: 'file:///x.kap', **position)
+    )
+
+    expect(result_for(responses)['result']).to be_nil
   end
 
   it 'renames a let binding referenced inside an accumulate iterator with multiple binders' do
@@ -365,6 +406,24 @@ RSpec.describe Kapusta::LSP do
       'range' => {
         'start' => { 'line' => 0, 'character' => 6 },
         'end' => { 'line' => 0, 'character' => 7 }
+      }
+    )
+  end
+
+  it 'jumps from a colon hash lookup base to its local binding' do
+    text = "(let [user {:name \"Ada\"}]\n  user:name)\n"
+    responses = run(
+      frame_initialize,
+      frame_did_open('file:///x.kap', text),
+      frame_definition(uri: 'file:///x.kap', **cursor_at(text, 'user:name'))
+    )
+    result = result_for(responses)['result']
+
+    expect(result).to eq(
+      'uri' => 'file:///x.kap',
+      'range' => {
+        'start' => { 'line' => 0, 'character' => 6 },
+        'end' => { 'line' => 0, 'character' => 10 }
       }
     )
   end
