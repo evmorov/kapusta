@@ -150,7 +150,7 @@ module Kapusta
         . ?. :
         ..
         length
-        require require_relative require-relative
+        require
         module class end
         try catch finally
         raise

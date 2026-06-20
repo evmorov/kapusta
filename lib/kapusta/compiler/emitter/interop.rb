@@ -78,17 +78,6 @@ module Kapusta
           "require #{path_code}"
         end
 
-        def emit_require_relative(arg, env, current_scope)
-          literal = require_path_literal(arg)
-          path_code =
-            if literal
-              literal.inspect
-            else
-              "(#{emit_expr(arg, env, current_scope)}).to_s"
-            end
-          "require_relative #{path_code}"
-        end
-
         def kapusta_feature_source?(feature)
           return false if @path.nil? || @path.start_with?('(')
 

@@ -1,4 +1,4 @@
-module RequireRelativeArgs
+module RequireLocalArgs
   def self.parse(argv)
     {:command => argv[0], :options => argv.drop(1)}
   end
