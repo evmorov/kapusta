@@ -78,10 +78,36 @@ module Kapusta
           "require #{path_code}"
         end
 
+        def kapusta_module_require_form?(form)
+          return false unless form.is_a?(List)
+          return false unless form.head.is_a?(Sym) && form.head.name == 'require'
+          return false unless form.rest.length == 1
+
+          kapusta_require_source?(form.rest[0])
+        end
+
+        def kapusta_require_source?(arg)
+          return kapusta_feature_source?(arg.to_s.tr('.', '/')) if arg.is_a?(Symbol)
+
+          literal = require_path_literal(arg)
+          return false unless literal&.match?(%r{\A\.\.?/})
+
+          kapusta_local_source?(literal)
+        end
+
         def kapusta_feature_source?(feature)
           return false if @path.nil? || @path.start_with?('(')
 
           File.file?(File.expand_path("#{feature}.kap", File.dirname(File.expand_path(@path))))
+        end
+
+        def kapusta_local_source?(feature)
+          return false if @path.nil? || @path.start_with?('(')
+
+          base = File.dirname(File.expand_path(@path))
+          path = File.absolute_path?(feature) ? feature : File.expand_path(feature, base)
+          candidates = File.extname(path).empty? ? ["#{path}.kap"] : [path]
+          candidates.any? { |candidate| File.file?(candidate) && candidate.end_with?('.kap') }
         end
 
         def require_path_literal(arg)
@@ -315,6 +341,10 @@ module Kapusta
         end
 
         def emit_multisym_call(head, args, env, current_scope)
+          if (lookup_code = required_module_lookup_code(head.segments, env))
+            return emit_callable_call(lookup_code, args, env, current_scope)
+          end
+
           base_code, segments = multisym_base(head.segments, env)
           if segments.empty?
             emit_callable_call(base_code, args, env, current_scope)
@@ -465,8 +495,28 @@ module Kapusta
         end
 
         def emit_multisym_value(sym, env)
+          if (lookup_code = required_module_lookup_code(sym.segments, env))
+            return lookup_code
+          end
+
           base_code, segments = multisym_base(sym.segments, env)
           emit_method_path(base_code, segments)
+        end
+
+        def required_module_lookup_code(segments, env)
+          return if segments.length < 2
+
+          binding = env.lookup_if_defined(segments[0])
+          return unless binding && required_module_binding?(binding)
+
+          emit_hash_lookup_path(binding_value_code(binding), segments[1..])
+        end
+
+        def emit_hash_lookup_path(base_code, segments)
+          receiver = simple_expression?(base_code) ? base_code : parenthesize(base_code)
+          segments.reduce(receiver) do |acc, segment|
+            "#{acc}[#{Kapusta.kebab_to_snake(segment).to_sym.inspect}]"
+          end
         end
 
         def multisym_base(segments, env)

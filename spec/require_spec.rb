@@ -38,6 +38,25 @@ RSpec.describe 'Kapusta require' do
     end
   end
 
+  it 'calls functions on required .kap module maps with dotted syntax' do
+    Dir.mktmpdir('kapusta-require-local-map-call') do |dir|
+      File.write(File.join(dir, 'probe.kap'), <<~KAP)
+        (fn parse-size [output]
+          (.. "size:" output))
+
+        {: parse-size}
+      KAP
+
+      File.write(File.join(dir, 'main.kap'), <<~KAP)
+        (local probe (require "./probe"))
+
+        (probe.parse-size "42 120")
+      KAP
+
+      expect(Kapusta.dofile(File.join(dir, 'main.kap'))).to eq('size:42 120')
+    end
+  end
+
   it 'delegates relative requires to Ruby for .rb files' do
     Dir.mktmpdir('kapusta-require-local-ruby') do |dir|
       mod_name = "KapustaRequireRelativeRubyFeature#{rand(1_000_000)}"
