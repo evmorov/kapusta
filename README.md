@@ -126,25 +126,11 @@ messages = App::Messages
 require_relative "config"
 ```
 
-For Fennel-style modules, a file can return a hash of functions:
+For larger programs, organize code with Kapusta's Ruby host forms:
 
-```fennel
-(fn plan [query]
-  ...)
-
-(fn run [plan]
-  ...)
-
-{: plan : run}
-```
-
-Callers can bind that final value and use hash calls:
-
-```fennel
-(local search (require "./search"))
-
-(search:run (search:plan query))
-```
+1. Use `module` + `defn` for stateless functions.
+2. Use `class` + `fn` for state or dependencies.
+3. Avoid returning hashes of functions as the main app structure.
 
 ## Comparison with Fennel
 

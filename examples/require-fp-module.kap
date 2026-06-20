@@ -1,3 +1,0 @@
-(local search (require "./search-pipeline"))
-
-(print (search:run (search:plan "kapusta")))
