@@ -326,18 +326,6 @@ module Kapusta
           ruby_name
         end
 
-        def mark_required_module_binding(binding)
-          required_module_bindings[binding] = true
-        end
-
-        def required_module_binding?(binding)
-          required_module_bindings.key?(binding)
-        end
-
-        def required_module_bindings
-          @required_module_bindings ||= {}.compare_by_identity
-        end
-
         def local_name(source_name, env, shadow:)
           base = sanitize_local(source_name)
           base = "user_#{base}" if !generated_symbol?(source_name) && reserved_generated_name?(base)

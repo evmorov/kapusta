@@ -126,6 +126,26 @@ messages = App::Messages
 require_relative "config"
 ```
 
+For Fennel-style modules, a file can return a hash of functions:
+
+```fennel
+(fn plan [query]
+  ...)
+
+(fn run [plan]
+  ...)
+
+{: plan : run}
+```
+
+Callers can bind that final value and use hash calls:
+
+```fennel
+(local search (require "./search"))
+
+(search:run (search:plan query))
+```
+
 ## Comparison with Fennel
 
 Kapusta keeps most core Fennel forms. The main differences come from Ruby's runtime and object model.

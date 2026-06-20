@@ -273,7 +273,6 @@ module Kapusta
 
             value_code = emit_expr(value_form, child_env, current_scope)
             bind_code, child_env = emit_pattern_bind(pattern, value_code, child_env)
-            mark_required_module_pattern_binding(child_env, pattern, value_form)
             walk_pattern_syms(pattern) { |sym| mark_mutability(child_env, sym, mutable: false) }
             binding_codes << bind_code
           end
@@ -329,9 +328,6 @@ module Kapusta
             end
 
             ruby_name = define_local(env, target.name)
-            if parsed.head == 'local' && kapusta_module_require_form?(value_form)
-              mark_required_module_binding(ruby_name)
-            end
             mark_mutability(env, target.name, mutable: parsed.mutable?)
             ["#{ruby_name} = #{value_code}\nnil", env]
           else
@@ -359,13 +355,6 @@ module Kapusta
           when Numeric, String, ::Symbol, true, false, nil then true
           else false
           end
-        end
-
-        def mark_required_module_pattern_binding(env, pattern, value_form)
-          return unless pattern.is_a?(Sym) && pattern.name != '_'
-          return unless kapusta_module_require_form?(value_form)
-
-          mark_required_module_binding(env.lookup(pattern))
         end
 
         def check_destructure_value!(pattern, value_form)

@@ -80,18 +80,6 @@ module Kapusta
           "require #{path_code}"
         end
 
-        def kapusta_module_require_form?(form)
-          return false unless form.is_a?(List)
-          return false unless form.head.is_a?(Sym) && form.head.name == 'require'
-          return false unless form.rest.length == 1
-
-          kapusta_require_source?(form.rest[0])
-        end
-
-        def kapusta_require_source?(arg)
-          !kapusta_require_source_path(arg).nil?
-        end
-
         def kapusta_require_module_constant(form)
           return unless form.is_a?(List)
           return unless form.head.is_a?(Sym) && form.head.name == 'require'
@@ -393,10 +381,6 @@ module Kapusta
         end
 
         def emit_multisym_call(head, args, env, current_scope)
-          if (lookup_code = required_module_lookup_code(head.segments, env))
-            return emit_callable_call(lookup_code, args, env, current_scope)
-          end
-
           base_code, segments = multisym_base(head.segments, env)
           if segments.empty?
             emit_callable_call(base_code, args, env, current_scope)
@@ -553,10 +537,6 @@ module Kapusta
         end
 
         def emit_multisym_value(sym, env)
-          if (lookup_code = required_module_lookup_code(sym.segments, env))
-            return lookup_code
-          end
-
           base_code, segments = multisym_base(sym.segments, env)
           emit_method_path(base_code, segments)
         end
@@ -564,15 +544,6 @@ module Kapusta
         def emit_multihash_value(sym, env)
           base_code, segments = multihash_base(sym.colon_segments, env)
           emit_hash_lookup_path(base_code, segments)
-        end
-
-        def required_module_lookup_code(segments, env)
-          return if segments.length < 2
-
-          binding = env.lookup_if_defined(segments[0])
-          return unless binding && required_module_binding?(binding)
-
-          emit_hash_lookup_path(binding_value_code(binding), segments[1..])
         end
 
         def emit_hash_lookup_path(base_code, segments)

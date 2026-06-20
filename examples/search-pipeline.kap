@@ -1,0 +1,7 @@
+(fn plan [query]
+  (.. "plan:" query))
+
+(fn run [plan]
+  (.. "run:" plan))
+
+{: plan : run}

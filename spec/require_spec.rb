@@ -38,7 +38,7 @@ RSpec.describe 'Kapusta require' do
     end
   end
 
-  it 'calls functions on required .kap module maps with dotted syntax' do
+  it 'calls functions on required .kap module maps with colon syntax' do
     Dir.mktmpdir('kapusta-require-local-map-call') do |dir|
       File.write(File.join(dir, 'probe.kap'), <<~KAP)
         (fn parse-size [output]
@@ -50,10 +50,33 @@ RSpec.describe 'Kapusta require' do
       File.write(File.join(dir, 'main.kap'), <<~KAP)
         (local probe (require "./probe"))
 
-        (probe.parse-size "42 120")
+        (probe:parse-size "42 120")
       KAP
 
       expect(Kapusta.dofile(File.join(dir, 'main.kap'))).to eq('size:42 120')
+    end
+  end
+
+  it 'keeps dotted calls on required .kap module maps as method calls' do
+    Dir.mktmpdir('kapusta-require-local-map-dotted-call') do |dir|
+      File.write(File.join(dir, 'probe.kap'), <<~KAP)
+        (fn parse-size [output]
+          (.. "size:" output))
+
+        {: parse-size}
+      KAP
+
+      main_path = File.join(dir, 'main.kap')
+      File.write(main_path, <<~KAP)
+        (local probe (require "./probe"))
+
+        (probe.parse-size "42 120")
+      KAP
+
+      expect(Kapusta.compile(File.read(main_path), path: main_path)).to eq(<<~RUBY)
+        probe = require_relative "probe"
+        probe.parse_size("42 120")
+      RUBY
     end
   end
 

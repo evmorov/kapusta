@@ -755,6 +755,12 @@ RSpec.describe 'examples' do
     OUT
   end
 
+  it 'require-fp-module.kap' do
+    expect(run_example('require-fp-module.kap')).to eq(<<~OUT)
+      "run:plan:kapusta"
+    OUT
+  end
+
   it 'require-module.kap' do
     expect(run_example('require-module.kap')).to eq(<<~OUT)
       "deploy -> production"
