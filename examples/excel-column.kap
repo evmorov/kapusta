@@ -1,0 +1,26 @@
+(module Excel <<)
+
+(fn to-number [title]
+  (var result 0)
+  (each [ch title.chars]
+    (set result (+ (* result 26) (- ch.ord 64))))
+  result)
+
+(fn to-title [number]
+  (var n number)
+  (var chars [])
+  (while (> n 0)
+    (set n (- n 1))
+    (let [code (+ 65 (% n 26))]
+      (chars.unshift code.chr))
+    (set n (/ n 26)))
+  (chars.join ""))
+
+(end)
+
+(print (Excel.to-number "A"))
+(print (Excel.to-number "AB"))
+(print (Excel.to-number "ZY"))
+(print (Excel.to-title 1))
+(print (Excel.to-title 28))
+(print (Excel.to-title 701))

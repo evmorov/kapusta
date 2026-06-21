@@ -1,9 +1,9 @@
-(module App.Args)
+(module App.Args <<)
 
-(defn parse [argv]
+(fn parse [argv]
   {:command (: argv 0) :target (: argv 1)})
 
-(defn format-command [parsed]
+(fn format-command [parsed]
   (.. (: parsed :command) " -> " (: parsed :target)))
 
 (end)

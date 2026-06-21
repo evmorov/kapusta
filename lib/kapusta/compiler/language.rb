@@ -8,7 +8,7 @@ module Kapusta
 
         def anonymous? = name.nil?
       end
-      ModuleForm = Struct.new(:name, :body, :prefix_length, keyword_init: true)
+      ModuleForm = Struct.new(:name, :body, :singleton, :prefix_length, keyword_init: true)
       ClassForm = Struct.new(:name, :supers, :body, :prefix_length, keyword_init: true)
       TryForm = Struct.new(:body, :clauses, keyword_init: true)
       CatchClause = Struct.new(:klass, :bind_sym, :body, keyword_init: true)
@@ -165,6 +165,12 @@ module Kapusta
         quasi-sym quasi-list quasi-list-tail quasi-vec quasi-vec-tail quasi-hash quasi-gensym
       ].freeze
       SPECIAL_FORMS = (CORE_SPECIAL_FORMS + LuaCompat::SPECIAL_FORMS).freeze
+      CLASS_BODY_DECLARATIONS = %w[
+        include extend prepend
+        private public protected
+        module_function
+        attr_accessor attr_reader attr_writer
+      ].freeze
 
       module_function
 
@@ -206,6 +212,8 @@ module Kapusta
       end
 
       def special_form?(name) = SPECIAL_FORMS.include?(name)
+
+      def class_body_declaration?(name) = CLASS_BODY_DECLARATIONS.include?(name)
 
       def function_head?(name) = FUNCTION_HEADS.include?(name)
 
@@ -282,7 +290,10 @@ module Kapusta
       end
 
       def parse_module_args(args)
-        ModuleForm.new(name: args[0], body: args[1..] || [], prefix_length: 1)
+        rest = args[1..] || []
+        singleton = rest[0].is_a?(Sym) && rest[0].name == '<<'
+        rest = rest.drop(1) if singleton
+        ModuleForm.new(name: args[0], body: rest, singleton:, prefix_length: singleton ? 2 : 1)
       end
 
       def parse_class_args(args)

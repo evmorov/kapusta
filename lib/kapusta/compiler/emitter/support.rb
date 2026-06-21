@@ -95,6 +95,7 @@ module Kapusta
               body, next_i = with_class_body do
                 emit_form_run(forms, body_start, env.child, :module, header_form: form)
               end
+              body = wrap_singleton(body) if parsed.singleton
               [emit_direct_module_header(parsed.name, body) || emit_module_wrapper(parsed.name, body), next_i]
             end
           else
@@ -157,6 +158,7 @@ module Kapusta
 
           name = form.head.name
           return if special_form?(name)
+          return if Language.class_body_declaration?(Kapusta.kebab_to_snake(name))
           return if form.head.dotted?
           return if env.lookup_if_defined(name)
 
@@ -175,6 +177,7 @@ module Kapusta
               emit_sequence(parsed.body, env.child, :module, allow_method_definitions: true,
                                                              result: false).first
             end
+            body = wrap_singleton(body) if parsed.singleton
             emit_direct_module_header(parsed.name, body) || emit_module_wrapper(parsed.name, body)
           else
             parsed = Language.parse_class_args(args)
@@ -313,6 +316,10 @@ module Kapusta
         def indent(text, level = 1)
           prefix = '  ' * level
           text.lines.map { |line| line.strip.empty? ? line : "#{prefix}#{line}" }.join
+        end
+
+        def wrap_singleton(body)
+          ['class << self', indent(body), 'end'].join("\n")
         end
 
         def temp(prefix)

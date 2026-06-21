@@ -779,6 +779,38 @@ RSpec.describe 'examples' do
       "alice"
     OUT
   end
+
+  it 'excel-column.kap' do
+    expect(run_example('excel-column.kap')).to eq(<<~OUT)
+      1
+      28
+      701
+      "A"
+      "AB"
+      "ZY"
+    OUT
+  end
+
+  it 'logger-rate-limiter.kap' do
+    expect(run_example('logger-rate-limiter.kap')).to eq(<<~OUT)
+      true
+      true
+      false
+      false
+      false
+      true
+      true
+    OUT
+  end
+
+  it 'digit-tools.kap' do
+    expect(run_example('digit-tools.kap')).to eq(<<~OUT)
+      15
+      321
+      true
+      false
+    OUT
+  end
 end
 
 RSpec.describe 'mruby runtime examples' do

@@ -22,11 +22,13 @@ count-effects
 count-items-matching-rule
 counter
 destructure
+digit-tools
 divisibility-stats
 doto
 doto-hygiene
 egg-count
 even-squares
+excel-column
 exceptions
 factorial
 falling-drops

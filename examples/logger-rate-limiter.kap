@@ -1,0 +1,26 @@
+(require "singleton")
+
+(class RateLimiter)
+(include Singleton)
+
+(fn initialize []
+  (set (ivar last) {}))
+
+(fn should-print? [timestamp message]
+  (let [last (ivar last)]
+    (if (or (not (last.key? message)) (>= timestamp (: last message)))
+        (do
+          (tset last message (+ timestamp 10))
+          true)
+        false)))
+
+(end)
+
+(let [logger (RateLimiter.instance)]
+  (print (logger.should-print? 1 "foo"))
+  (print (logger.should-print? 2 "bar"))
+  (print (logger.should-print? 3 "foo"))
+  (print (logger.should-print? 8 "bar"))
+  (print (logger.should-print? 10 "foo"))
+  (print (logger.should-print? 11 "foo"))
+  (print (= logger (RateLimiter.instance))))

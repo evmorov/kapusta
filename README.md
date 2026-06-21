@@ -128,8 +128,8 @@ require_relative "config"
 
 For larger programs, organize code with Kapusta's Ruby host forms:
 
-1. Use `module` + `defn` for stateless functions.
-2. Use `class` + `fn` for state or dependencies.
+1. Use `module Name <<` + `fn` for stateless functions ([`examples/app/args.kap`](https://github.com/evmorov/kapusta/tree/main/examples/app/args.kap)).
+2. Use `class` + `fn` for state or dependencies ([`examples/use_bank_account.rb`](https://github.com/evmorov/kapusta/tree/main/examples/use_bank_account.rb)).
 3. Avoid returning hashes of functions as the main app structure.
 
 ## Comparison with Fennel

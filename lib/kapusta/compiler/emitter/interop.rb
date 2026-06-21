@@ -163,6 +163,7 @@ module Kapusta
           body = with_class_body do
             emit_sequence(parsed.body, env.child, :module, allow_method_definitions: true, result: false).first
           end
+          body = wrap_singleton(body) if parsed.singleton
           emit_module_wrapper(parsed.name, body)
         end
 
@@ -432,6 +433,9 @@ module Kapusta
         def emit_self_call(name, args, env, current_scope)
           positional, kwargs, block_form = split_call_args(args, env, current_scope)
           snake = Kapusta.kebab_to_snake(name)
+          if Language.class_body_declaration?(snake) && kwargs.nil? && block_form.nil?
+            return positional.empty? ? snake : "#{snake} #{positional.join(', ')}"
+          end
           if direct_method_name?(snake)
             return emit_direct_self_call(snake, positional, kwargs, block_form, env, current_scope)
           end

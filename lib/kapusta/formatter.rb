@@ -13,7 +13,7 @@ module Kapusta
     STDIN_PATH = '-'
     BODY_ONLY_HEADS = %w[do finally].freeze
     SINGLE_PREFIX_BODY_HEADS = %w[
-      while when unless for each icollect collect fcollect accumulate faccumulate module
+      while when unless for each icollect collect fcollect accumulate faccumulate
     ].freeze
     CASE_HEADS = %w[case match].freeze
     private_constant :BODY_ONLY_HEADS, :SINGLE_PREFIX_BODY_HEADS, :CASE_HEADS
@@ -188,6 +188,7 @@ module Kapusta
       when 'try' then render_try(list, indent)
       when *SINGLE_PREFIX_BODY_HEADS then render_single_prefix_body_form(name, raw_args, indent)
       when 'class' then render_class(list, indent)
+      when 'module' then render_module(list, indent)
       when 'catch' then render_catch(list, indent)
       when 'if' then render_if(list, indent)
       when *CASE_HEADS then render_case_or_match(name, list, raw_args, indent)
@@ -232,6 +233,14 @@ module Kapusta
       prefix_length = Compiler::Language.parse_class_args(args).prefix_length
       raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
       render_prefix_body_form('class', raw_prefix, raw_body, indent)
+    end
+
+    def render_module(list, indent)
+      args = list_rest(list)
+      raw_args = list_raw_rest(list)
+      prefix_length = Compiler::Language.parse_module_args(args).prefix_length
+      raw_prefix, raw_body = split_raw_items(raw_args, prefix_length)
+      render_prefix_body_form('module', raw_prefix, raw_body, indent)
     end
 
     def render_try(list, indent)
